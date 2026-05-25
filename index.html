@@ -350,7 +350,8 @@ input[type=text]{width:180px}
 
     <!-- T7: REFUNDS -->
     <div class="sec" id="t7">
-      <div class="kpis" id="kpi7"></div>
+      <div id="ref-kpi-strip"></div>
+      <div id="ref-drill-panel" style="display:none"></div>
       <div class="g2">
         <div class="card"><div class="ct">Refund type count</div><div class="leg" id="leg-rt"></div><div class="cw" style="height:200px"><canvas id="c-rt"></canvas></div></div>
         <div class="card"><div class="ct">Dollar value by type</div><div class="cw" style="height:200px"><canvas id="c-rv"></canvas></div></div>
@@ -370,12 +371,26 @@ input[type=text]{width:180px}
         <div class="card"><div class="ct">TL reviews by agent</div><div class="cw" style="height:240px"><canvas id="c-tlr"></canvas></div></div>
         <div class="card"><div class="ct">Escalation handling</div><div class="cw" style="height:240px"><canvas id="c-tle"></canvas></div></div>
       </div>
-      <div class="card"><div class="ct">TL activity detail</div>
-        <div class="tw"><table>
-          <thead><tr><th>Agent</th><th class="n">TL Reviews</th><th class="n">Esc (TL)</th><th class="n">Esc (Ops)</th><th class="n">Total</th></tr></thead>
-          <tbody id="tb-tl"></tbody><tfoot><tr id="tf-tl"></tr></tfoot>
-        </table></div>
+
+      <div class="team-hdr" style="--tc:#2563eb">Team Leaders
+        <span style="font-weight:400;font-size:10px;color:var(--tx3)">(8 TLs · Aswini AS on Maternity Leave)</span>
       </div>
+      <div class="tw" style="margin-bottom:16px"><table>
+        <thead><tr><th>Name</th><th class="n">TL Reviews</th><th class="n">Esc (TL)</th><th class="n">Esc (Ops)</th><th class="n">Total</th><th>Status</th></tr></thead>
+        <tbody id="tb-tl-tls"></tbody><tfoot><tr id="tf-tl-tls"></tr></tfoot>
+      </table></div>
+
+      <div class="team-hdr" style="--tc:#7c3aed">Acting DTL</div>
+      <div class="tw" style="margin-bottom:16px"><table>
+        <thead><tr><th>Name</th><th>Role</th><th class="n">TL Reviews</th><th class="n">Esc handled</th><th class="n">Total</th></tr></thead>
+        <tbody id="tb-tl-dtl"></tbody>
+      </table></div>
+
+      <div class="team-hdr" style="--tc:#d97706">SME</div>
+      <div class="tw" style="margin-bottom:16px"><table>
+        <thead><tr><th>Name</th><th class="n">TL Reviews</th><th class="n">Esc handled</th><th class="n">Total</th></tr></thead>
+        <tbody id="tb-tl-sme"></tbody>
+      </table></div>
     </div>
 
     <!-- T9: REVIEWS -->
@@ -385,7 +400,23 @@ input[type=text]{width:180px}
         <div class="card"><div class="ct">Rating distribution</div><div class="leg" id="leg-rr"></div><div class="cw" style="height:180px"><canvas id="c-rr"></canvas></div></div>
         <div class="card"><div class="ct">Reviews by vertical</div><div class="cw" style="height:180px"><canvas id="c-rvt"></canvas></div></div>
       </div>
-      <div class="card"><div class="ct">Review detail</div>
+      <div class="card"><div class="ct">Reviews by handler — 5★ vs 1★ breakdown</div>
+        <div class="tw"><table>
+          <thead><tr><th>Agent</th><th class="n" style="color:#16a34a">5★</th><th class="n" style="color:#2563eb">4★</th><th class="n" style="color:#d97706">3★</th><th class="n" style="color:#ea580c">2★</th><th class="n" style="color:#dc2626">1★</th><th class="n">Total</th><th class="n">5★%</th></tr></thead>
+          <tbody id="tb-rev-agent"></tbody><tfoot><tr id="tf-rev-agent"></tr></tfoot>
+        </table></div>
+      </div>
+      <div class="g2">
+        <div class="card" id="card-lots-positive">
+          <div class="ct" style="color:#16a34a">⭐ Top 5 lots — 4 &amp; 5 star reviews</div>
+          <div id="lots-positive"></div>
+        </div>
+        <div class="card" id="card-lots-negative">
+          <div class="ct" style="color:#dc2626">⚠️ Top 5 lots — 1, 2 &amp; 3 star reviews</div>
+          <div id="lots-negative"></div>
+        </div>
+      </div>
+      <div class="card"><div class="ct">All review interactions</div>
         <div class="tw"><table>
           <thead><tr><th>Agent</th><th>Rating</th><th>Sub reason</th><th>Action</th><th>Vertical</th></tr></thead>
           <tbody id="tb-rev"></tbody>
@@ -1075,51 +1106,317 @@ function buildEscalationsTab(){
 // ═══════════════════════════════════════════════
 // T7: REFUNDS
 // ═══════════════════════════════════════════════
+let ACTIVE_REFUND_TYPE=null;
+
 function buildRefundsTab(){
   const{df}=getFiltered();const fl=df.filter(r=>r._category==='Frontline');const refs=fl.filter(r=>r._refund);
   const sum=arr=>arr.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
-  const bC=refs.filter(r=>r._refund==='BCI Card'),aF=refs.filter(r=>r._refund==='ACI Full'),aP=refs.filter(r=>r._refund==='ACI Partial'),aD=refs.filter(r=>r._refund==='ACI Denied'),sC=refs.filter(r=>r._refund==='Sub Refund');
-  document.getElementById('kpi7').innerHTML=mkKPI('Total refund actions',refs.length)+mkKPI('BCI card refunds',fmt$(sum(bC)),bC.length+' cases','rd')+mkKPI('ACI full refunds',fmt$(sum(aF)),aF.length+' cases','rd')+mkKPI('ACI partial',fmt$(sum(aP)),aP.length+' cases','am')+mkKPI('ACI denied (saved)',fmt$(sum(aD)),aD.length+' cases','gn')+mkKPI('Sub cancellations',sC.length,refs.filter(r=>r._refund==='Sub No Refund').length+' not refunded');
+  const bC=refs.filter(r=>r._refund==='BCI Card'),aF=refs.filter(r=>r._refund==='ACI Full'),
+    aP=refs.filter(r=>r._refund==='ACI Partial'),aD=refs.filter(r=>r._refund==='ACI Denied'),
+    sC=refs.filter(r=>r._refund==='Sub Refund'),bW=refs.filter(r=>r._refund==='BCI Waybucks'),
+    aW=refs.filter(r=>r._refund==='ACI Waybucks');
   const tC2={'BCI Card':'#f87171','BCI Waybucks':'#60a5fa','ACI Full':'#fb923c','ACI Partial':'#fbbf24','ACI Waybucks':'#4ade80','ACI Denied':'#34d399','Sub Refund':'#a78bfa','Sub No Refund':'#6b7280'};
+
+  // Clickable KPI strip
+  const kpiDefs=[
+    {type:null,label:'Total Refund Actions',val:refs.length,sub:'click a type below',color:'',bg:'var(--sf)'},
+    {type:'BCI Card',label:'BCI Card Refunds',val:fmt$(sum(bC)),sub:bC.length+' cases',color:'#dc2626',bg:'#fff5f5'},
+    {type:'BCI Waybucks',label:'BCI Waybucks',val:bW.length,sub:fmt$(sum(bW)),color:'#2563eb',bg:'#eff6ff'},
+    {type:'ACI Full',label:'ACI Full Refunds',val:fmt$(sum(aF)),sub:aF.length+' cases',color:'#ea580c',bg:'#fff7ed'},
+    {type:'ACI Partial',label:'ACI Partial',val:fmt$(sum(aP)),sub:aP.length+' cases',color:'#d97706',bg:'#fffbeb'},
+    {type:'ACI Waybucks',label:'ACI Waybucks',val:aW.length,sub:fmt$(sum(aW)),color:'#16a34a',bg:'#f0fdf4'},
+    {type:'ACI Denied',label:'ACI Denied (Saved)',val:fmt$(sum(aD)),sub:aD.length+' cases',color:'#16a34a',bg:'#f0fdf4'},
+    {type:'Sub Refund',label:'Sub Cancellations',val:sC.length,sub:refs.filter(r=>r._refund==='Sub No Refund').length+' not refunded',color:'#7c3aed',bg:'#faf5ff'},
+  ];
+  const strip=document.getElementById('ref-kpi-strip');
+  strip.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px">`+
+    kpiDefs.map(k=>`<div onclick="toggleRefundDrill('${k.type||''}',${JSON.stringify(refs.filter(r=>!k.type||r._refund===k.type).length)})" style="background:${k.bg};border:2px solid ${ACTIVE_REFUND_TYPE===k.type&&k.type?k.color:k.type?'#e5e7eb':'var(--bd)'};border-radius:var(--r);padding:.85rem 1rem;cursor:${k.type?'pointer':'default'};transition:all .15s" ${k.type?`title="Click to see ${k.type} breakdown"`:''}>`+
+      `<div style="font-size:10px;color:${k.color||'var(--tx3)'};font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:5px">${k.label}</div>`+
+      `<div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:${k.color||'var(--tx)'};line-height:1">${k.val}</div>`+
+      `<div style="font-size:10px;color:var(--tx3);margin-top:3px">${k.sub}${k.type?` <span style="font-size:9px;color:${k.color||'var(--tx3)'}">▾</span>`:''}</div>`+
+    `</div>`).join('')+`</div>`;
+
+  // Charts & table unchanged
   const tCt={};refs.forEach(r=>{tCt[r._refund]=(tCt[r._refund]||0)+1;});const tO=Object.entries(tCt).sort((a,b)=>b[1]-a[1]);
   document.getElementById('leg-rt').innerHTML=tO.map(([t])=>`<span class="li"><span class="ld" style="background:${tC2[t]||'#888'}"></span>${t}</span>`).join('');
   mkDonut('c-rt',tO.map(t=>t[0]),tO.map(t=>t[1]),tO.map(t=>tC2[t[0]]||'#888'));
-  const vT=['BCI Card','ACI Full','ACI Partial','ACI Waybucks','ACI Denied'];
-  mkBar('c-rv',vT,[{data:vT.map(t=>Math.round(sum(refs.filter(r=>r._refund===t)))),backgroundColor:vT.map(t=>tC2[t]||'#888'),borderRadius:4,borderSkipped:false}],{yt:{callback:v=>'$'+v.toLocaleString()}});
+  const vT2=['BCI Card','ACI Full','ACI Partial','ACI Waybucks','ACI Denied'];
+  mkBar('c-rv',vT2,[{data:vT2.map(t=>Math.round(sum(refs.filter(r=>r._refund===t)))),backgroundColor:vT2.map(t=>tC2[t]||'#888'),borderRadius:4,borderSkipped:false}],{yt:{callback:v=>'$'+v.toLocaleString()}});
   const verts=[...new Set(refs.map(r=>r._vertical))].filter(v=>v);const rT=['BCI Card','BCI Waybucks','ACI Full','ACI Partial','ACI Denied','Sub Refund'];
   let tb='';const tots2={};rT.forEach(t=>tots2[t]=0);let grand=0;
   verts.forEach(v=>{const vr=refs.filter(r=>r._vertical===v);const cnts=rT.map(t=>vr.filter(r=>r._refund===t).length);const vTot=vr.length;grand+=vTot;cnts.forEach((c,i)=>tots2[rT[i]]+=c);tb+=`<tr><td>${v}</td>${cnts.map(c=>`<td class="n">${c}</td>`).join('')}<td class="n"><b>${vTot}</b></td></tr>`;});
   document.getElementById('tb-rv').innerHTML=tb;document.getElementById('tf-rv').innerHTML=`<td>Total</td>${rT.map(t=>`<td class="n">${tots2[t]}</td>`).join('')}<td class="n">${grand}</td>`;
+
+  // Render drill if one was active
+  if(ACTIVE_REFUND_TYPE) renderRefundDrill(ACTIVE_REFUND_TYPE);
+}
+
+function toggleRefundDrill(type){
+  if(!type){return;}
+  ACTIVE_REFUND_TYPE=(ACTIVE_REFUND_TYPE===type)?null:type;
+  buildRefundsTab();
+  if(ACTIVE_REFUND_TYPE){setTimeout(()=>document.getElementById('ref-drill-panel').scrollIntoView({behavior:'smooth',block:'nearest'}),100);}
+}
+
+function renderRefundDrill(type){
+  const{df}=getFiltered();const fl=df.filter(r=>r._category==='Frontline');
+  const refs=fl.filter(r=>r._refund===type);
+  const sum=arr=>arr.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
+  const tC2={'BCI Card':'#f87171','BCI Waybucks':'#60a5fa','ACI Full':'#fb923c','ACI Partial':'#fbbf24','ACI Waybucks':'#4ade80','ACI Denied':'#34d399','Sub Refund':'#a78bfa'};
+  const col=tC2[type]||'#888';
+  const panel=document.getElementById('ref-drill-panel');
+  panel.style.display='block';
+
+  // Agent breakdown
+  const agMap={};refs.forEach(r=>{const a=String(r['Agent Name']||'');if(!a)return;if(!agMap[a])agMap[a]={count:0,amount:0};agMap[a].count++;agMap[a].amount+=(parseFloat(r['Amount'])||0);});
+  const agList=Object.entries(agMap).sort((a,b)=>b[1].count-a[1].count);
+  const maxAg=agList[0]?.[1]?.count||1;
+
+  // Lot breakdown (for BCI and ACI types)
+  const showLots=['BCI Card','BCI Waybucks','ACI Full','ACI Partial','ACI Waybucks','ACI Denied'].includes(type);
+  const lotMap={};
+  if(showLots){refs.forEach(r=>{const l=String(r['Lot Name']||'').trim();if(!l)return;if(!lotMap[l])lotMap[l]={count:0,amount:0};lotMap[l].count++;lotMap[l].amount+=(parseFloat(r['Amount'])||0);});}
+  const lotList=Object.entries(lotMap).sort((a,b)=>b[1].amount-a[1].amount).slice(0,8);
+  const maxLot=lotList[0]?.[1]?.amount||1;
+
+  // Vertical breakdown
+  const vtMap={};refs.forEach(r=>{const v=r._vertical||'Other';vtMap[v]=(vtMap[v]||0)+1;});
+  const vtList=Object.entries(vtMap).sort((a,b)=>b[1]-a[1]);
+  const maxVt=vtList[0]?.[1]||1;
+
+  panel.innerHTML=`
+  <div style="background:var(--sf);border:2px solid ${col};border-radius:var(--r);padding:1.2rem;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:${col}">${type} — ${refs.length} cases · ${fmt$(sum(refs))}</div>
+      <button onclick="toggleRefundDrill('${type}')" style="font-size:11px;padding:4px 10px;border:1px solid var(--bd2);border-radius:var(--rs);background:transparent;cursor:pointer;color:var(--tx2)">✕ Close</button>
+    </div>
+    <div style="display:grid;grid-template-columns:${showLots?'1fr 1fr 1fr':'1fr 1fr'};gap:16px">
+
+      <!-- Agents -->
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-bottom:10px">By Agent</div>
+        ${agList.map(([a,d])=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bd)">
+            <div style="flex:1;font-size:11px;color:var(--tx2)">${a}</div>
+            <div style="width:70px;height:5px;background:var(--sf3);border-radius:3px;overflow:hidden">
+              <div style="width:${Math.round(d.count/maxAg*100)}%;height:100%;border-radius:3px;background:${col}"></div>
+            </div>
+            <div style="font-size:11px;font-weight:600;min-width:22px;text-align:right;font-family:'DM Mono',monospace">${d.count}</div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Vertical -->
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-bottom:10px">By Vertical</div>
+        ${vtList.map(([v,c])=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bd)">
+            <div style="flex:1;font-size:11px;color:var(--tx2)">${v}</div>
+            <div style="width:70px;height:5px;background:var(--sf3);border-radius:3px;overflow:hidden">
+              <div style="width:${Math.round(c/maxVt*100)}%;height:100%;border-radius:3px;background:${col}"></div>
+            </div>
+            <div style="font-size:11px;font-weight:600;min-width:22px;text-align:right;font-family:'DM Mono',monospace">${c}</div>
+          </div>`).join('')}
+      </div>
+
+      ${showLots?`<!-- Lots -->
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-bottom:10px">Top Lots by Amount</div>
+        ${lotList.map(([lot,d],i)=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bd)">
+            <div style="flex:1;font-size:11px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px" title="${lot}">${lot}${i===0?'<span style="font-size:9px;padding:1px 4px;border-radius:3px;background:var(--rd-bg);color:var(--rd);margin-left:4px;font-weight:600">top</span>':''}</div>
+            <div style="text-align:right">
+              <div style="font-size:11px;font-weight:600;color:${col};font-family:'DM Mono',monospace">${fmt$(d.amount)}</div>
+              <div style="font-size:10px;color:var(--tx3)">${d.count} cases</div>
+            </div>
+          </div>`).join('')}
+      </div>`:``}
+
+    </div>
+  </div>`;
 }
 
 // ═══════════════════════════════════════════════
 // T8: TL ACTIVITY
 // ═══════════════════════════════════════════════
+const TL_ONLY=['Shiju Salam','Vishnu V','Bijoy Kiran','Rashmika Santhosh D','Vishnu BS','surya suresh','Ansu Varghese','Jaison Nelson'];
+const TL_MATERNITY=['Aswini AS'];
+const DTL_TEAM=['Vidya Vijayan'];
+const SME_TEAM=['Althaf Z','LALITA LAMA'];
+
 function buildTLTab(){
   const{df}=getFiltered();const tlR=df.filter(r=>r._category==='TL');
-  const tlRev=tlR.filter(r=>r['Interaction']==='TL Review');const escTL=tlR.filter(r=>r['Interaction']==='Escalation Handled by TL');const escOps=tlR.filter(r=>r['Interaction']==='Escalation handled by Ops Team');
-  document.getElementById('kpi8').innerHTML=mkKPI('TL Reviews',tlRev.length,'quality checks','bl')+mkKPI('Esc by TL',escTL.length,'TL direct handling','am')+mkKPI('Esc by Ops',escOps.length,'ops handling','am')+mkKPI('Total TL activity',tlR.length);
-  const rC=countBy(tlRev,'Agent Name');const rO=Object.entries(rC).sort((a,b)=>b[1]-a[1]);
+  const tlRev=tlR.filter(r=>r['Interaction']==='TL Review');
+  const escTL=tlR.filter(r=>r['Interaction']==='Escalation Handled by TL');
+  const escOps=tlR.filter(r=>r['Interaction']==='Escalation handled by Ops Team');
+
+  document.getElementById('kpi8').innerHTML=
+    mkKPI('TL Reviews',tlRev.length,'quality checks','bl')+
+    mkKPI('Esc by TL',escTL.length,'TL direct handling','am')+
+    mkKPI('Esc by Ops',escOps.length,'ops handling','am')+
+    mkKPI('Total TL activity',tlR.length);
+
+  // Charts — TLs only
+  const tlOnlyRev=tlRev.filter(r=>TL_ONLY.includes(String(r['Agent Name']||'')));
+  const rC=countBy(tlOnlyRev,'Agent Name');const rO=Object.entries(rC).sort((a,b)=>b[1]-a[1]);
   if(rO.length)mkBar('c-tlr',rO.map(([a])=>a),[{data:rO.map(([,c])=>c),backgroundColor:'#a78bfa',borderRadius:4,borderSkipped:false}],{h:true});
   const eR=[...escTL,...escOps].filter(r=>r['Agent Name']);const eC=countBy(eR,'Agent Name');const eO=Object.entries(eC).sort((a,b)=>b[1]-a[1]);
   if(eO.length)mkBar('c-tle',eO.map(([a])=>a),[{data:eO.map(([,c])=>c),backgroundColor:'#fbbf24',borderRadius:4,borderSkipped:false}],{h:true,yt:{stepSize:1}});
-  const ags=[...new Set(tlR.map(r=>String(r['Agent Name']||'')))].filter(a=>a);let tb='';let tR=0,tET=0,tEO=0;
-  ags.forEach(a=>{const r=tlRev.filter(x=>x['Agent Name']===a).length,et=escTL.filter(x=>x['Agent Name']===a).length,eo=escOps.filter(x=>x['Agent Name']===a).length;tR+=r;tET+=et;tEO+=eo;tb+=`<tr><td>${a}</td><td class="n">${r}</td><td class="n">${et}</td><td class="n">${eo}</td><td class="n"><b>${r+et+eo}</b></td></tr>`;});
-  document.getElementById('tb-tl').innerHTML=tb;document.getElementById('tf-tl').innerHTML=`<td>Total</td><td class="n">${tR}</td><td class="n">${tET}</td><td class="n">${tEO}</td><td class="n">${tR+tET+tEO}</td>`;
+
+  // Helper
+  function agRow(name,df_all){
+    const r=tlRev.filter(x=>x['Agent Name']===name).length;
+    const et=escTL.filter(x=>x['Agent Name']===name).length;
+    const eo=escOps.filter(x=>x['Agent Name']===name).length;
+    return{rev:r,escTL:et,escOps:eo,total:r+et+eo,present:df_all.some(x=>x['Agent Name']===name)};
+  }
+
+  // ── TL Section
+  let tlTb='',tlTotR=0,tlTotET=0,tlTotEO=0;
+  TL_ONLY.forEach(name=>{
+    const d=agRow(name,tlR);tlTotR+=d.rev;tlTotET+=d.escTL;tlTotEO+=d.escOps;
+    const status=d.present?'<span class="bx bg">Active</span>':'<span class="bx br">Absent</span>';
+    tlTb+=`<tr><td>${name}</td><td class="n">${d.rev}</td><td class="n">${d.escTL}</td><td class="n">${d.escOps}</td><td class="n"><b>${d.total}</b></td><td>${status}</td></tr>`;
+  });
+  // Maternity leave
+  TL_MATERNITY.forEach(name=>{
+    tlTb+=`<tr style="opacity:.6"><td>${name} <span style="font-size:9px;padding:1px 6px;border-radius:3px;background:#fce7f3;color:#be185d;font-weight:600">🤱 Maternity Leave</span></td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td></td></tr>`;
+  });
+  document.getElementById('tb-tl-tls').innerHTML=tlTb;
+  const tlFoot=document.getElementById('tf-tl-tls');
+  if(tlFoot)tlFoot.innerHTML=`<td>Total (${TL_ONLY.length} active TLs)</td><td class="n">${tlTotR}</td><td class="n">${tlTotET}</td><td class="n">${tlTotEO}</td><td class="n">${tlTotR+tlTotET+tlTotEO}</td><td></td>`;
+
+  // ── Acting DTL Section
+  let dtlTb='';
+  DTL_TEAM.forEach(name=>{
+    const d=agRow(name,tlR);
+    const status=d.present?'<span class="bx bg">Active</span>':'<span class="bx br">Absent</span>';
+    dtlTb+=`<tr><td>${name}${d.present?'':' <span class="absent-tag">Absent</span>'}</td><td style="font-size:11px;color:var(--pu)">Acting DTL</td><td class="n">${d.rev}</td><td class="n">${d.escTL+d.escOps}</td><td class="n"><b>${d.total}</b></td></tr>`;
+  });
+  document.getElementById('tb-tl-dtl').innerHTML=dtlTb;
+
+  // ── SME Section
+  let smeTb='';
+  SME_TEAM.forEach(name=>{
+    const d=agRow(name,tlR);
+    smeTb+=`<tr><td>${name}${d.present?'':' <span class="absent-tag">Absent</span>'}</td><td class="n">${d.rev}</td><td class="n">${d.escTL+d.escOps}</td><td class="n"><b>${d.total}</b></td></tr>`;
+  });
+  document.getElementById('tb-tl-sme').innerHTML=smeTb;
 }
 
 // ═══════════════════════════════════════════════
 // T9: REVIEWS
 // ═══════════════════════════════════════════════
+function getRating(reason){
+  const s=String(reason||'');
+  if(s.includes('5'))return 5;if(s.includes('4'))return 4;
+  if(s.includes('3'))return 3;if(s.includes('2'))return 2;
+  if(s.includes('1'))return 1;return null;
+}
+
 function buildReviewsTab(){
   const{df}=getFiltered();const revs=df.filter(r=>r._category==='Review');
-  const r5=revs.filter(r=>String(r['Reason']||'').includes('5')).length,r3=revs.filter(r=>String(r['Reason']||'').includes('3')).length,r1=revs.filter(r=>String(r['Reason']||'').includes('1')).length;
-  document.getElementById('kpi9').innerHTML=mkKPI('Total reviews',revs.length,'','pu')+mkKPI('5 star',r5,'positive','gn')+mkKPI('3 star',r3,'neutral','am')+mkKPI('1 star',r1,'negative','rd')+mkKPI('Published',revs.filter(r=>String(r['Action']||'').includes('Published')).length,'');
-  const rD=[{r:'5 ★',v:r5,c:'#4ade80'},{r:'3 ★',v:r3,c:'#fbbf24'},{r:'1 ★',v:r1,c:'#f87171'}].filter(d=>d.v>0);
-  document.getElementById('leg-rr').innerHTML=rD.map(d=>`<span class="li"><span class="ld" style="background:${d.c}"></span>${d.r} (${d.v})</span>`).join('');mkDonut('c-rr',rD.map(d=>d.r),rD.map(d=>d.v),rD.map(d=>d.c));
+  revs.forEach(r=>{r._rating=getRating(r['Reason']);});
+
+  const r5=revs.filter(r=>r._rating===5).length,r4=revs.filter(r=>r._rating===4).length,
+    r3=revs.filter(r=>r._rating===3).length,r2=revs.filter(r=>r._rating===2).length,
+    r1=revs.filter(r=>r._rating===1).length;
+
+  document.getElementById('kpi9').innerHTML=
+    mkKPI('Total reviews',revs.length,'','pu')+
+    mkKPI('5 star',r5,'positive','gn')+
+    mkKPI('4 star',r4,'','gn')+
+    mkKPI('3 star',r3,'neutral','am')+
+    mkKPI('2 star',r2,'','rd')+
+    mkKPI('1 star',r1,'negative','rd')+
+    mkKPI('Published',revs.filter(r=>String(r['Action']||'').includes('Published')).length,'');
+
+  const rD=[{r:'5 ★',v:r5,c:'#4ade80'},{r:'4 ★',v:r4,c:'#a3e635'},{r:'3 ★',v:r3,c:'#fbbf24'},{r:'2 ★',v:r2,c:'#fb923c'},{r:'1 ★',v:r1,c:'#f87171'}].filter(d=>d.v>0);
+  document.getElementById('leg-rr').innerHTML=rD.map(d=>`<span class="li"><span class="ld" style="background:${d.c}"></span>${d.r} (${d.v})</span>`).join('');
+  mkDonut('c-rr',rD.map(d=>d.r),rD.map(d=>d.v),rD.map(d=>d.c));
+
   const vO=Object.entries(countBy(revs,'_vertical')).sort((a,b)=>b[1]-a[1]);
   mkBar('c-rvt',vO.map(v=>v[0]),[{data:vO.map(v=>v[1]),backgroundColor:'#a78bfa',borderRadius:4,borderSkipped:false}]);
-  document.getElementById('tb-rev').innerHTML=revs.map(r=>`<tr><td>${r['Agent Name']||'—'}</td><td>${String(r['Reason']||'').replace('User ','').replace('Review','★')}</td><td style="font-size:11px;color:var(--tx2)">${String(r['Sub Reason']||'—').slice(0,50)}</td><td style="font-size:11px">${String(r['Action']||'—')}</td><td>${r._vertical}</td></tr>`).join('');
+
+  // ── Per-agent breakdown table
+  const allAgents=[...new Set(revs.map(r=>String(r['Agent Name']||'')).filter(a=>a))];
+  let agTb='',totR=[0,0,0,0,0];
+  allAgents.forEach(agent=>{
+    const ar=revs.filter(r=>r['Agent Name']===agent);
+    const c=[5,4,3,2,1].map(s=>ar.filter(r=>r._rating===s).length);
+    c.forEach((v,i)=>totR[i]+=v);
+    const pos=c[0]+c[1],neg=c[3]+c[4],tot=ar.length;
+    const posP=pct(pos,tot);
+    agTb+=`<tr>
+      <td style="font-weight:500">${agent}</td>
+      <td class="n" style="color:#16a34a;font-weight:600">${c[0]}</td>
+      <td class="n" style="color:#65a30d">${c[1]}</td>
+      <td class="n" style="color:#d97706">${c[2]}</td>
+      <td class="n" style="color:#ea580c">${c[3]}</td>
+      <td class="n" style="color:#dc2626;font-weight:600">${c[4]}</td>
+      <td class="n" style="font-weight:600">${tot}</td>
+      <td class="n"><span class="bx ${posP>=80?'bg':posP>=60?'ba':'br'}">${posP}%</span></td>
+    </tr>`;
+  });
+  document.getElementById('tb-rev-agent').innerHTML=agTb;
+  const grandTot=totR.reduce((s,v)=>s+v,0);
+  document.getElementById('tf-rev-agent').innerHTML=
+    `<td>Total</td>${totR.map(v=>`<td class="n">${v}</td>`).join('')}<td class="n">${grandTot}</td><td class="n">${pct(totR[0]+totR[1],grandTot)}%</td>`;
+
+  // ── Lot level: top 5 positive (4+5★) and negative (1-3★)
+  const lotPos={},lotNeg={};
+  revs.forEach(r=>{
+    const lot=String(r['Lot Name']||'').trim();if(!lot)return;
+    if(r._rating>=4){if(!lotPos[lot])lotPos[lot]={count:0,r5:0,r4:0};lotPos[lot].count++;if(r._rating===5)lotPos[lot].r5++;else lotPos[lot].r4++;}
+    if(r._rating<=3&&r._rating>=1){if(!lotNeg[lot])lotNeg[lot]={count:0,r1:0,r2:0,r3:0};lotNeg[lot].count++;if(r._rating===1)lotNeg[lot].r1++;else if(r._rating===2)lotNeg[lot].r2++;else lotNeg[lot].r3++;}
+  });
+  const posTop=Object.entries(lotPos).sort((a,b)=>b[1].count-a[1].count).slice(0,5);
+  const negTop=Object.entries(lotNeg).sort((a,b)=>b[1].count-a[1].count).slice(0,5);
+  const maxPos=posTop[0]?.[1]?.count||1,maxNeg=negTop[0]?.[1]?.count||1;
+
+  document.getElementById('lots-positive').innerHTML=posTop.length?posTop.map(([lot,d],i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">
+      <div style="width:22px;height:22px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#16a34a;flex-shrink:0">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${lot}">${lot}</div>
+        <div style="display:flex;gap:6px;margin-top:3px">
+          <span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:1px 5px;border-radius:3px">⭐⭐⭐⭐⭐ ${d.r5}</span>
+          <span style="font-size:10px;background:#f0fdf4;color:#65a30d;padding:1px 5px;border-radius:3px">⭐⭐⭐⭐ ${d.r4}</span>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:14px;font-weight:700;color:#16a34a">${d.count}</div>
+        <div style="width:60px;height:5px;background:var(--sf3);border-radius:3px;margin-top:4px;overflow:hidden">
+          <div style="width:${Math.round(d.count/maxPos*100)}%;height:100%;background:#4ade80;border-radius:3px"></div>
+        </div>
+      </div>
+    </div>`).join(''):`<div class="empty">No 4–5★ reviews</div>`;
+
+  document.getElementById('lots-negative').innerHTML=negTop.length?negTop.map(([lot,d],i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">
+      <div style="width:22px;height:22px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#dc2626;flex-shrink:0">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${lot}">${lot}</div>
+        <div style="display:flex;gap:6px;margin-top:3px">
+          ${d.r1?`<span style="font-size:10px;background:#fee2e2;color:#dc2626;padding:1px 5px;border-radius:3px">1★ ${d.r1}</span>`:''}
+          ${d.r2?`<span style="font-size:10px;background:#ffedd5;color:#ea580c;padding:1px 5px;border-radius:3px">2★ ${d.r2}</span>`:''}
+          ${d.r3?`<span style="font-size:10px;background:#fef3c7;color:#d97706;padding:1px 5px;border-radius:3px">3★ ${d.r3}</span>`:''}
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:14px;font-weight:700;color:#dc2626">${d.count}</div>
+        <div style="width:60px;height:5px;background:var(--sf3);border-radius:3px;margin-top:4px;overflow:hidden">
+          <div style="width:${Math.round(d.count/maxNeg*100)}%;height:100%;background:#f87171;border-radius:3px"></div>
+        </div>
+      </div>
+    </div>`).join(''):`<div class="empty">No 1–3★ reviews</div>`;
+
+  document.getElementById('tb-rev').innerHTML=revs.map(r=>`<tr>
+    <td>${r['Agent Name']||'—'}</td>
+    <td>${r._rating?'★'.repeat(r._rating)+' ('+(r._rating)+')':String(r['Reason']||'')}</td>
+    <td style="font-size:11px;color:var(--tx2)">${String(r['Sub Reason']||'—').slice(0,50)}</td>
+    <td style="font-size:11px">${String(r['Action']||'—')}</td>
+    <td>${r._vertical}</td>
+  </tr>`).join('');
 }
 
 // ═══════════════════════════════════════════════
