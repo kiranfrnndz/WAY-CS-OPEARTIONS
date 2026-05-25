@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAY Operations Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f4f0;--sf:#ffffff;--sf2:#f0ede8;--sf3:#e8e4de;--bd:#e2ddd6;--bd2:#ccc8c0;--tx:#1a1916;--tx2:#6b6760;--tx3:#a09c96;--gn:#16a34a;--gn-bg:#dcfce7;--rd:#dc2626;--rd-bg:#fee2e2;--am:#d97706;--am-bg:#fef3c7;--bl:#2563eb;--bl-bg:#dbeafe;--pu:#7c3aed;--ac:#ea580c;--r:8px;--rs:5px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:13px;line-height:1.5}
+
+/* ── UPLOAD SCREEN ── */
+.up-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;gap:0}
+.up-brand{font-size:11px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--tx3);margin-bottom:1.5rem}
+.up-title{font-family:'Syne',sans-serif;font-size:36px;font-weight:700;letter-spacing:-1px;margin-bottom:.4rem;text-align:center}
+.up-sub{font-size:14px;color:var(--tx3);margin-bottom:2rem;text-align:center}
+
+.mode-picker{display:flex;gap:0;border:1px solid var(--bd2);border-radius:var(--r);overflow:hidden;margin-bottom:1.5rem;width:100%;max-width:500px}
+.mode-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem .8rem;cursor:pointer;background:var(--sf);transition:all .2s;border:none;font-family:'DM Sans',sans-serif;color:var(--tx2);border-right:1px solid var(--bd2)}
+.mode-btn:last-child{border-right:none}
+.mode-btn:hover{background:var(--sf2)}
+.mode-btn.active{background:var(--ac);color:#fff}
+.mode-btn.active .mode-sub{color:rgba(255,255,255,.7)}
+.mode-icon{font-size:20px;margin-bottom:4px}
+.mode-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:600}
+.mode-sub{font-size:10px;color:var(--tx3);margin-top:1px}
+
+/* UPLOAD GRID */
+.up-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;width:100%;max-width:740px;margin-bottom:1.2rem}
+.up-zone{border:1.5px dashed var(--bd2);border-radius:var(--r);padding:1.5rem 1rem;text-align:center;cursor:pointer;background:transparent;position:relative;transition:all .2s}
+.up-zone:hover,.up-zone.drag{border-color:var(--ac);background:#fff7ed}
+.up-zone.done{border-color:var(--gn);background:var(--gn-bg);border-style:solid}
+.up-zone.required{border-color:var(--ac)}
+.up-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.up-z-icon{font-size:24px;margin-bottom:8px}
+.up-z-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;margin-bottom:3px}
+.up-z-hint{font-size:11px;color:var(--tx3)}
+.up-z-tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:20px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
+.req-tag{background:var(--am-bg);color:var(--am)}
+.opt-tag{background:var(--bl-bg);color:var(--bl)}
+.done-tag{background:var(--gn-bg);color:var(--gn)}
+.up-z-file{font-size:10px;color:var(--gn);margin-top:4px;font-weight:500}
+
+.up-go{padding:12px 32px;font-family:'Syne',sans-serif;font-size:14px;font-weight:600;background:var(--ac);color:#fff;border:none;border-radius:var(--r);cursor:pointer;transition:all .2s;display:none}
+.up-go:hover{background:#c2440a}
+.up-go.visible{display:block}
+.up-prog{margin-top:1rem;display:none;align-items:center;justify-content:center;gap:10px;font-size:12px;color:var(--tx3)}
+.spin{width:16px;height:16px;border:2px solid var(--bd2);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.up-err{background:var(--rd-bg);color:var(--rd);border:1px solid #4a1515;border-radius:var(--rs);padding:10px 14px;font-size:12px;margin-top:1rem;display:none;max-width:740px;text-align:center}
+
+/* ── DASHBOARD ── */
+.db{display:none}
+.topbar{background:var(--sf);border-bottom:1px solid var(--bd);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100}
+.tb-brand{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.tb-dot{width:6px;height:6px;border-radius:50%;background:var(--ac)}
+.tb-chips{display:flex;gap:6px;align-items:center}
+.tb-chip{font-size:10px;padding:2px 8px;border-radius:20px;font-family:'DM Mono',monospace;font-weight:600}
+.chip-wp{background:#fef3c7;color:#92400e}
+.chip-cc{background:#dbeafe;color:#1e40af}
+.chip-ag{background:#dcfce7;color:#15803d}
+.chip-no{background:var(--sf2);color:var(--tx3)}
+.tb-period{font-size:11px;color:var(--tx3);background:var(--sf2);border:1px solid var(--bd2);padding:3px 10px;border-radius:20px;font-family:'DM Mono',monospace}
+.new-btn{font-size:11px;padding:5px 12px;border:1px solid var(--bd2);border-radius:var(--rs);background:transparent;color:var(--tx2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.new-btn:hover{background:var(--sf2);border-color:var(--ac)}
+
+.sel-bar{background:var(--sf2);border-bottom:1px solid var(--bd);padding:8px 1.5rem;display:flex;align-items:center;gap:10px;overflow-x:auto;scrollbar-width:none}
+.sel-bar::-webkit-scrollbar{display:none}
+.sel-bar.hidden{display:none}
+.sel-lbl{font-size:11px;color:var(--tx3);white-space:nowrap;font-weight:500;letter-spacing:.04em;text-transform:uppercase;flex-shrink:0}
+.sel-btn{padding:5px 14px;font-size:12px;font-family:'DM Sans',sans-serif;background:transparent;border:1px solid var(--bd2);border-radius:var(--rs);color:var(--tx2);cursor:pointer;white-space:nowrap;transition:all .15s}
+.sel-btn:hover{color:var(--tx)}
+.sel-btn.active{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:500}
+
+.tabs{background:var(--sf);border-bottom:1px solid var(--bd);padding:0 1.5rem;display:flex;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.t-btn{padding:14px 13px;font-size:12px;font-family:'DM Sans',sans-serif;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--tx3);cursor:pointer;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:5px}
+.t-btn:hover{color:var(--tx2)}
+.t-btn.active{color:var(--tx);border-bottom-color:var(--ac);font-weight:500}
+.t-btn .t-badge{font-size:9px;padding:1px 5px;border-radius:3px;background:var(--bl-bg);color:var(--bl);font-weight:600}
+.t-btn .t-badge.locked{background:var(--sf2);color:var(--tx3)}
+
+.content{padding:1.25rem 1.5rem;max-width:1280px;margin:0 auto}
+.sec{display:none}.sec.active{display:block}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:1.25rem}
+.kpi{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:.9rem 1rem}
+.kpi-l{font-size:10px;color:var(--tx3);margin-bottom:5px;font-weight:500;letter-spacing:.05em;text-transform:uppercase}
+.kpi-v{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1}
+.kpi-s{font-size:10px;color:var(--tx3);margin-top:3px}
+.gn{color:var(--gn)}.rd{color:var(--rd)}.am{color:var(--am)}.bl{color:var(--bl)}.pu{color:var(--pu)}
+
+/* CARD */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:1rem 1.2rem;margin-bottom:12px}
+.ct{font-family:'Syne',sans-serif;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.cw{position:relative;width:100%}
+.leg{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.li{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tx2)}
+.ld{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* TABLE */
+.tw{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--sf2);padding:9px 11px;text-align:left;font-weight:600;font-size:10px;color:var(--tx3);border-bottom:1px solid var(--bd);cursor:pointer;white-space:nowrap;user-select:none;letter-spacing:.05em;text-transform:uppercase}
+thead th:hover{color:var(--tx2)}
+thead th.sortable::after{content:' ⇅';opacity:.4}
+thead th.asc::after{content:' ↑';opacity:1;color:var(--ac)}
+thead th.desc::after{content:' ↓';opacity:1;color:var(--ac)}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--sf2)}
+tbody td{padding:8px 11px;color:var(--tx)}
+tfoot td{padding:9px 11px;font-weight:600;font-size:11px;color:var(--tx2);border-top:1px solid var(--bd2);background:var(--sf2)}
+.n{text-align:right;font-variant-numeric:tabular-nums;font-family:'DM Mono',monospace;font-size:11px}
+
+/* BADGE */
+.bx{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;font-family:'DM Mono',monospace}
+.bg{background:var(--gn-bg);color:var(--gn)}.br{background:var(--rd-bg);color:var(--rd)}.ba{background:var(--am-bg);color:var(--am)}.bb{background:var(--bl-bg);color:var(--bl)}.bp{background:#1e1030;color:var(--pu)}
+
+/* LOCKED TAB */
+.locked-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:2.5rem 2rem;text-align:center;color:var(--tx3)}
+.locked-icon{font-size:36px;margin-bottom:12px}
+.locked-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:600;color:var(--tx2);margin-bottom:6px}
+.locked-sub{font-size:12px;color:var(--tx3)}
+
+/* DRIVERS */
+.drv{margin-bottom:6px;border:1px solid var(--bd);border-radius:var(--rs);overflow:hidden}
+.drv-h{background:var(--sf2);padding:9px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:background .1s}
+.drv-h:hover{background:var(--sf3)}
+.drv-lbl{font-size:12px;font-weight:500;flex:1}
+.drv-r{display:flex;align-items:center;gap:8px}
+.drv-c{font-size:11px;color:var(--tx2);font-family:'DM Mono',monospace}
+.drv-a{font-size:9px;color:var(--tx3)}
+.drv-b{padding:10px 12px;display:none;border-top:1px solid var(--bd);background:var(--sf)}
+.drv-b.open{display:block}
+.lr{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--bd)}
+.lr:last-child{border-bottom:none}
+.ln{flex:1;font-size:11px;color:var(--tx2)}
+.lbw{width:80px;height:4px;background:var(--sf3);border-radius:2px;overflow:hidden;flex-shrink:0}
+.lb{height:100%;border-radius:2px}
+.lc{font-size:11px;font-weight:500;min-width:20px;text-align:right;font-family:'DM Mono',monospace}
+.flag{display:inline-block;font-size:9px;padding:1px 5px;border-radius:3px;background:var(--rd-bg);color:var(--rd);margin-left:4px;font-weight:600}
+
+/* QUEUE TABLE BARS */
+.qbw{width:60px;height:5px;background:var(--sf3);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px}
+.qb{height:100%;border-radius:3px;background:var(--bl)}
+.qb-rd{background:var(--rd)}
+
+/* DISPUTE LOTS */
+.dlr{display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--bd);gap:10px}
+.dlr:last-child{border-bottom:none}
+.dln{flex:1;font-size:12px}
+.dlbw{width:100px;height:5px;background:var(--sf3);border-radius:3px;overflow:hidden;flex-shrink:0}
+.dlb{height:100%;border-radius:3px;background:var(--rd)}
+.dlc{font-size:12px;font-weight:600;color:var(--rd);min-width:20px;text-align:right;font-family:'DM Mono',monospace}
+.dla{font-size:11px;color:var(--tx3);min-width:60px;text-align:right;font-family:'DM Mono',monospace}
+
+/* AI CARD */
+.ai-card{background:linear-gradient(135deg,#dbeafe,#ede9fe);border:1px solid #bfdbfe;border-radius:var(--r);padding:1rem 1.2rem;margin-bottom:12px}
+.ai-tag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#1d4ed8;background:#dbeafe;border:1px solid #bfdbfe;padding:2px 8px;border-radius:20px;margin-bottom:10px;letter-spacing:.05em;text-transform:uppercase}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:#2563eb;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* CONTROLS */
+.ctrl{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+select,input[type=text]{padding:6px 10px;font-size:12px;font-family:'DM Sans',sans-serif;border:1px solid var(--bd2);border-radius:var(--rs);background:var(--sf);color:var(--tx);outline:none;transition:border-color .15s}
+select:focus,input[type=text]:focus{border-color:var(--ac)}
+input[type=text]{width:180px}
+.hint{font-size:11px;color:var(--tx3)}
+.empty{text-align:center;padding:2rem;color:var(--tx3);font-size:12px}
+
+/* TEAM HEADERS */
+.team-hdr{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tc,var(--tx2));border-left:3px solid var(--tc,var(--bd2));padding:6px 10px;margin-bottom:10px;margin-top:4px;background:color-mix(in srgb,var(--tc,var(--bd2)) 8%,transparent);border-radius:0 var(--rs) var(--rs) 0}
+.absent-tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;background:var(--rd-bg);color:var(--rd);margin-left:6px;font-weight:600;font-family:'DM Mono',monospace}
+
+/* SECTION DIVIDER */
+.sec-div{display:flex;align-items:center;gap:10px;margin:16px 0 10px}
+.sec-div-line{flex:1;height:1px;background:var(--bd)}
+.sec-div-lbl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)}
+
+@media(max-width:700px){.g2,.g3{grid-template-columns:1fr}.up-grid{grid-template-columns:1fr}.content{padding:1rem}.up-title{font-size:26px}}
+</style>
+</head>
+<body>
+
+<!-- ═══ UPLOAD SCREEN ═══ -->
+<div class="up-screen" id="upScreen">
+  <div class="up-brand">Way.com &middot; Customer Operations</div>
+  <h1 class="up-title">Operations Dashboard</h1>
+  <p class="up-sub">Upload all three reports together to build the full dashboard</p>
+
+  <div class="mode-picker">
+    <button class="mode-btn active" id="mode-daily" onclick="setMode('daily',this)"><div class="mode-icon">📅</div><div class="mode-name">Daily</div><div class="mode-sub">Single day</div></button>
+    <button class="mode-btn" id="mode-weekly" onclick="setMode('weekly',this)"><div class="mode-icon">📆</div><div class="mode-name">Weekly</div><div class="mode-sub">7-day period</div></button>
+    <button class="mode-btn" id="mode-monthly" onclick="setMode('monthly',this)"><div class="mode-icon">🗓️</div><div class="mode-name">Monthly</div><div class="mode-sub">Full month</div></button>
+  </div>
+
+  <div class="up-grid">
+    <!-- WP -->
+    <div class="up-zone required" id="zone-wp">
+      <input type="file" id="file-wp" accept=".xlsx,.xls" onchange="fileChosen('wp',this)">
+      <div class="up-z-icon">📋</div>
+      <div style="margin-bottom:6px"><span class="up-z-tag req-tag">Required</span></div>
+      <div class="up-z-name">WP / CRM Report</div>
+      <div class="up-z-hint">CRM interaction export</div>
+      <div class="up-z-file" id="fn-wp"></div>
+    </div>
+    <!-- CC -->
+    <div class="up-zone" id="zone-cc">
+      <input type="file" id="file-cc" accept=".xlsx,.xls" onchange="fileChosen('cc',this)">
+      <div class="up-z-icon">📞</div>
+      <div style="margin-bottom:6px"><span class="up-z-tag req-tag">Required</span></div>
+      <div class="up-z-name">CC Call Detail</div>
+      <div class="up-z-hint">Queue-level call report</div>
+      <div class="up-z-file" id="fn-cc"></div>
+    </div>
+    <!-- AG -->
+    <div class="up-zone" id="zone-ag">
+      <input type="file" id="file-ag" accept=".xlsx,.xls" onchange="fileChosen('ag',this)">
+      <div class="up-z-icon">👤</div>
+      <div style="margin-bottom:6px"><span class="up-z-tag req-tag">Required</span></div>
+      <div class="up-z-name">Agent Call Detail</div>
+      <div class="up-z-hint">Agent-level call report</div>
+      <div class="up-z-file" id="fn-ag"></div>
+    </div>
+  </div>
+
+  <button class="up-go" id="upGo" onclick="buildDashboard()">Build Dashboard →</button>
+  <div class="up-prog" id="upProg"><div class="spin"></div><span id="upTxt">Processing...</span></div>
+  <div class="up-err" id="upErr"></div>
+</div>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div class="db" id="db">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="tb-brand"><div class="tb-dot"></div>WAY Operations Dashboard</div>
+      <div class="tb-chips">
+        <span class="tb-chip chip-wp" id="chip-wp">WP ✓</span>
+        <span class="tb-chip chip-cc" id="chip-cc">CC</span>
+        <span class="tb-chip chip-ag" id="chip-ag">AG</span>
+      </div>
+      <div class="tb-period" id="tb-period"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;color:var(--tx3)">WP + CC + Agent reports · FCR target 80%</span>
+      <button class="new-btn" onclick="resetDB()">↑ New upload</button>
+    </div>
+  </div>
+
+  <div class="sel-bar hidden" id="selBar">
+    <span class="sel-lbl" id="sel-lbl">Select day:</span>
+    <div id="selBtns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  </div>
+
+  <div class="tabs">
+    <button class="t-btn active" onclick="showTab('t1',this)">Overview</button>
+    <button class="t-btn" onclick="showTab('t2',this)">Call Drivers</button>
+    <button class="t-btn" onclick="showTab('t3',this)">Queue &amp; Abandon</button>
+    <button class="t-btn" onclick="showTab('t4',this)">Productivity</button>
+    <button class="t-btn" onclick="showTab('t5',this)">Disputes</button>
+    <button class="t-btn" onclick="showTab('t6',this)">Escalations</button>
+    <button class="t-btn" onclick="showTab('t7',this)">Refunds</button>
+    <button class="t-btn" onclick="showTab('t8',this)">TL Activity</button>
+    <button class="t-btn" onclick="showTab('t9',this)">Reviews</button>
+    <button class="t-btn" onclick="showTab('t10',this)">AI Agent</button>
+    <button class="t-btn" onclick="showTab('t11',this)">Platforms</button>
+    <button class="t-btn" onclick="showTab('t12',this)">Time Patterns</button>
+    <button class="t-btn" onclick="showTab('t13',this)">Agents</button>
+  </div>
+
+  <div class="content">
+
+    <!-- T1: OVERVIEW -->
+    <div class="sec active" id="t1">
+      <div class="kpis" id="kpi1"></div>
+      <div class="g2">
+        <div class="card"><div class="ct">Channel mix</div><div class="leg" id="leg-ch"></div><div class="cw" style="height:180px"><canvas id="c-ch"></canvas></div></div>
+        <div class="card"><div class="ct">Vertical distribution</div><div class="leg" id="leg-vt"></div><div class="cw" style="height:180px"><canvas id="c-vt"></canvas></div></div>
+      </div>
+      <div class="card"><div class="ct">All interaction types</div><div class="cw" style="height:130px"><canvas id="c-all"></canvas></div></div>
+      <div class="card" id="trend-card" style="display:none"><div class="ct" id="trend-title">Daily ticket volume</div><div class="cw" style="height:200px"><canvas id="c-trend"></canvas></div></div>
+      <div class="g2">
+        <div class="card"><div class="ct">FCR by channel vs 80% target</div><div class="cw" style="height:160px"><canvas id="c-fcr-ch"></canvas></div></div>
+        <div class="card"><div class="ct">FCR by vertical vs 80% target</div><div class="cw" style="height:160px"><canvas id="c-fcr-vt"></canvas></div></div>
+      </div>
+      <div class="card"><div class="ct">Vertical summary</div>
+        <div class="tw"><table>
+          <thead><tr><th>Vertical</th><th class="n">Tickets</th><th class="n">Interactions</th><th class="n">Calls</th><th class="n">Emails</th><th class="n">Chats</th><th class="n">FCR</th><th class="n">Esc%</th></tr></thead>
+          <tbody id="tb-vs"></tbody><tfoot><tr id="tf-vs"></tr></tfoot>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- T2: CALL DRIVERS -->
+    <div class="sec" id="t2">
+      <div class="ctrl">
+        <select id="vsel" onchange="renderDrivers()"></select>
+        <select id="chsel" onchange="renderDrivers()"><option>Call</option><option>Email</option><option>Chat</option></select>
+        <span class="hint">Click a reason to expand lot breakdown</span>
+      </div>
+      <div id="drv-list"></div>
+      <div class="card"><div class="ct" id="drv-ct">Top drivers</div><div class="cw" style="height:220px"><canvas id="c-drv"></canvas></div></div>
+    </div>
+
+    <!-- T3: QUEUE & ABANDON -->
+    <div class="sec" id="t3">
+      <div id="t3-content"></div>
+    </div>
+
+    <!-- T4: PRODUCTIVITY -->
+    <div class="sec" id="t4">
+      <div id="t4-content"></div>
+    </div>
+
+    <!-- T5: DISPUTES -->
+    <div class="sec" id="t5">
+      <div class="kpis" id="kpi5"></div>
+      <div class="g2">
+        <div class="card"><div class="ct">By vertical</div><div class="leg" id="leg-dv"></div><div class="cw" style="height:170px"><canvas id="c-dv"></canvas></div></div>
+        <div class="card"><div class="ct">Dispute outcomes</div><div class="cw" style="height:170px"><canvas id="c-do"></canvas></div></div>
+      </div>
+      <div class="card"><div class="ct">Dispute team utilisation</div>
+        <div class="tw"><table>
+          <thead><tr><th>Agent</th><th class="n">Disputes</th><th class="n">Other</th><th class="n">Total</th><th class="n">Amount</th><th>Status</th></tr></thead>
+          <tbody id="tb-dt"></tbody><tfoot><tr id="tf-dt"></tr></tfoot>
+        </table></div>
+      </div>
+      <div id="disp-lots"></div>
+    </div>
+
+    <!-- T6: ESCALATIONS -->
+    <div class="sec" id="t6">
+      <div class="kpis" id="kpi6"></div>
+      <div class="g2">
+        <div class="card"><div class="ct">By vertical</div><div class="leg" id="leg-ev"></div><div class="cw" style="height:170px"><canvas id="c-ev"></canvas></div></div>
+        <div class="card"><div class="ct">By channel</div><div class="leg" id="leg-ec"></div><div class="cw" style="height:170px"><canvas id="c-ec"></canvas></div></div>
+      </div>
+      <div class="card"><div class="ct">Top escalation reasons</div><div class="cw" style="height:240px"><canvas id="c-er"></canvas></div></div>
+      <div class="card"><div class="ct">Status breakdown</div>
+        <div class="tw"><table><thead><tr><th>Status</th><th class="n">Count</th><th class="n">%</th></tr></thead><tbody id="tb-es"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- T7: REFUNDS -->
+    <div class="sec" id="t7">
+      <div class="kpis" id="kpi7"></div>
+      <div class="g2">
+        <div class="card"><div class="ct">Refund type count</div><div class="leg" id="leg-rt"></div><div class="cw" style="height:200px"><canvas id="c-rt"></canvas></div></div>
+        <div class="card"><div class="ct">Dollar value by type</div><div class="cw" style="height:200px"><canvas id="c-rv"></canvas></div></div>
+      </div>
+      <div class="card"><div class="ct">Refunds by vertical</div>
+        <div class="tw"><table>
+          <thead><tr><th>Vertical</th><th class="n">BCI card</th><th class="n">BCI wb</th><th class="n">ACI full</th><th class="n">ACI partial</th><th class="n">ACI denied</th><th class="n">Sub refund</th><th class="n">Total</th></tr></thead>
+          <tbody id="tb-rv"></tbody><tfoot><tr id="tf-rv"></tr></tfoot>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- T8: TL ACTIVITY -->
+    <div class="sec" id="t8">
+      <div class="kpis" id="kpi8"></div>
+      <div class="g2">
+        <div class="card"><div class="ct">TL reviews by agent</div><div class="cw" style="height:240px"><canvas id="c-tlr"></canvas></div></div>
+        <div class="card"><div class="ct">Escalation handling</div><div class="cw" style="height:240px"><canvas id="c-tle"></canvas></div></div>
+      </div>
+      <div class="card"><div class="ct">TL activity detail</div>
+        <div class="tw"><table>
+          <thead><tr><th>Agent</th><th class="n">TL Reviews</th><th class="n">Esc (TL)</th><th class="n">Esc (Ops)</th><th class="n">Total</th></tr></thead>
+          <tbody id="tb-tl"></tbody><tfoot><tr id="tf-tl"></tr></tfoot>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- T9: REVIEWS -->
+    <div class="sec" id="t9">
+      <div class="kpis" id="kpi9"></div>
+      <div class="g2">
+        <div class="card"><div class="ct">Rating distribution</div><div class="leg" id="leg-rr"></div><div class="cw" style="height:180px"><canvas id="c-rr"></canvas></div></div>
+        <div class="card"><div class="ct">Reviews by vertical</div><div class="cw" style="height:180px"><canvas id="c-rvt"></canvas></div></div>
+      </div>
+      <div class="card"><div class="ct">Review detail</div>
+        <div class="tw"><table>
+          <thead><tr><th>Agent</th><th>Rating</th><th>Sub reason</th><th>Action</th><th>Vertical</th></tr></thead>
+          <tbody id="tb-rev"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- T10: AI AGENT -->
+    <div class="sec" id="t10">
+      <div class="ai-card"><div class="ai-tag"><div class="ai-dot"></div>AI Agent Active</div><div class="kpis" id="kpi10"></div></div>
+      <div class="g2">
+        <div class="card"><div class="ct">AI calls by vertical</div><div class="cw" style="height:180px"><canvas id="c-aiv"></canvas></div></div>
+        <div class="card"><div class="ct">AI call status</div><div class="cw" style="height:180px"><canvas id="c-ais"></canvas></div></div>
+      </div>
+      <div class="card"><div class="ct">AI interactions detail</div>
+        <div class="tw"><table>
+          <thead><tr><th>Vertical</th><th>Reason</th><th>Sub reason</th><th>Status</th><th>Tag</th></tr></thead>
+          <tbody id="tb-ai"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- T11: PLATFORMS -->
+    <div class="sec" id="t11">
+      <div class="kpis" id="kpi11"></div>
+      <div class="card"><div class="ct">Tickets by booking platform</div><div class="cw" style="height:220px"><canvas id="c-plt"></canvas></div></div>
+      <div class="card"><div class="ct">Platform by vertical</div>
+        <div class="tw"><table><thead><tr id="th-plt"></tr></thead><tbody id="tb-plt"></tbody><tfoot><tr id="tf-plt"></tr></tfoot></table></div>
+      </div>
+    </div>
+
+    <!-- T12: TIME PATTERNS -->
+    <div class="sec" id="t12">
+      <div class="kpis" id="kpi12"></div>
+      <div class="card">
+        <div class="ct">Hourly ticket volume (WP) — PST with shift overlay</div>
+        <div class="leg">
+          <span class="li"><span class="ld" style="background:#4a6fa5"></span>Shift 1 (6:30PM–3:30AM)</span>
+          <span class="li"><span class="ld" style="background:#4a8c5c"></span>Shift 2 (2:00AM–11:00AM)</span>
+          <span class="li"><span class="ld" style="background:#8c6a2a"></span>Shift 3 (10:00AM–7:00PM)</span>
+        </div>
+        <div class="cw" style="height:260px"><canvas id="c-hr"></canvas></div>
+      </div>
+      <div id="cc-hourly-card"></div>
+    </div>
+
+    <!-- T13: AGENTS -->
+    <div class="sec" id="t13">
+      <div class="kpis" id="kpi13"></div>
+      <div class="team-hdr" style="--tc:#b45309">Management</div>
+      <div class="tw" style="margin-bottom:20px"><table><thead><tr><th>Name</th><th>Role</th><th class="n">Calls</th><th class="n">Emails</th><th class="n">Chats</th><th class="n">Total</th></tr></thead><tbody id="mgmt-body"></tbody></table></div>
+      <div class="team-hdr" style="--tc:#2563eb">Team Leaders <span id="tl-cnt" style="font-weight:400;font-size:10px;color:var(--tx3)"></span></div>
+      <div class="tw" style="margin-bottom:20px"><table><thead><tr><th>Name</th><th class="n">Calls</th><th class="n">Emails</th><th class="n">Chats</th><th class="n">TL Reviews</th><th class="n">Esc handled</th><th class="n">Total</th><th class="n">Esc%</th></tr></thead><tbody id="tl-body"></tbody><tfoot><tr id="tl-foot"></tr></tfoot></table></div>
+      <div class="team-hdr" style="--tc:#7c3aed">QC Team</div>
+      <div class="tw" style="margin-bottom:20px"><table><thead><tr><th>Name</th><th>Note</th><th class="n">QC Audits</th><th class="n">FL Calls</th><th class="n">FL Emails</th><th class="n">FL Chats</th><th class="n">FL Total</th><th class="n">FCR%</th><th class="n">Esc%</th></tr></thead><tbody id="qc-body"></tbody><tfoot><tr id="qc-foot"></tr></tfoot></table></div>
+      <div class="team-hdr" style="--tc:#dc2626">L2 Escalations</div>
+      <div class="tw" style="margin-bottom:20px"><table><thead><tr><th>Name</th><th class="n">Esc handled</th><th class="n">FL Calls</th><th class="n">FL Emails</th><th class="n">FL Chats</th><th class="n">FL Total</th><th class="n">FCR%</th></tr></thead><tbody id="l2-body"></tbody></table></div>
+      <div class="team-hdr" style="--tc:#0891b2">Reviews Team</div>
+      <div class="tw" style="margin-bottom:20px"><table><thead><tr><th>Name</th><th class="n">Reviews handled</th><th class="n">FL Calls</th><th class="n">FL Emails</th><th class="n">FL Chats</th><th class="n">FL Total</th><th class="n">FCR%</th><th class="n">Esc%</th></tr></thead><tbody id="rev-team-body"></tbody><tfoot><tr id="rev-team-foot"></tr></tfoot></table></div>
+      <div class="team-hdr" style="--tc:#059669">Ad hoc &amp; Reporting</div>
+      <div class="tw" style="margin-bottom:20px"><table><thead><tr><th>Name</th><th class="n">FL Calls</th><th class="n">FL Emails</th><th class="n">FL Chats</th><th class="n">Total</th></tr></thead><tbody id="adhoc-body"></tbody></table></div>
+      <div class="team-hdr" style="--tc:#d97706">Indian Spanish Team <span id="isp-cnt" style="font-weight:400;font-size:10px;color:var(--tx3)"></span></div>
+      <div class="tw" style="margin-bottom:20px"><table><thead><tr><th>Name</th><th class="n">Calls</th><th class="n">Emails</th><th class="n">Chats</th><th class="n">Total</th><th class="n">FCR%</th><th class="n">Esc%</th></tr></thead><tbody id="isp-body"></tbody><tfoot><tr id="isp-foot"></tr></tfoot></table></div>
+      <div class="team-hdr" style="--tc:#be185d">Way+ / Columbia Team <span id="col-cnt" style="font-weight:400;font-size:10px;color:var(--tx3)"></span></div>
+      <div class="tw" style="margin-bottom:20px"><table><thead><tr><th>Name</th><th class="n">Calls</th><th class="n">Emails</th><th class="n">Chats</th><th class="n">Total</th><th class="n">FCR%</th><th class="n">Esc%</th></tr></thead><tbody id="col-body"></tbody><tfoot><tr id="col-foot"></tr></tfoot></table></div>
+      <div class="team-hdr" style="--tc:#16a34a">Frontline Agents</div>
+      <div class="card" style="margin-bottom:12px"><div class="ct">Top agents by complexity (min 5 tickets)</div><div class="cw" style="height:220px"><canvas id="c-ipt"></canvas></div></div>
+      <div class="ctrl">
+        <input type="text" id="ag-srch" placeholder="Search agent..." oninput="renderAgents()">
+        <select id="ag-flt" onchange="renderAgents()">
+          <option value="all">All agents</option>
+          <option value="fcr-low">FCR below 80%</option>
+          <option value="esc-high">Esc rate above 5%</option>
+          <option value="complex">High complexity (&gt;1.4x)</option>
+        </select>
+        <span class="hint" id="ag-cnt"></span>
+      </div>
+      <div class="tw"><table>
+        <thead><tr>
+          <th class="sortable" onclick="sortAg('name')" id="ah-name"># Agent</th>
+          <th class="n sortable" onclick="sortAg('total')" id="ah-total">Total</th>
+          <th class="n sortable" onclick="sortAg('calls')" id="ah-calls">Calls</th>
+          <th class="n sortable" onclick="sortAg('emails')" id="ah-emails">Emails</th>
+          <th class="n sortable" onclick="sortAg('chats')" id="ah-chats">Chats</th>
+          <th class="n sortable" onclick="sortAg('tl_reviews')" id="ah-tl_reviews">TL Rev</th>
+          <th class="n sortable" onclick="sortAg('esc_rate')" id="ah-esc_rate">Esc%</th>
+          <th class="n sortable" onclick="sortAg('fcr_pct')" id="ah-fcr_pct">FCR%</th>
+          <th class="n sortable" onclick="sortAg('avg_ints')" id="ah-avg_ints">Ints/ticket</th>
+          <th class="n sortable" onclick="sortAg('aht_sec')" id="ah-aht_sec">AHT</th>
+        </tr></thead>
+        <tbody id="ag-body"></tbody>
+        <tfoot><tr id="ag-foot"></tr></tfoot>
+      </table></div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /db -->
+
+<script>
+// ═══════════════════════════════════════════════
+// CONSTANTS (from original CCD)
+// ═══════════════════════════════════════════════
+const COLORS=['#60a5fa','#4ade80','#f97316','#a78bfa','#f87171','#2dd4bf','#fbbf24','#fb923c','#818cf8','#34d399'];
+const FCR_TARGET=80;
+const DISPUTE_TEAM=['Sreelaraghavan','Gowri','Subin MS','Greeshma RS'];
+const TL_TEAM=['Shiju Salam','Vishnu V','Bijoy Kiran','Rashmika Santhosh D','Vishnu BS','surya suresh','Ansu Varghese','Jaison Nelson'];
+const QC_TEAM=['Henna Najim S','Vidya Vijayan','Reshma','Rijisha S Kumar'];
+const L2_TEAM=['Jithin S'];
+const REVIEW_TEAM=['Muvithra M','Tharun Sunil Kumar','Jijo Papachan','Abhilash Augustin'];
+const ADHOC_TEAM=['Vishnu MS'];
+const MGMT_TEAM=['Anju Mareeta Lean','Joyson Fernandez'];
+const INDIAN_SPANISH=['Pawan Kumar','NAUSHAD AHMAD','Javed Humayun Khan','MD Sattar Alam','Mohamed Jowhar','Ansar Alli','U Likhith','Mohammad Haider Ali','Siddarth Raj'];
+const COLUMBIA_TEAM=['Alexandra Morales','Andrea Ruiz','Angeles Soledad','Daniel Montoya','Karen Hopkins','Brianna Lundy','Karolyne Perez','Mauricio Leon','Nicholas Marquez','Oscar Perez','Sarah Gonzales','Valentina Torres','Selina Benavides','Gabriella Lacayo'];
+const CROSSSELL=['AS, Al-Ameen','Chacko, Samuel','Mathew, Daisy','R, Nivesh','S Nair, Goutham','S, Sreelakshmi','Selvia, Shyny','Sudarsanan, Vishnu','Ashok, Aathira'];
+const FCR_EXCLUDE=['Dispute','TL Review','AI-Agent Call','Escalation Handled by TL','Escalation handled by Ops Team','User Reviews','QC Audit','Manager Review','Escalation Handled by Escalation Team'];
+const R_BCI_CARD=['BCI -Card refund','Before check-in, Card Refund','BCI - Refunded','Before Check-In -Refunded','Before Check-In - Way bucks offered customer denied Refunded back to card','Confirmed With Lot -Before Check-In -Way bucks offered customer denied Refunded back to card','Before check in - Refunded back to card','Before check in - Cancelled','BCI – Card Refund Issued','Card Refund issued','Card refund issued','Cancelled - Before check-In','Cancelled - Before Check-In','Before Check-In Cancelled','Before check in - cancelled','Before  check in - cancelled','Not Confirmed - Before Check-In - Way bucks offered customer denied Refunded back to card','LM Offered – Not Interested – Card refund','Confirmed with lot - LM Offered – Not Interested – Card refund','Confirmed with lot - LM Offered – Parked Elsewhere – Card refund'];
+const R_BCI_WB=['BCI -Way bucks issued','Before check-in, Wallet refunded','BCI – Waybucks issued','Confirmed With Lot -Before Check-In - Way bucks offered customer accepted','Way bucks issued'];
+const R_ACI_FULL=['ACI - Refunded','After check-in, Card Refund','Cancelled After Check-in - Back To Card','ACI – Card Refund Issued','Cancelled After Check-in – Back To Card','Way bucks offered customer denied Refunded back to card - After Check-In','Not Confirmed With Lot -After Check-In-Way bucks offered customer denied Refunded back to card','After check in - Refunded back to card','After check in - cancelled'];
+const R_ACI_PARTIAL=['Partial card refund issued for the unused days','ACI – Partial Card Refund Issued','Partial Card Refund issued','Partial refund Processed - Way bucks offered customer denied Refunded back to card'];
+const R_ACI_WB=['ACI -Way bucks issued','Way bucks offered customer accepted - After Check-In','ACI – Waybucks issued','ACI – Partial Waybucks Refund Issued','Partial refund Processed - Way bucks offered customer accepted'];
+const R_ACI_DENIED=['After check-in, denied','Denied - After Check-In','Refund Denied','ACI - Refund Denied','ACI – Refund Denied','After check in - Refund Denied'];
+const R_SUB=['Subscription Cancelled- Refund Issued','Subscription Cancelled -Waybucks Issued','Cancelled - Refund Issued','subscription cancelled'];
+const R_SUB_NO=['Subscription Cancelled - No Refund'];
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MGMT_ROLES={'Anju Mareeta Lean':'Asst. Manager','Joyson Fernandez':'Manager'};
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let MODE='daily';
+let G={};               // WP processed data
+let CC_DATA=null;       // raw CC rows parsed
+let AG_DATA=null;       // raw AG rows parsed
+let RAW_FILES={wp:null,cc:null,ag:null};
+let ACTIVE_KEY=null;
+let CHARTS={};
+let DRV_CHART=null;
+let AG_SORT='total', AG_ASC=false;
+
+// ═══════════════════════════════════════════════
+// MODE
+// ═══════════════════════════════════════════════
+function setMode(m,el){
+  MODE=m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+// UPLOAD HANDLING
+// ═══════════════════════════════════════════════
+function fileChosen(key,input){
+  if(!input.files[0])return;
+  const fname=input.files[0].name;
+  RAW_FILES[key]=input.files[0];
+  const zone=document.getElementById('zone-'+key);
+  const fn=document.getElementById('fn-'+key);
+  zone.classList.add('done');
+  fn.textContent='✓ '+fname.slice(0,28);
+  // Update tag
+  zone.querySelector('.up-z-tag').className='up-z-tag done-tag';
+  zone.querySelector('.up-z-tag').textContent='Ready';
+  // Show go button only when all 3 are loaded
+  if(RAW_FILES.wp && RAW_FILES.cc && RAW_FILES.ag) document.getElementById('upGo').classList.add('visible');
+  else document.getElementById('upGo').classList.remove('visible');
+}
+
+function prog(t){document.getElementById('upProg').style.display='flex';document.getElementById('upTxt').textContent=t;}
+function showErr(m){const e=document.getElementById('upErr');e.textContent=m;e.style.display='block';document.getElementById('upProg').style.display='none';}
+
+function readXlsx(file,hdrRow=0){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const raw=XLSX.utils.sheet_to_json(ws,{defval:'',range:hdrRow});
+        res(raw);
+      }catch(err){rej(err);}
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function buildDashboard(){
+  document.getElementById('upErr').style.display='none';
+  prog('Reading WP report...');
+  try{
+    const wpRaw=await readXlsx(RAW_FILES.wp);
+    if(RAW_FILES.cc){prog('Reading CC report...');CC_DATA=await readXlsx(RAW_FILES.cc,7);}
+    if(RAW_FILES.ag){prog('Reading Agent report...');AG_DATA=await readXlsx(RAW_FILES.ag,8);}
+    prog('Building dashboard...');
+    setTimeout(()=>initDashboard(wpRaw),50);
+  }catch(err){showErr('Could not read file: '+err.message);}
+}
+
+function resetDB(){
+  document.getElementById('upScreen').style.display='flex';
+  document.getElementById('db').style.display='none';
+  RAW_FILES={wp:null,cc:null,ag:null};
+  CC_DATA=null; AG_DATA=null;
+  ['wp','cc','ag'].forEach(k=>{
+    document.getElementById('file-'+k).value='';
+    document.getElementById('fn-'+k).textContent='';
+    document.getElementById('zone-'+k).classList.remove('done');
+    const tag=document.getElementById('zone-'+k).querySelector('.up-z-tag');
+    if(tag){tag.textContent='Required';tag.className='up-z-tag req-tag';}
+  });
+  document.getElementById('upGo').classList.remove('visible');
+  document.getElementById('upProg').style.display='none';
+  Object.values(CHARTS).forEach(c=>{try{c.destroy();}catch(e){}});
+  CHARTS={};
+  if(DRV_CHART){try{DRV_CHART.destroy();}catch(e){}DRV_CHART=null;}
+  G={}; ACTIVE_KEY=null;
+}
+
+// ═══════════════════════════════════════════════
+// DATE PARSING
+// ═══════════════════════════════════════════════
+function parseDate(val){
+  if(!val||val==='')return null;
+  if(typeof val==='number'){const d=new Date(Math.round((val-25569)*86400*1000));if(!isNaN(d))return d;}
+  const s=String(val).trim();if(!s)return null;
+  const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m){
+    const mo=parseInt(m[1])-1,dy=parseInt(m[2]),yr=parseInt(m[3]);
+    const tm=s.match(/(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
+    if(tm){let h=parseInt(tm[1]);const min=parseInt(tm[2]),sec=parseInt(tm[3]);if(tm[4].toUpperCase()==='PM'&&h<12)h+=12;if(tm[4].toUpperCase()==='AM'&&h===12)h=0;return new Date(yr,mo,dy,h,min,sec);}
+    return new Date(yr,mo,dy);
+  }
+  // Try MM/DD/YYYY, HH:MM:SS
+  const m2=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}),\s*(\d{1,2}):(\d{2}):(\d{2})/);
+  if(m2){const mo=parseInt(m2[1])-1,dy=parseInt(m2[2]),yr=parseInt(m2[3]),h=parseInt(m2[4]),min=parseInt(m2[5]),sec=parseInt(m2[6]);return new Date(yr,mo,dy,h,min,sec);}
+  const d=new Date(s);return isNaN(d)?null:d;
+}
+
+function timeToDuration(val){
+  // Converts HH:MM:SS string or decimal day fraction to seconds
+  if(!val||val===0)return 0;
+  if(typeof val==='object'&&val instanceof Date){return val.getHours()*3600+val.getMinutes()*60+val.getSeconds();}
+  if(typeof val==='number')return Math.round(val*86400);
+  const s=String(val).trim();
+  const m=s.match(/^(\d+):(\d{2}):(\d{2})$/);
+  if(m)return parseInt(m[1])*3600+parseInt(m[2])*60+parseInt(m[3]);
+  const f=parseFloat(s);if(!isNaN(f))return Math.round(f*86400);
+  return 0;
+}
+
+function secToMmss(s){if(!s||s===0)return'0:00';const m=Math.floor(s/60),sec=Math.round(s%60);return m+':'+(sec<10?'0':'')+sec;}
+
+function dateKey(d){if(!d)return'';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function fmtDate(d){if(!d)return'?';return MONTHS[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();}
+function fmtDateShort(d){if(!d)return'?';return MONTHS[d.getMonth()]+' '+d.getDate();}
+function weekKey(d){const jan1=new Date(d.getFullYear(),0,1);const wk=Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);return d.getFullYear()+'-W'+String(wk).padStart(2,'0');}
+function monthKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function fmtMonth(mk){const[yr,mo]=mk.split('-');return MONTHS[parseInt(mo)-1]+' '+yr;}
+function fmtWeek(wk,allRows){const rows=allRows.filter(r=>r._weekKey===wk&&r._dt);if(!rows.length)return wk;const dates=rows.map(r=>r._dt).sort((a,b)=>a-b);return fmtDateShort(dates[0])+' – '+fmtDateShort(dates[dates.length-1]);}
+
+// ═══════════════════════════════════════════════
+// DATA TAGGING
+// ═══════════════════════════════════════════════
+function mapVertical(row){
+  const v=String(row['Vertical']||'').trim(),sv=String(row['SubVertical']||'').trim();
+  if(v==='Parking'&&(sv.includes('Airport')||sv.includes('Cruise')))return'Airport Parking';
+  if(v==='Parking'&&(sv.includes('City')||sv.includes('Monthly')))return'City Parking';
+  if(v==='Parking')return'Airport Parking';
+  if(v==='Carwash')return'Carwash';
+  if(v==='Wayplus')return'Wayplus';
+  if(v==='Auto Repair')return'R&M';
+  if(v==='Insurance')return'Insurance';
+  if(v==='Gas')return'Gas';
+  if(v==='General')return'General';
+  return'Other';
+}
+function tagRefund(a){const s=String(a||'').trim();if(R_BCI_CARD.includes(s))return'BCI Card';if(R_BCI_WB.includes(s))return'BCI Waybucks';if(R_ACI_FULL.includes(s))return'ACI Full';if(R_ACI_PARTIAL.includes(s))return'ACI Partial';if(R_ACI_WB.includes(s))return'ACI Waybucks';if(R_ACI_DENIED.includes(s))return'ACI Denied';if(R_SUB.includes(s))return'Sub Refund';if(R_SUB_NO.includes(s))return'Sub No Refund';return null;}
+function categorize(row){
+  const int=String(row['Interaction']||''),agent=String(row['Agent Name']||'');
+  if(DISPUTE_TEAM.includes(agent))return'Dispute';
+  if(agent==='ai-decagon ai-decagon'||int==='AI-Agent Call')return'AI';
+  if(int==='Dispute')return'Dispute';
+  if(['TL Review','Escalation Handled by TL','Escalation handled by Ops Team','QC Audit','Manager Review','Escalation Handled by Escalation Team'].includes(int))return'TL';
+  if(int==='User Reviews')return'Review';
+  if(['Call','Email','Chat'].includes(int))return'Frontline';
+  return'Other';
+}
+
+// ═══════════════════════════════════════════════
+// INIT DASHBOARD
+// ═══════════════════════════════════════════════
+function initDashboard(raw){
+  const df=raw.map(r=>{
+    const dt=parseDate(r['Ticket_created_date']),idt=parseDate(r['Interaction created date']);
+    return{...r,_dt:dt,_idt:idt,_dateKey:dt?dateKey(dt):'',
+      _weekKey:dt?weekKey(dt):'',_monthKey:dt?monthKey(dt):'',
+      _vertical:mapVertical(r),_refund:tagRefund(r['Action']),
+      _driver:(String(r['Reason']||'').trim()+' > '+String(r['Sub Reason']||'').trim()).replace(/ > $/,'').replace(/^ > /,''),
+      _isTicket:!!r['Ticket ID'],_isEscalated:String(r['TKT_IssueReason']||'')==='Escalated',
+      _category:categorize(r)};
+  });
+
+  const followupOGIs=new Set(df.filter(r=>!r._isTicket&&r['OGI']).map(r=>String(r['OGI'])));
+  const ticketRows=df.filter(r=>r._isTicket&&(r._idt||r._dt));
+  const dateKeys=[...new Set(ticketRows.map(r=>{const d=r._idt||r._dt;return d?dateKey(d):'';}).filter(k=>k))].sort();
+  const weekKeys=[...new Set(ticketRows.map(r=>{const d=r._idt||r._dt;return d?weekKey(d):'';}).filter(k=>k))].sort();
+  const monthKeys=[...new Set(ticketRows.map(r=>{const d=r._idt||r._dt;return d?monthKey(d):'';}).filter(k=>k))].sort();
+
+  G={df,followupOGIs,dateKeys,weekKeys,monthKeys};
+
+  // Process CC data if available
+  if(CC_DATA){
+    CC_DATA=CC_DATA.map(r=>{
+      const dt=parseDate(r['Call Start Time']);
+      return{...r,_dt:dt,_dateKey:dt?dateKey(dt):'',_weekKey:dt?weekKey(dt):'',_monthKey:dt?monthKey(dt):'',
+        _talk:timeToDuration(r['Talk Time']),_hold:timeToDuration(r['Hold Time']),_wrap:timeToDuration(r['Wrap Up Time']),
+        _wait:timeToDuration(r['Wait Time'])};
+    });
+  }
+  if(AG_DATA){
+    AG_DATA=AG_DATA.map(r=>{
+      const dt=parseDate(r['Call Start Time']);
+      return{...r,_dt:dt,_dateKey:dt?dateKey(dt):'',_weekKey:dt?weekKey(dt):'',_monthKey:dt?monthKey(dt):'',
+        _talk:timeToDuration(r['Talk Time']),_hold:timeToDuration(r['Hold Time']),_wrap:timeToDuration(r['Wrap Up Time'])};
+    });
+  }
+
+  // Update chips
+  document.getElementById('chip-cc').className='tb-chip chip-cc';
+  document.getElementById('chip-cc').textContent='CC ✓';
+  document.getElementById('chip-ag').className='tb-chip chip-ag';
+  document.getElementById('chip-ag').textContent='AG ✓';
+
+  // Update tab badges
+
+
+  buildSelBar();
+  document.getElementById('upScreen').style.display='none';
+  document.getElementById('db').style.display='block';
+  document.getElementById('tb-period').textContent={daily:'Daily',weekly:'Weekly',monthly:'Monthly'}[MODE];
+  showTab('t1',document.querySelector('.t-btn'));
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════
+// PERIOD SELECTOR
+// ═══════════════════════════════════════════════
+function buildSelBar(){
+  const{df,dateKeys,weekKeys,monthKeys}=G;
+  const bar=document.getElementById('selBar');
+  const btns=document.getElementById('selBtns');
+  btns.innerHTML='';
+  let keys=[];
+  if(MODE==='daily'){keys=dateKeys;document.getElementById('sel-lbl').textContent='Select day:';}
+  else if(MODE==='weekly'){keys=weekKeys;document.getElementById('sel-lbl').textContent='Select week:';}
+  else{keys=monthKeys;document.getElementById('sel-lbl').textContent='Select month:';}
+  if(keys.length<=1){bar.classList.add('hidden');ACTIVE_KEY=keys[0]||null;return;}
+  ACTIVE_KEY=keys[keys.length-1];
+  bar.classList.remove('hidden');
+  keys.forEach(k=>{
+    const btn=document.createElement('button');
+    btn.className='sel-btn'+(k===ACTIVE_KEY?' active':'');
+    btn.textContent=MODE==='daily'?fmtDate(new Date(k+'T12:00:00')):MODE==='weekly'?fmtWeek(k,G.df):fmtMonth(k);
+    btn.onclick=()=>{ACTIVE_KEY=k;document.querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAll();};
+    btns.appendChild(btn);
+  });
+}
+
+function getFiltered(){
+  const{df,followupOGIs}=G;
+  if(!ACTIVE_KEY)return{df,followupOGIs};
+  const filtered=df.filter(r=>{
+    const d=r._idt||r._dt;if(!d)return false;
+    if(MODE==='daily')return dateKey(d)===ACTIVE_KEY;
+    if(MODE==='weekly')return weekKey(d)===ACTIVE_KEY;
+    if(MODE==='monthly')return monthKey(d)===ACTIVE_KEY;
+    return true;
+  });
+  return{df:filtered,followupOGIs};
+}
+
+function getCCFiltered(){
+  return (CC_DATA||[]).filter(r=>{
+    if(!r._dt)return false;
+    if(MODE==='daily')return r._dateKey===ACTIVE_KEY;
+    if(MODE==='weekly')return r._weekKey===ACTIVE_KEY;
+    if(MODE==='monthly')return r._monthKey===ACTIVE_KEY;
+    return true;
+  });
+}
+
+function getAGFiltered(){
+  return (AG_DATA||[]).filter(r=>{
+    if(!r._dt)return false;
+    if(MODE==='daily')return r._dateKey===ACTIVE_KEY;
+    if(MODE==='weekly')return r._weekKey===ACTIVE_KEY;
+    if(MODE==='monthly')return r._monthKey===ACTIVE_KEY;
+    return true;
+  });
+}
+
+function renderAll(){
+  buildOverview();buildDriversTab();buildQueueTab();buildProductivityTab();
+  buildDisputesTab();buildEscalationsTab();buildRefundsTab();
+  buildTLTab();buildReviewsTab();buildAITab();buildPlatformsTab();
+  buildTimeTab();buildAgentTab();
+}
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+function mkKPI(l,v,s='',c=''){return`<div class="kpi"><div class="kpi-l">${l}</div><div class="kpi-v ${c}">${v}</div>${s?`<div class="kpi-s">${s}</div>`:''}</div>`;}
+function pct(n,d){return d?Math.round(n/d*1000)/10:0;}
+function fmt$(n){return'$'+Math.round(n).toLocaleString();}
+function countBy(arr,key){const r={};arr.forEach(x=>{const k=String(x[key]||'');r[k]=(r[k]||0)+1;});return r;}
+const GC='rgba(0,0,0,0.07)',TC='#9e9a94';
+function lockedCard(title,msg){return`<div class="locked-card"><div class="locked-icon">🔒</div><div class="locked-title">${title}</div><div class="locked-sub">${msg}</div></div>`;}
+
+function mkDonut(id,labels,data,colors){if(CHARTS[id])CHARTS[id].destroy();CHARTS[id]=new Chart(document.getElementById(id),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors||COLORS.slice(0,data.length),borderWidth:2,borderColor:'#ffffff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});}
+function mkBar(id,labels,datasets,opts={}){if(CHARTS[id])CHARTS[id].destroy();CHARTS[id]=new Chart(document.getElementById(id),{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},indexAxis:opts.h?'y':'x',scales:{x:{grid:{display:opts.h?false:true,color:GC},ticks:{color:TC,font:{size:10},...(opts.xt||{})},stacked:opts.stk},y:{grid:{color:opts.h?'rgba(0,0,0,0)':GC},ticks:{color:TC,...(opts.yt||{})},min:opts.ymin,stacked:opts.stk}}}});}
+function mkLine(id,labels,datasets){if(CHARTS[id])CHARTS[id].destroy();CHARTS[id]=new Chart(document.getElementById(id),{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC},min:0}}}});}
+
+// ═══════════════════════════════════════════════
+// T1: OVERVIEW
+// ═══════════════════════════════════════════════
+function buildOverview(){
+  const{df:rawDf,followupOGIs,dateKeys,weekKeys,monthKeys}=G;
+  const{df}=getFiltered();
+  const fl=df.filter(r=>r._category==='Frontline');
+  const tickets=fl.filter(r=>r._isTicket);
+  const calls=df.filter(r=>r['Interaction']==='Call').length;
+  const callsInbound=df.filter(r=>r['Interaction']==='Call'&&String(r['Reason']||'')!=='Outbound Vendor Call').length;
+  const callsOutbound=df.filter(r=>r['Interaction']==='Call'&&String(r['Reason']||'')==='Outbound Vendor Call').length;
+  const emails=fl.filter(r=>r['Interaction']==='Email').length;
+  const chats=fl.filter(r=>r['Interaction']==='Chat').length;
+  const escs=df.filter(r=>r._isEscalated).length;
+  const disputes=df.filter(r=>r._category==='Dispute'&&r['Interaction']==='Dispute').length;
+  const tlTotal=df.filter(r=>r._category==='TL').length;
+  const reviews=df.filter(r=>r._category==='Review').length;
+  const aiCalls=df.filter(r=>r._category==='AI').length;
+  const fcrT=tickets.filter(r=>!FCR_EXCLUDE.includes(String(r['Interaction']||'')));
+  fcrT.forEach(r=>{r._isFCR=r['OGI']?!followupOGIs.has(String(r['OGI'])):true;});
+  const fcrPct=pct(fcrT.filter(r=>r._isFCR).length,fcrT.length);
+  document.getElementById('kpi1').innerHTML=
+    mkKPI('Tickets (frontline)',tickets.length.toLocaleString())+
+    mkKPI('Inbound Calls',callsInbound.toLocaleString(),'of '+calls+' total')+
+    mkKPI('Outbound Calls',callsOutbound.toLocaleString(),'vendor calls')+
+    mkKPI('Emails',emails.toLocaleString())+mkKPI('Chats',chats.toLocaleString())+
+    mkKPI('Overall FCR',fcrPct+'%',fcrPct>=FCR_TARGET?'above target':'below target',fcrPct>=FCR_TARGET?'gn':'rd')+
+    mkKPI('Escalations',escs,pct(escs,tickets.length)+'% rate','rd')+
+    mkKPI('Disputes',disputes,'separate team','rd')+
+    mkKPI('TL Reviews',tlTotal,'quality checks','bl')+
+    mkKPI('User Reviews',reviews,'','pu')+mkKPI('AI Calls',aiCalls,'AI handled','bl');
+  const chTot=callsInbound+callsOutbound+emails+chats;
+  document.getElementById('leg-ch').innerHTML=[['Inbound',callsInbound,'#2563eb'],['Outbound',callsOutbound,'#60a5fa'],['Email',emails,'#4ade80'],['Chat',chats,'#f97316']].map(([l,v,c])=>`<span class="li"><span class="ld" style="background:${c}"></span>${l} ${pct(v,chTot)}%</span>`).join('');
+  mkDonut('c-ch',['Inbound','Outbound','Email','Chat'],[callsInbound,callsOutbound,emails,chats],['#2563eb','#60a5fa','#4ade80','#f97316']);
+  const vC={};fl.forEach(r=>{vC[r._vertical]=(vC[r._vertical]||0)+1;});
+  const vO=Object.entries(vC).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('leg-vt').innerHTML=vO.map(([v,c],i)=>`<span class="li"><span class="ld" style="background:${COLORS[i%COLORS.length]}"></span>${v} ${pct(c,fl.length)}%</span>`).join('');
+  mkDonut('c-vt',vO.map(v=>v[0]),vO.map(v=>v[1]),vO.map((_,i)=>COLORS[i%COLORS.length]));
+  const allT=[{l:'Call',v:calls,c:'#60a5fa'},{l:'Email',v:emails,c:'#4ade80'},{l:'Chat',v:chats,c:'#f97316'},{l:'TL Review',v:tlTotal,c:'#a78bfa'},{l:'User Reviews',v:reviews,c:'#f87171'},{l:'Dispute',v:disputes,c:'#fb923c'},{l:'AI Call',v:aiCalls,c:'#2dd4bf'}].filter(t=>t.v>0);
+  mkBar('c-all',allT.map(t=>t.l),[{data:allT.map(t=>t.v),backgroundColor:allT.map(t=>t.c),borderRadius:4,borderSkipped:false}]);
+  // Trend
+  const tC=document.getElementById('trend-card');let showT=false,tL=[],tD=[];
+  if(MODE==='weekly'){const wD=dateKeys.filter(dk=>{const r=rawDf.find(r=>r._isTicket&&r._dateKey===dk);return r&&r._weekKey===ACTIVE_KEY;});if(wD.length>1){showT=true;document.getElementById('trend-title').textContent='Daily ticket volume (this week)';tL=wD.map(dk=>fmtDateShort(new Date(dk+'T12:00:00')));tD=wD.map(dk=>rawDf.filter(r=>r._isTicket&&r._dateKey===dk&&r._category==='Frontline').length);}}
+  else if(MODE==='monthly'){const mW=weekKeys.filter(wk=>{const r=rawDf.find(r=>r._isTicket&&r._weekKey===wk);return r&&r._monthKey===ACTIVE_KEY;});if(mW.length>1){showT=true;document.getElementById('trend-title').textContent='Weekly volume (this month)';tL=mW.map(wk=>fmtWeek(wk,rawDf));tD=mW.map(wk=>rawDf.filter(r=>r._isTicket&&r._weekKey===wk&&r._category==='Frontline').length);}}
+  else if(MODE==='daily'&&dateKeys.length>1){showT=true;document.getElementById('trend-title').textContent='Daily ticket volume';tL=dateKeys.map(dk=>fmtDateShort(new Date(dk+'T12:00:00')));tD=dateKeys.map(dk=>rawDf.filter(r=>r._isTicket&&r._dateKey===dk&&r._category==='Frontline').length);}
+  tC.style.display=showT?'block':'none';
+  if(showT)mkLine('c-trend',tL,[{data:tD,borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.1)',fill:true,tension:0.3,pointRadius:5,pointBackgroundColor:'#60a5fa',pointBorderColor:'#fff',pointBorderWidth:2}]);
+  // FCR by channel
+  const fcrByCh={};fcrT.forEach(r=>{const ch=String(r['Interaction']||'');if(!fcrByCh[ch])fcrByCh[ch]={t:0,f:0};fcrByCh[ch].t++;if(r._isFCR)fcrByCh[ch].f++;});
+  const chK=Object.keys(fcrByCh),chF=chK.map(k=>pct(fcrByCh[k].f,fcrByCh[k].t));
+  mkBar('c-fcr-ch',chK,[{data:chF,backgroundColor:chF.map(v=>v>=FCR_TARGET?'#4ade80':'#f87171'),borderRadius:4,borderSkipped:false},{data:chK.map(()=>FCR_TARGET),type:'line',borderColor:'#f97316',borderDash:[4,4],borderWidth:1.5,pointRadius:0,fill:false}],{yt:{callback:v=>v+'%'},ymin:50});
+  // Vertical table
+  const verts=['Airport Parking','City Parking','Wayplus','General','Insurance','Carwash','R&M','Gas'];
+  let tbody='';let totT=0,totI=0,totC=0,totE=0,totCh2=0,totEsc=0;
+  verts.forEach(v=>{
+    const vI=fl.filter(r=>r._vertical===v),vT=tickets.filter(r=>r._vertical===v),vF=fcrT.filter(r=>r._vertical===v);
+    const vFP=vF.length?pct(vF.filter(r=>r._isFCR).length,vF.length):null;
+    const t=vT.length,ints=vI.length,c=vI.filter(r=>r['Interaction']==='Call').length,e=vI.filter(r=>r['Interaction']==='Email').length,ch=vI.filter(r=>r['Interaction']==='Chat').length;
+    const vEsc=vT.filter(r=>r._isEscalated).length;
+    if(!t)return;
+    totT+=t;totI+=ints;totC+=c;totE+=e;totCh2+=ch;totEsc+=vEsc;
+    tbody+=`<tr><td>${v}</td><td class="n">${t.toLocaleString()}</td><td class="n">${ints.toLocaleString()}</td><td class="n">${c}</td><td class="n">${e}</td><td class="n">${ch}</td><td class="n">${vFP!==null?`<span class="bx ${vFP>=80?'bg':'br'}">${vFP}%</span>`:'—'}</td><td class="n"><span class="bx ${pct(vEsc,t)>5?'br':'ba'}">${pct(vEsc,t)}%</span></td></tr>`;
+  });
+  document.getElementById('tb-vs').innerHTML=tbody;
+  const tf=pct(fcrT.filter(r=>r._isFCR).length,fcrT.length);
+  document.getElementById('tf-vs').innerHTML=`<td>Total</td><td class="n">${totT.toLocaleString()}</td><td class="n">${totI.toLocaleString()}</td><td class="n">${totC}</td><td class="n">${totE}</td><td class="n">${totCh2}</td><td class="n">${tf}%</td><td class="n">${pct(totEsc,totT)}%</td>`;
+  const vFD=verts.map(v=>{const vf=fcrT.filter(r=>r._vertical===v);return vf.length?pct(vf.filter(r=>r._isFCR).length,vf.length):null;});
+  const vL=verts.filter((_,i)=>vFD[i]!==null),vDd=vFD.filter(v=>v!==null);
+  mkBar('c-fcr-vt',vL,[{data:vDd,backgroundColor:vDd.map(v=>v>=FCR_TARGET?'#4ade80':'#f87171'),borderRadius:4,borderSkipped:false},{data:vL.map(()=>FCR_TARGET),type:'line',borderColor:'#f97316',borderDash:[4,4],borderWidth:1.5,pointRadius:0,fill:false}],{yt:{callback:v=>v+'%'},ymin:0});
+}
+
+// ═══════════════════════════════════════════════
+// T2: CALL DRIVERS
+// ═══════════════════════════════════════════════
+function buildDriversTab(){
+  const{df}=getFiltered();const fl=df.filter(r=>r._category==='Frontline');
+  const verts=[...new Set(fl.map(r=>r._vertical))].filter(v=>v&&v!=='Other').sort();
+  const vsel=document.getElementById('vsel');const cur=vsel.value;
+  vsel.innerHTML=verts.map(v=>`<option${v===cur?' selected':''}>${v}</option>`).join('');
+  renderDrivers();
+}
+function renderDrivers(){
+  const{df}=getFiltered();const fl=df.filter(r=>r._category==='Frontline');
+  const v=document.getElementById('vsel').value,ch=document.getElementById('chsel').value;
+  const filtered=fl.filter(r=>r._vertical===v&&r['Interaction']===ch);
+  document.getElementById('drv-ct').textContent=v+' · '+ch+' — top drivers';
+  const dC={};filtered.forEach(r=>{dC[r._driver]=(dC[r._driver]||0)+1;});
+  const top5=Object.entries(dC).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  if(!top5.length){document.getElementById('drv-list').innerHTML='<div class="empty">No data for this combination</div>';if(DRV_CHART){DRV_CHART.destroy();DRV_CHART=null;}return;}
+  const maxT=top5[0][1];
+  document.getElementById('drv-list').innerHTML=top5.map(([driver,count],i)=>{
+    const dR=filtered.filter(r=>r._driver===driver),lC={};
+    dR.forEach(r=>{const l=String(r['Lot Name']||'').trim();if(l)lC[l]=(lC[l]||0)+1;});
+    const tL=Object.entries(lC).sort((a,b)=>b[1]-a[1]).slice(0,5),hL=tL.length>0,mL=tL.length?tL[0][1]:1;
+    const lotHtml=hL?`<div class="drv-b" id="db${i}">${tL.map(([lot,lc])=>`<div class="lr"><div class="ln">${lot}${lc===tL[0][1]&&tL[0][1]>1?'<span class="flag">top</span>':''}</div><div class="lbw"><div class="lb" style="width:${Math.round(lc/mL*100)}%;background:${COLORS[i%COLORS.length]}"></div></div><div class="lc">${lc}</div></div>`).join('')}</div>`:'';
+    return`<div class="drv"><div class="drv-h" onclick="${hL?`toggleDrv('db${i}',this)`:''}" style="${hL?'':'cursor:default'}"><div style="display:flex;align-items:center;gap:8px;flex:1"><div style="width:${Math.round(count/maxT*120)}px;height:5px;border-radius:2px;background:${COLORS[i%COLORS.length]};flex-shrink:0"></div><div class="drv-lbl">${driver}</div></div><div class="drv-r"><div class="drv-c">${count}</div>${hL?'<div class="drv-a">▾</div>':''}</div></div>${lotHtml}</div>`;
+  }).join('');
+  if(DRV_CHART)DRV_CHART.destroy();
+  DRV_CHART=new Chart(document.getElementById('c-drv'),{type:'bar',data:{labels:top5.map(([d])=>d.length>38?d.slice(0,38)+'...':d),datasets:[{data:top5.map(([,c])=>c),backgroundColor:COLORS.slice(0,top5.length),borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},indexAxis:'y',scales:{x:{grid:{color:GC},ticks:{color:TC}},y:{grid:{display:false},ticks:{color:TC,font:{size:11}}}}}});
+}
+function toggleDrv(id,el){const b=document.getElementById(id);const a=el.querySelector('.drv-a');if(b.classList.contains('open')){b.classList.remove('open');if(a)a.innerHTML='▾';}else{b.classList.add('open');if(a)a.innerHTML='▴';}}
+
+// ═══════════════════════════════════════════════
+// T3: QUEUE & ABANDON
+// ═══════════════════════════════════════════════
+function buildQueueTab(){
+  const el=document.getElementById('t3-content');
+  const cc=getCCFiltered();
+  const answered=cc.filter(r=>r['Call Result']==='Answered');
+  const abandoned=cc.filter(r=>r['Call Result']==='Abandoned');
+  const total=cc.length,totAns=answered.length,totAbn=abandoned.length;
+  const abn_ge30=abandoned.filter(r=>r._wait>=30).length;
+  const abn_lt30=abandoned.filter(r=>r._wait<30).length;
+  const arr=pct(abn_ge30,total);
+  const totTalk=answered.reduce((s,r)=>s+r._talk,0);
+  const totHold=answered.reduce((s,r)=>s+r._hold,0);
+  const totWrap=answered.reduce((s,r)=>s+r._wrap,0);
+  const aht=totAns>0?(totTalk+totHold+totWrap)/totAns:0;
+  // Queue breakdown
+  const queues={};cc.forEach(r=>{const q=String(r['Call Center Name']||'Other');if(!queues[q])queues[q]={total:0,answered:0,abandoned:0,talk:0,hold:0,wrap:0,wait:0,wc:0};queues[q].total++;if(r['Call Result']==='Answered'){queues[q].answered++;queues[q].talk+=r._talk;queues[q].hold+=r._hold;queues[q].wrap+=r._wrap;}if(r['Call Result']==='Abandoned'){queues[q].abandoned++;queues[q].wait+=r._wait;queues[q].wc++;}});
+  const qList=Object.entries(queues).sort((a,b)=>b[1].total-a[1].total);
+  const maxQ=qList[0]?.[1]?.total||1;
+  let qRows='',qFoot='';
+  const qTots={total:0,ans:0,abn:0};
+  qList.forEach(([name,d])=>{
+    qTots.total+=d.total;qTots.ans+=d.answered;qTots.abn+=d.abandoned;
+    const qAHT=d.answered>0?(d.talk+d.hold+d.wrap)/d.answered:0;
+    const qAWait=d.wc>0?d.wait/d.wc:0;
+    const abr=pct(d.abandoned,d.total);
+    qRows+=`<tr><td>${name}</td><td class="n">${d.total}<span class="qbw"><span class="qb" style="width:${Math.round(d.total/maxQ*100)}%"></span></span></td><td class="n">${d.answered}</td><td class="n">${d.abandoned}</td><td class="n"><span class="bx ${abr>10?'br':abr>5?'ba':'bg'}">${abr}%</span></td><td class="n">${secToMmss(qAHT)}</td><td class="n">${secToMmss(qAWait)}</td><td class="n">${pct(d.total,total)}%</td></tr>`;
+  });
+  qFoot=`<td>Total</td><td class="n">${qTots.total}</td><td class="n">${qTots.ans}</td><td class="n">${qTots.abn}</td><td class="n">${pct(qTots.abn,qTots.total)}%</td><td class="n">${secToMmss(aht)}</td><td class="n">—</td><td class="n">100%</td>`;
+  // Wait time buckets
+  const buckets=[['0–30s',abandoned.filter(r=>r._wait<30).length],['31–60s',abandoned.filter(r=>r._wait>=31&&r._wait<=60).length],['61–120s',abandoned.filter(r=>r._wait>=61&&r._wait<=120).length],['121–300s',abandoned.filter(r=>r._wait>=121&&r._wait<=300).length],['>300s',abandoned.filter(r=>r._wait>300).length]];
+  let bktRows=buckets.map(([l,c])=>`<tr><td>${l}</td><td class="n">${c}</td><td class="n">${pct(c,totAbn)}%</td></tr>`).join('');
+  el.innerHTML=`
+    <div class="kpis">
+      ${mkKPI('Total Calls',total.toLocaleString())}
+      ${mkKPI('Answered',totAns.toLocaleString(),pct(totAns,total)+'% answer rate','gn')}
+      ${mkKPI('Abandoned',totAbn.toLocaleString(),pct(totAbn,total)+'% of calls','rd')}
+      ${mkKPI('Abn <30s',abn_lt30,'short abandonments')}
+      ${mkKPI('Abn ≥30s (ARR)',abn_ge30,'contributes to ARR')}
+      ${mkKPI('ARR %',arr.toFixed(2)+'%','Abn≥30s / total calls',arr<3?'gn':arr<6?'am':'rd')}
+      ${mkKPI('Avg AHT',secToMmss(aht),'Talk + Hold + Wrap')}
+      ${mkKPI('Avg Talk',secToMmss(totAns>0?totTalk/totAns:0))}
+      ${mkKPI('Avg Hold',secToMmss(totAns>0?totHold/totAns:0))}
+    </div>
+    <div class="card"><div class="ct">Queue performance</div>
+      <div class="tw"><table>
+        <thead><tr><th>Queue</th><th class="n">Total</th><th class="n">Answered</th><th class="n">Abandoned</th><th class="n">Abn%</th><th class="n">AHT</th><th class="n">Avg Wait</th><th class="n">% Share</th></tr></thead>
+        <tbody>${qRows}</tbody><tfoot><tr>${qFoot}</tr></tfoot>
+      </table></div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="ct">Abandon wait-time buckets</div>
+        <div class="tw"><table><thead><tr><th>Wait Time</th><th class="n">Count</th><th class="n">% of Abandoned</th></tr></thead><tbody>${bktRows}</tbody></table></div>
+      </div>
+      <div class="card"><div class="ct">Abandon distribution</div>
+        <div class="cw" style="height:200px"><canvas id="c-abn-bkt"></canvas></div>
+      </div>
+    </div>`;
+  setTimeout(()=>{
+    if(document.getElementById('c-abn-bkt'))
+      mkBar('c-abn-bkt',buckets.map(b=>b[0]),[{data:buckets.map(b=>b[1]),backgroundColor:['#4ade80','#fbbf24','#f97316','#f87171','#dc2626'],borderRadius:4,borderSkipped:false}]);
+  },50);
+}
+
+// ═══════════════════════════════════════════════
+// T4: PRODUCTIVITY
+// ═══════════════════════════════════════════════
+function buildProductivityTab(){
+  const el=document.getElementById('t4-content');
+  const cc=getCCFiltered();const ag=getAGFiltered();
+  const answered=cc.filter(r=>r['Call Result']==='Answered');
+  const totAns=answered.length;
+  const totTalk=answered.reduce((s,r)=>s+r._talk,0);
+  const totHold=answered.reduce((s,r)=>s+r._hold,0);
+  const totWrap=answered.reduce((s,r)=>s+r._wrap,0);
+  const totHandle=totTalk+totHold+totWrap;
+  const aht=totAns>0?totHandle/totAns:0;
+  const agCore=ag.filter(r=>!CROSSSELL.includes(String(r['Agent Name']||'')));
+  const agInb=agCore.filter(r=>['Inbound ACD','Inbound'].includes(r['Call Type']));
+  const agOut=agCore.filter(r=>r['Call Type']==='Outbound');
+  // Active agents by date
+  const agByDate={};agCore.forEach(r=>{if(!r._dateKey)return;if(!agByDate[r._dateKey])agByDate[r._dateKey]=new Set();agByDate[r._dateKey].add(String(r['Agent Name']||''));});
+  const dailyActiveCounts=Object.values(agByDate).map(s=>s.size);
+  const avgAgents=dailyActiveCounts.length>0?dailyActiveCounts.reduce((s,v)=>s+v,0)/dailyActiveCounts.length:agCore.length?[...new Set(agCore.map(r=>r['Agent Name']))].length:0;
+  // WP interactions per agent
+  const{df}=getFiltered();const wpInt=df.filter(r=>['Call','Email','Chat'].includes(r['Interaction']));
+  const wpByDate={};wpInt.forEach(r=>{const d=r._idt||r._dt;if(!d)return;const k=dateKey(d);if(!wpByDate[k])wpByDate[k]={ints:0};wpByDate[k].ints++;});
+  const agActiveDates=Object.keys(agByDate);
+  const avgIntPerAgent=agActiveDates.length?agActiveDates.reduce((s,dk)=>{const ints=(wpByDate[dk]||{ints:0}).ints;const agents=agByDate[dk]?agByDate[dk].size:1;return s+ints/agents;},0)/agActiveDates.length:0;
+  // Agent table
+  const agStats={};agCore.forEach(r=>{const a=String(r['Agent Name']||'');if(!a)return;if(!agStats[a])agStats[a]={name:a,inb:0,out:0,talk:0,hold:0,wrap:0};if(['Inbound ACD','Inbound'].includes(r['Call Type'])){agStats[a].inb++;agStats[a].talk+=r._talk;agStats[a].hold+=r._hold;agStats[a].wrap+=r._wrap;}if(r['Call Type']==='Outbound')agStats[a].out++;});
+  const agList=Object.values(agStats).map(a=>({...a,aht:a.inb>0?(a.talk+a.hold+a.wrap)/a.inb:0})).sort((a,b)=>b.inb-a.inb);
+  let agRows=agList.slice(0,30).map(a=>`<tr><td>${a.name}</td><td class="n">${a.inb}</td><td class="n">${a.out}</td><td class="n">${secToMmss(a.inb>0?a.talk/a.inb:0)}</td><td class="n">${secToMmss(a.inb>0?a.hold/a.inb:0)}</td><td class="n">${secToMmss(a.aht)}</td><td class="n">${((a.talk+a.hold+a.wrap)/3600).toFixed(1)}h</td></tr>`).join('');
+  el.innerHTML=`
+    <div class="kpis">
+      ${mkKPI('Inbound Calls',totAns.toLocaleString())}
+      ${mkKPI('Outbound Calls',agOut.length.toLocaleString(),'agent outbound')}
+      ${mkKPI('Avg Talk',secToMmss(totAns>0?totTalk/totAns:0))}
+      ${mkKPI('Avg Hold',secToMmss(totAns>0?totHold/totAns:0))}
+      ${mkKPI('AHT',secToMmss(aht),'Talk + Hold + Wrap')}
+      ${mkKPI('Total Handle',((totHandle)/3600).toFixed(1)+'h','team total')}
+      ${mkKPI('Avg Agents/Day',Math.round(avgAgents),'daily active headcount')}
+      ${mkKPI('Avg Interactions/Agent/Day',avgIntPerAgent.toFixed(1),'Calls+Emails+Chats')}
+    </div>
+    <div class="card"><div class="ct">Agent call metrics (top 30 by inbound calls — from CC report)</div>
+      <div class="tw"><table>
+        <thead><tr><th>Agent</th><th class="n">Inbound</th><th class="n">Outbound</th><th class="n">Avg Talk</th><th class="n">Avg Hold</th><th class="n">AHT</th><th class="n">Handle (hrs)</th></tr></thead>
+        <tbody>${agRows}</tbody>
+      </table></div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// T5: DISPUTES
+// ═══════════════════════════════════════════════
+function buildDisputesTab(){
+  const{df}=getFiltered();
+  const dispR=df.filter(r=>DISPUTE_TEAM.includes(String(r['Agent Name']||'')));
+  const pD=dispR.filter(r=>r['Interaction']==='Dispute');
+  const tA=pD.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
+  const vO=Object.entries(countBy(pD,'_vertical')).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('kpi5').innerHTML=mkKPI('Total disputes',pD.length,'','rd')+mkKPI('Disputed amount',fmt$(tA),'booking value','rd')+mkKPI('Avg per dispute',fmt$(tA/Math.max(pD.length,1)))+mkKPI('All closed',pD.filter(r=>String(r['Status']||'').toLowerCase()==='closed').length,'',pD.filter(r=>String(r['Status']||'').toLowerCase()==='closed').length===pD.length?'gn':'am');
+  const lC2=vO.map((_,i)=>COLORS[i%COLORS.length]);
+  document.getElementById('leg-dv').innerHTML=vO.map(([v,c],i)=>`<span class="li"><span class="ld" style="background:${lC2[i]}"></span>${v} ${pct(c,pD.length)}%</span>`).join('');
+  mkDonut('c-dv',vO.map(v=>v[0]),vO.map(v=>v[1]),lC2);
+  const oO=Object.entries(countBy(pD,'Action')).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  mkBar('c-do',oO.map(([o])=>o.length>20?o.slice(0,20)+'...':o),[{data:oO.map(([,c])=>c),backgroundColor:'#f87171',borderRadius:4,borderSkipped:false}],{yt:{stepSize:1}});
+  const agM={};DISPUTE_TEAM.forEach(a=>{agM[a]={disputes:0,other:0,amount:0,present:false};});
+  dispR.forEach(r=>{const a=String(r['Agent Name']||'');if(!agM[a])agM[a]={disputes:0,other:0,amount:0,present:false};agM[a].present=true;if(r['Interaction']==='Dispute'){agM[a].disputes++;agM[a].amount+=(parseFloat(r['Amount'])||0);}else agM[a].other++;});
+  let tb='';let tD=0,tO=0,tAm=0;
+  Object.entries(agM).forEach(([a,d])=>{tD+=d.disputes;tO+=d.other;tAm+=d.amount;tb+=`<tr><td>${a}</td><td class="n">${d.disputes}</td><td class="n">${d.other}</td><td class="n">${d.disputes+d.other}</td><td class="n">${fmt$(d.amount)}</td><td>${d.present?'<span class="bx bg">Present</span>':'<span class="bx br">Absent</span>'}</td></tr>`;});
+  document.getElementById('tb-dt').innerHTML=tb;
+  document.getElementById('tf-dt').innerHTML=`<td>Total</td><td class="n">${tD}</td><td class="n">${tO}</td><td class="n">${tD+tO}</td><td class="n">${fmt$(tAm)}</td><td></td>`;
+  let lH='';
+  ['Airport Parking','City Parking','Carwash','Wayplus','General'].forEach(v=>{
+    const vD=pD.filter(r=>r._vertical===v);if(!vD.length)return;
+    const lM={};vD.forEach(r=>{const l=String(r['Lot Name']||'').trim();if(l){if(!lM[l])lM[l]={count:0,amount:0};lM[l].count++;lM[l].amount+=(parseFloat(r['Amount'])||0);}});
+    const tL=Object.entries(lM).sort((a,b)=>b[1].count-a[1].count);if(!tL.length)return;
+    const mL=tL[0][1].count;
+    lH+=`<div class="card"><div class="ct">${v} — disputes by lot</div>${tL.map(([lot,d])=>`<div class="dlr"><div class="dln">${lot}${d.count===tL[0][1].count&&tL[0][1].count>1?'<span class="flag">top</span>':''}</div><div class="dlbw"><div class="dlb" style="width:${Math.round(d.count/mL*100)}%"></div></div><div class="dlc">${d.count}</div><div class="dla">${fmt$(d.amount)}</div></div>`).join('')}</div>`;
+  });
+  document.getElementById('disp-lots').innerHTML=lH;
+}
+
+// ═══════════════════════════════════════════════
+// T6: ESCALATIONS
+// ═══════════════════════════════════════════════
+function buildEscalationsTab(){
+  const{df}=getFiltered();const fl=df.filter(r=>r._category==='Frontline');
+  const tickets=fl.filter(r=>r._isTicket);const escs=df.filter(r=>r._isEscalated);const tot=escs.length;
+  const closed=escs.filter(r=>String(r['Status']||'').toLowerCase()==='closed').length;
+  document.getElementById('kpi6').innerHTML=mkKPI('Total escalated',tot,'','rd')+mkKPI('Escalation rate',pct(tot,tickets.length)+'%','of frontline tickets','rd')+mkKPI('Closed',closed,'',closed===tot?'gn':'am')+mkKPI('Still open',tot-closed,'',tot-closed>0?'rd':'gn');
+  const vO=Object.entries(countBy(escs,'_vertical')).sort((a,b)=>b[1]-a[1]);const lC3=vO.map((_,i)=>COLORS[i%COLORS.length]);
+  document.getElementById('leg-ev').innerHTML=vO.map(([v,c],i)=>`<span class="li"><span class="ld" style="background:${lC3[i]}"></span>${v} ${pct(c,tot)}%</span>`).join('');mkDonut('c-ev',vO.map(v=>v[0]),vO.map(v=>v[1]),lC3);
+  const cO=Object.entries(countBy(escs,'Interaction')).sort((a,b)=>b[1]-a[1]);const cC2=['#60a5fa','#4ade80','#f97316','#a78bfa','#f87171'];
+  document.getElementById('leg-ec').innerHTML=cO.map(([c,n],i)=>`<span class="li"><span class="ld" style="background:${cC2[i]}"></span>${c} ${pct(n,tot)}%</span>`).join('');mkDonut('c-ec',cO.map(c=>c[0]),cO.map(c=>c[1]),cC2);
+  const rO=Object.entries(countBy(escs,'_driver')).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  mkBar('c-er',rO.map(([r])=>r.length>35?r.slice(0,35)+'...':r),[{data:rO.map(([,c])=>c),backgroundColor:'#f87171',borderRadius:4,borderSkipped:false}],{h:true});
+  const sO=Object.entries(countBy(escs,'Status')).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('tb-es').innerHTML=sO.map(([s,c])=>`<tr><td>${s||'Unknown'}</td><td class="n">${c}</td><td class="n"><span class="bx ${s==='Closed'?'bg':'ba'}">${pct(c,tot)}%</span></td></tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// T7: REFUNDS
+// ═══════════════════════════════════════════════
+function buildRefundsTab(){
+  const{df}=getFiltered();const fl=df.filter(r=>r._category==='Frontline');const refs=fl.filter(r=>r._refund);
+  const sum=arr=>arr.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
+  const bC=refs.filter(r=>r._refund==='BCI Card'),aF=refs.filter(r=>r._refund==='ACI Full'),aP=refs.filter(r=>r._refund==='ACI Partial'),aD=refs.filter(r=>r._refund==='ACI Denied'),sC=refs.filter(r=>r._refund==='Sub Refund');
+  document.getElementById('kpi7').innerHTML=mkKPI('Total refund actions',refs.length)+mkKPI('BCI card refunds',fmt$(sum(bC)),bC.length+' cases','rd')+mkKPI('ACI full refunds',fmt$(sum(aF)),aF.length+' cases','rd')+mkKPI('ACI partial',fmt$(sum(aP)),aP.length+' cases','am')+mkKPI('ACI denied (saved)',fmt$(sum(aD)),aD.length+' cases','gn')+mkKPI('Sub cancellations',sC.length,refs.filter(r=>r._refund==='Sub No Refund').length+' not refunded');
+  const tC2={'BCI Card':'#f87171','BCI Waybucks':'#60a5fa','ACI Full':'#fb923c','ACI Partial':'#fbbf24','ACI Waybucks':'#4ade80','ACI Denied':'#34d399','Sub Refund':'#a78bfa','Sub No Refund':'#6b7280'};
+  const tCt={};refs.forEach(r=>{tCt[r._refund]=(tCt[r._refund]||0)+1;});const tO=Object.entries(tCt).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('leg-rt').innerHTML=tO.map(([t])=>`<span class="li"><span class="ld" style="background:${tC2[t]||'#888'}"></span>${t}</span>`).join('');
+  mkDonut('c-rt',tO.map(t=>t[0]),tO.map(t=>t[1]),tO.map(t=>tC2[t[0]]||'#888'));
+  const vT=['BCI Card','ACI Full','ACI Partial','ACI Waybucks','ACI Denied'];
+  mkBar('c-rv',vT,[{data:vT.map(t=>Math.round(sum(refs.filter(r=>r._refund===t)))),backgroundColor:vT.map(t=>tC2[t]||'#888'),borderRadius:4,borderSkipped:false}],{yt:{callback:v=>'$'+v.toLocaleString()}});
+  const verts=[...new Set(refs.map(r=>r._vertical))].filter(v=>v);const rT=['BCI Card','BCI Waybucks','ACI Full','ACI Partial','ACI Denied','Sub Refund'];
+  let tb='';const tots2={};rT.forEach(t=>tots2[t]=0);let grand=0;
+  verts.forEach(v=>{const vr=refs.filter(r=>r._vertical===v);const cnts=rT.map(t=>vr.filter(r=>r._refund===t).length);const vTot=vr.length;grand+=vTot;cnts.forEach((c,i)=>tots2[rT[i]]+=c);tb+=`<tr><td>${v}</td>${cnts.map(c=>`<td class="n">${c}</td>`).join('')}<td class="n"><b>${vTot}</b></td></tr>`;});
+  document.getElementById('tb-rv').innerHTML=tb;document.getElementById('tf-rv').innerHTML=`<td>Total</td>${rT.map(t=>`<td class="n">${tots2[t]}</td>`).join('')}<td class="n">${grand}</td>`;
+}
+
+// ═══════════════════════════════════════════════
+// T8: TL ACTIVITY
+// ═══════════════════════════════════════════════
+function buildTLTab(){
+  const{df}=getFiltered();const tlR=df.filter(r=>r._category==='TL');
+  const tlRev=tlR.filter(r=>r['Interaction']==='TL Review');const escTL=tlR.filter(r=>r['Interaction']==='Escalation Handled by TL');const escOps=tlR.filter(r=>r['Interaction']==='Escalation handled by Ops Team');
+  document.getElementById('kpi8').innerHTML=mkKPI('TL Reviews',tlRev.length,'quality checks','bl')+mkKPI('Esc by TL',escTL.length,'TL direct handling','am')+mkKPI('Esc by Ops',escOps.length,'ops handling','am')+mkKPI('Total TL activity',tlR.length);
+  const rC=countBy(tlRev,'Agent Name');const rO=Object.entries(rC).sort((a,b)=>b[1]-a[1]);
+  if(rO.length)mkBar('c-tlr',rO.map(([a])=>a),[{data:rO.map(([,c])=>c),backgroundColor:'#a78bfa',borderRadius:4,borderSkipped:false}],{h:true});
+  const eR=[...escTL,...escOps].filter(r=>r['Agent Name']);const eC=countBy(eR,'Agent Name');const eO=Object.entries(eC).sort((a,b)=>b[1]-a[1]);
+  if(eO.length)mkBar('c-tle',eO.map(([a])=>a),[{data:eO.map(([,c])=>c),backgroundColor:'#fbbf24',borderRadius:4,borderSkipped:false}],{h:true,yt:{stepSize:1}});
+  const ags=[...new Set(tlR.map(r=>String(r['Agent Name']||'')))].filter(a=>a);let tb='';let tR=0,tET=0,tEO=0;
+  ags.forEach(a=>{const r=tlRev.filter(x=>x['Agent Name']===a).length,et=escTL.filter(x=>x['Agent Name']===a).length,eo=escOps.filter(x=>x['Agent Name']===a).length;tR+=r;tET+=et;tEO+=eo;tb+=`<tr><td>${a}</td><td class="n">${r}</td><td class="n">${et}</td><td class="n">${eo}</td><td class="n"><b>${r+et+eo}</b></td></tr>`;});
+  document.getElementById('tb-tl').innerHTML=tb;document.getElementById('tf-tl').innerHTML=`<td>Total</td><td class="n">${tR}</td><td class="n">${tET}</td><td class="n">${tEO}</td><td class="n">${tR+tET+tEO}</td>`;
+}
+
+// ═══════════════════════════════════════════════
+// T9: REVIEWS
+// ═══════════════════════════════════════════════
+function buildReviewsTab(){
+  const{df}=getFiltered();const revs=df.filter(r=>r._category==='Review');
+  const r5=revs.filter(r=>String(r['Reason']||'').includes('5')).length,r3=revs.filter(r=>String(r['Reason']||'').includes('3')).length,r1=revs.filter(r=>String(r['Reason']||'').includes('1')).length;
+  document.getElementById('kpi9').innerHTML=mkKPI('Total reviews',revs.length,'','pu')+mkKPI('5 star',r5,'positive','gn')+mkKPI('3 star',r3,'neutral','am')+mkKPI('1 star',r1,'negative','rd')+mkKPI('Published',revs.filter(r=>String(r['Action']||'').includes('Published')).length,'');
+  const rD=[{r:'5 ★',v:r5,c:'#4ade80'},{r:'3 ★',v:r3,c:'#fbbf24'},{r:'1 ★',v:r1,c:'#f87171'}].filter(d=>d.v>0);
+  document.getElementById('leg-rr').innerHTML=rD.map(d=>`<span class="li"><span class="ld" style="background:${d.c}"></span>${d.r} (${d.v})</span>`).join('');mkDonut('c-rr',rD.map(d=>d.r),rD.map(d=>d.v),rD.map(d=>d.c));
+  const vO=Object.entries(countBy(revs,'_vertical')).sort((a,b)=>b[1]-a[1]);
+  mkBar('c-rvt',vO.map(v=>v[0]),[{data:vO.map(v=>v[1]),backgroundColor:'#a78bfa',borderRadius:4,borderSkipped:false}]);
+  document.getElementById('tb-rev').innerHTML=revs.map(r=>`<tr><td>${r['Agent Name']||'—'}</td><td>${String(r['Reason']||'').replace('User ','').replace('Review','★')}</td><td style="font-size:11px;color:var(--tx2)">${String(r['Sub Reason']||'—').slice(0,50)}</td><td style="font-size:11px">${String(r['Action']||'—')}</td><td>${r._vertical}</td></tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// T10: AI AGENT
+// ═══════════════════════════════════════════════
+function buildAITab(){
+  const{df}=getFiltered();const ai=df.filter(r=>r._category==='AI');
+  const closed=ai.filter(r=>String(r['Status']||'').toLowerCase()==='closed').length,open=ai.filter(r=>['open','in progress'].includes(String(r['Status']||'').toLowerCase())).length,aiH=ai.filter(r=>String(r['TKT_IssueReason']||'')==='AI Handled').length;
+  document.getElementById('kpi10').innerHTML=mkKPI('AI calls handled',ai.length,'','bl')+mkKPI('Fully resolved',aiH,'AI handled tag','gn')+mkKPI('Closed',closed,'','gn')+mkKPI('Open / In progress',open,'needs follow-up',open>0?'am':'gn');
+  const vO=Object.entries(countBy(ai,'_vertical')).sort((a,b)=>b[1]-a[1]);mkDonut('c-aiv',vO.map(v=>v[0]),vO.map(v=>v[1]),COLORS.slice(0,vO.length));
+  const sO=Object.entries(countBy(ai,'Status')).sort((a,b)=>b[1]-a[1]);mkDonut('c-ais',sO.map(s=>s[0]),sO.map(s=>s[1]),['#4ade80','#f97316','#f87171','#fbbf24']);
+  document.getElementById('tb-ai').innerHTML=ai.map(r=>`<tr><td>${r._vertical}</td><td>${r['Reason']||'—'}</td><td style="font-size:11px;color:var(--tx2)">${r['Sub Reason']||'—'}</td><td><span class="bx ${r['Status']==='Closed'?'bg':r['Status']==='Open'?'br':'ba'}">${r['Status']||'—'}</span></td><td><span class="bx bb">${r['TKT_IssueReason']||'—'}</span></td></tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// T11: PLATFORMS
+// ═══════════════════════════════════════════════
+function buildPlatformsTab(){
+  const{df}=getFiltered();const wD=df.filter(r=>r['Domain']);const dC=countBy(wD,'Domain');const dO=Object.entries(dC).sort((a,b)=>b[1]-a[1]).slice(0,10);const unt=df.filter(r=>!r['Domain']).length;
+  document.getElementById('kpi11').innerHTML=mkKPI('Platforms tracked',dO.length)+mkKPI('Top platform',dO[0]?.[0]||'—',(dO[0]?.[1]||0)+' tickets')+mkKPI('Top share',pct(dO[0]?.[1]||0,df.length)+'%')+mkKPI('Untagged',unt,'no domain');
+  mkBar('c-plt',dO.map(d=>d[0]),[{data:dO.map(d=>d[1]),backgroundColor:'#60a5fa',borderRadius:4,borderSkipped:false}]);
+  const verts=[...new Set(df.map(r=>r._vertical))].filter(v=>v&&v!=='Other');
+  document.getElementById('th-plt').innerHTML=`<th>Platform</th>${verts.map(v=>`<th class="n">${v}</th>`).join('')}<th class="n">Total</th>`;
+  const pV={};const tots3={};dO.forEach(([d])=>{pV[d]={};verts.forEach(v=>pV[d][v]=0);df.filter(r=>String(r['Domain']||'')==d).forEach(r=>{if(verts.includes(r._vertical))pV[d][r._vertical]++;});tots3[d]=df.filter(r=>String(r['Domain']||'')==d).length;});
+  document.getElementById('tb-plt').innerHTML=dO.map(([d])=>`<tr><td>${d}</td>${verts.map(v=>`<td class="n">${pV[d][v]||0}</td>`).join('')}<td class="n"><b>${tots3[d]}</b></td></tr>`).join('');
+  const vT=verts.map(v=>dO.reduce((s,[d])=>s+(pV[d][v]||0),0));const gT=dO.reduce((s,[d])=>s+tots3[d],0);
+  document.getElementById('tf-plt').innerHTML=`<td>Total (tagged)</td>${vT.map(t=>`<td class="n">${t}</td>`).join('')}<td class="n">${gT}</td>`;
+}
+
+// ═══════════════════════════════════════════════
+// T12: TIME PATTERNS
+// ═══════════════════════════════════════════════
+function buildTimeTab(){
+  const{df}=getFiltered();const fl=df.filter(r=>r._category==='Frontline');const tickets=fl.filter(r=>r._isTicket);
+  const hourly=new Array(24).fill(0);tickets.forEach(r=>{if(r._dt)hourly[r._dt.getHours()]++;});
+  const peak=hourly.indexOf(Math.max(...hourly));const nZ=hourly.filter(v=>v>0);const quiet=nZ.length?hourly.indexOf(Math.min(...nZ)):0;
+  const s1=hourly.slice(19).reduce((s,v)=>s+v,0)+hourly.slice(0,2).reduce((s,v)=>s+v,0);const s2=hourly.slice(2,11).reduce((s,v)=>s+v,0);const s3=hourly.slice(10,19).reduce((s,v)=>s+v,0);
+  const fH=h=>h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p';
+  document.getElementById('kpi12').innerHTML=mkKPI('Peak hour (PST)',fH(peak),hourly[peak]+' tickets')+mkKPI('Quietest hour',fH(quiet),hourly[quiet]+' tickets')+mkKPI('Shift 1 volume',s1,'6:30PM–3:30AM')+mkKPI('Shift 2 volume',s2,'2:00AM–11:00AM')+mkKPI('Shift 3 volume',s3,'10:00AM–7:00PM');
+  function sC(h){if(h>=19||h<2)return'#4a6fa5';if(h>=2&&h<10)return'#4a8c5c';if(h>=10&&h<19)return'#8c6a2a';return'#4a6fa5';}
+  mkBar('c-hr',hourly.map((_,i)=>fH(i)),[{data:hourly,backgroundColor:hourly.map((_,i)=>sC(i)),borderRadius:3,borderSkipped:false}],{xt:{maxRotation:0,font:{size:10}}});
+  // CC hourly if available
+  const cc=getCCFiltered();
+  if(cc.length){
+    const ccHourly=new Array(24).fill(0);const ccAns=new Array(24).fill(0);const ccAbn=new Array(24).fill(0);
+    cc.forEach(r=>{if(!r._dt)return;const h=r._dt.getHours();ccHourly[h]++;if(r['Call Result']==='Answered')ccAns[h]++;if(r['Call Result']==='Abandoned')ccAbn[h]++;});
+    const ccPeak=ccHourly.indexOf(Math.max(...ccHourly));
+    document.getElementById('cc-hourly-card').innerHTML=`<div class="card"><div class="ct">Hourly call volume (CC report) — peak at ${fH(ccPeak)}</div><div class="cw" style="height:200px"><canvas id="c-cc-hr"></canvas></div></div>`;
+    setTimeout(()=>{
+      mkBar('c-cc-hr',ccHourly.map((_,i)=>fH(i)),[
+        {label:'Answered',data:ccAns,backgroundColor:'#4ade80',borderRadius:2,borderSkipped:false,stack:'s'},
+        {label:'Abandoned',data:ccAbn,backgroundColor:'#f87171',borderRadius:2,borderSkipped:false,stack:'s'}
+      ],{stk:true,xt:{maxRotation:0,font:{size:10}}});
+      CHARTS['c-cc-hr'].options.plugins.legend={display:true,position:'top',labels:{font:{size:10},padding:10}};
+      CHARTS['c-cc-hr'].update();
+    },50);
+  } else {document.getElementById('cc-hourly-card').innerHTML='';}
+}
+
+// ═══════════════════════════════════════════════
+// T13: AGENTS
+// ═══════════════════════════════════════════════
+function buildAgentTab(){
+  const{df:rawDf,followupOGIs}=G;const{df}=getFiltered();
+  const ag=getAGFiltered();
+
+  // AHT lookup from AG report per agent
+  const agAHT={};
+  if(ag.length){
+    const agCore2=ag.filter(r=>!CROSSSELL.includes(String(r['Agent Name']||'')));
+    const agInb2=agCore2.filter(r=>['Inbound ACD','Inbound'].includes(r['Call Type']));
+    const agStats2={};
+    agInb2.forEach(r=>{const a=String(r['Agent Name']||'');if(!a)return;if(!agStats2[a])agStats2[a]={talk:0,hold:0,wrap:0,calls:0};agStats2[a].talk+=r._talk;agStats2[a].hold+=r._hold;agStats2[a].wrap+=r._wrap;agStats2[a].calls++;});
+    Object.entries(agStats2).forEach(([a,d])=>{agAHT[a]=d.calls>0?(d.talk+d.hold+d.wrap)/d.calls:0;});
+  }
+
+  function agStats(rows){
+    const m={};rows.forEach(r=>{const a=String(r['Agent Name']||'');if(!a)return;if(!m[a])m[a]={name:a,total:0,calls:0,emails:0,chats:0,tlreviews:0,escHandled:0,escalations:0,reviews:0,qcaudits:0};m[a].total++;const ch=String(r['Interaction']||'');if(ch==='Call')m[a].calls++;else if(ch==='Email')m[a].emails++;else if(ch==='Chat')m[a].chats++;else if(ch==='TL Review')m[a].tlreviews++;else if(ch==='User Reviews')m[a].reviews++;else if(ch==='QC Audit')m[a].qcaudits++;else if(['Escalation Handled by TL','Escalation handled by Ops Team','Escalation handled by Escalation Team'].includes(ch))m[a].escHandled++;if(r._isEscalated)m[a].escalations++;});return m;
+  }
+  function calcFCR(rows){
+    const fcr={};const t=rows.filter(r=>r._isTicket&&!FCR_EXCLUDE.includes(String(r['Interaction']||'')));
+    t.forEach(r=>{r._isFCR=r['OGI']?!followupOGIs.has(String(r['OGI'])):true;});
+    t.forEach(r=>{const a=String(r['Agent Name']||'');if(!fcr[a])fcr[a]={t:0,f:0};fcr[a].t++;if(r._isFCR)fcr[a].f++;});return fcr;
+  }
+  function fcrP(fcr,n){const f=fcr[n];return f?pct(f.f,f.t):null;}
+  function abTag(p){return p?'':'<span class="absent-tag">Absent</span>';}
+  function fcrB(p){if(p===null)return'—';return`<span class="bx ${p>=80?'bg':p>=70?'ba':'br'}">${p}%</span>`;}
+  function escB(r){return`<span class="bx ${r>5?'br':r>2?'ba':'bg'}">${r}%</span>`;}
+  function ahtCell(name){const s=agAHT[name];return s?`<td class="n">${secToMmss(s)}</td>`:'<td class="n">—</td>';}
+
+  // MGMT
+  const mgmtMap=agStats(df.filter(r=>MGMT_TEAM.includes(String(r['Agent Name']||''))));
+  document.getElementById('mgmt-body').innerHTML=MGMT_TEAM.map(n=>{const d=mgmtMap[n]||{calls:0,emails:0,chats:0,total:0};return`<tr><td>${n}${abTag(d.total>0)}</td><td style="font-size:11px;color:var(--tx2)">${MGMT_ROLES[n]||''}</td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n" style="font-weight:600">${d.calls+d.emails+d.chats}</td></tr>`;}).join('');
+
+  // TLs
+  const tlMap=agStats(df.filter(r=>TL_TEAM.includes(String(r['Agent Name']||''))));
+  document.getElementById('tl-cnt').textContent='('+TL_TEAM.length+' TLs)';
+  const tlT={calls:0,emails:0,chats:0,tlreviews:0,escHandled:0,escalations:0,total:0};
+  document.getElementById('tl-body').innerHTML=TL_TEAM.map(n=>{const d=tlMap[n]||{calls:0,emails:0,chats:0,tlreviews:0,escHandled:0,escalations:0,total:0};const rt=d.calls+d.emails+d.chats+d.tlreviews+d.escHandled;['calls','emails','chats','tlreviews','escHandled','escalations','total'].forEach(k=>tlT[k]+=(d[k]||0));const er=pct(d.escalations,d.total||1);return`<tr><td>${n}${abTag(d.total>0)}</td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n"><span class="bx bb">${d.tlreviews}</span></td><td class="n">${d.escHandled}</td><td class="n" style="font-weight:600">${rt}</td><td class="n">${escB(er)}</td></tr>`;}).join('');
+  document.getElementById('tl-foot').innerHTML=`<td>Total</td><td class="n">${tlT.calls}</td><td class="n">${tlT.emails}</td><td class="n">${tlT.chats}</td><td class="n">${tlT.tlreviews}</td><td class="n">${tlT.escHandled}</td><td class="n">${tlT.calls+tlT.emails+tlT.chats+tlT.tlreviews+tlT.escHandled}</td><td class="n">${escB(pct(tlT.escalations,tlT.total||1))}</td>`;
+
+  // QC
+  const qcAllRows=df.filter(r=>QC_TEAM.includes(String(r['Agent Name']||'')));const qcMap=agStats(qcAllRows);const qcFCR=calcFCR(qcAllRows);const qcT={qcaudits:0,calls:0,emails:0,chats:0,flTotal:0,escalations:0,total:0};
+  document.getElementById('qc-body').innerHTML=QC_TEAM.map(n=>{const d=qcMap[n]||{qcaudits:0,calls:0,emails:0,chats:0,escalations:0,total:0};const note=n==='Vidya Vijayan'?'Deputy TL':'';const fp=fcrP(qcFCR,n);const er=pct(d.escalations,d.total||1);const fl=d.calls+d.emails+d.chats;['qcaudits','calls','emails','chats','escalations','total'].forEach(k=>qcT[k]+=(d[k]||0));qcT.flTotal+=fl;return`<tr><td>${n}${abTag(d.total>0)}</td><td style="font-size:11px;color:var(--tx2)">${note}</td><td class="n"><span class="bx bp">${d.qcaudits}</span></td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n" style="font-weight:600">${fl}</td><td class="n">${fcrB(fp)}</td><td class="n">${escB(er)}</td></tr>`;}).join('');
+  document.getElementById('qc-foot').innerHTML=`<td>Total</td><td></td><td class="n">${qcT.qcaudits}</td><td class="n">${qcT.calls}</td><td class="n">${qcT.emails}</td><td class="n">${qcT.chats}</td><td class="n">${qcT.flTotal}</td><td class="n">—</td><td class="n">${escB(pct(qcT.escalations,qcT.total||1))}</td>`;
+
+  // L2
+  const l2Rows=df.filter(r=>L2_TEAM.includes(String(r['Agent Name']||'')));const l2Map=agStats(l2Rows);const l2FCR=calcFCR(l2Rows);
+  document.getElementById('l2-body').innerHTML=L2_TEAM.map(n=>{const d=l2Map[n]||{escHandled:0,calls:0,emails:0,chats:0,total:0};const fp=fcrP(l2FCR,n);const fl=d.calls+d.emails+d.chats;return`<tr><td>${n}${abTag(d.total>0)}</td><td class="n"><span class="bx br">${d.escHandled}</span></td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n" style="font-weight:600">${fl}</td><td class="n">${fcrB(fp)}</td></tr>`;}).join('');
+
+  // Reviews Team
+  const revTeamRows=df.filter(r=>REVIEW_TEAM.includes(String(r['Agent Name']||'')));const revTeamMap=agStats(revTeamRows);const revTeamFCR=calcFCR(revTeamRows);const rvT={reviews:0,calls:0,emails:0,chats:0,flTotal:0,escalations:0,total:0};
+  document.getElementById('rev-team-body').innerHTML=REVIEW_TEAM.map(n=>{const d=revTeamMap[n]||{reviews:0,calls:0,emails:0,chats:0,escalations:0,total:0};const fp=fcrP(revTeamFCR,n);const er=pct(d.escalations,d.total||1);const fl=d.calls+d.emails+d.chats;['reviews','calls','emails','chats','escalations','total'].forEach(k=>rvT[k]+=(d[k]||0));rvT.flTotal+=fl;return`<tr><td>${n}${abTag(d.total>0)}</td><td class="n"><span class="bx" style="background:#e0f2fe;color:#0369a1">${d.reviews}</span></td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n" style="font-weight:600">${fl}</td><td class="n">${fcrB(fp)}</td><td class="n">${escB(er)}</td></tr>`;}).join('');
+  document.getElementById('rev-team-foot').innerHTML=`<td>Total</td><td class="n">${rvT.reviews}</td><td class="n">${rvT.calls}</td><td class="n">${rvT.emails}</td><td class="n">${rvT.chats}</td><td class="n">${rvT.flTotal}</td><td class="n">—</td><td class="n">${escB(pct(rvT.escalations,rvT.total||1))}</td>`;
+
+  // Ad hoc
+  const adhocRows=df.filter(r=>ADHOC_TEAM.includes(String(r['Agent Name']||'')));const adhocMap=agStats(adhocRows);
+  document.getElementById('adhoc-body').innerHTML=ADHOC_TEAM.map(n=>{const d=adhocMap[n]||{calls:0,emails:0,chats:0,total:0};return`<tr><td>${n}${abTag(d.total>0)}</td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n" style="font-weight:600">${d.calls+d.emails+d.chats}</td></tr>`;}).join('');
+
+  // Indian Spanish
+  const ispRows=df.filter(r=>INDIAN_SPANISH.includes(String(r['Agent Name']||'')));const ispMap=agStats(ispRows);const ispFCR=calcFCR(ispRows);document.getElementById('isp-cnt').textContent='('+INDIAN_SPANISH.length+' agents)';const ispT={calls:0,emails:0,chats:0,total:0,escalations:0};
+  document.getElementById('isp-body').innerHTML=INDIAN_SPANISH.map(n=>{const d=ispMap[n]||{calls:0,emails:0,chats:0,total:0,escalations:0};const fp=fcrP(ispFCR,n);const er=pct(d.escalations,d.total||1);['calls','emails','chats','total','escalations'].forEach(k=>ispT[k]+=(d[k]||0));return`<tr><td>${n}${abTag(d.total>0)}</td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n" style="font-weight:600">${d.total}</td><td class="n">${fcrB(fp)}</td><td class="n">${escB(er)}</td></tr>`;}).join('');
+  document.getElementById('isp-foot').innerHTML=`<td>Total</td><td class="n">${ispT.calls}</td><td class="n">${ispT.emails}</td><td class="n">${ispT.chats}</td><td class="n">${ispT.total}</td><td class="n">—</td><td class="n">${escB(pct(ispT.escalations,ispT.total||1))}</td>`;
+
+  // Columbia
+  const colRows=df.filter(r=>COLUMBIA_TEAM.includes(String(r['Agent Name']||'')));const colMap=agStats(colRows);const colFCR=calcFCR(colRows);document.getElementById('col-cnt').textContent='('+COLUMBIA_TEAM.length+' agents)';const colT={calls:0,emails:0,chats:0,total:0,escalations:0};
+  document.getElementById('col-body').innerHTML=COLUMBIA_TEAM.map(n=>{const d=colMap[n]||{calls:0,emails:0,chats:0,total:0,escalations:0};const fp=fcrP(colFCR,n);const er=pct(d.escalations,d.total||1);['calls','emails','chats','total','escalations'].forEach(k=>colT[k]+=(d[k]||0));return`<tr><td>${n}${abTag(d.total>0)}</td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n" style="font-weight:600">${d.total}</td><td class="n">${fcrB(fp)}</td><td class="n">${escB(er)}</td></tr>`;}).join('');
+  document.getElementById('col-foot').innerHTML=`<td>Total</td><td class="n">${colT.calls}</td><td class="n">${colT.emails}</td><td class="n">${colT.chats}</td><td class="n">${colT.total}</td><td class="n">—</td><td class="n">${escB(pct(colT.escalations,colT.total||1))}</td>`;
+
+  // Frontline
+  const FRONTLINE_EXCLUDE=new Set([...DISPUTE_TEAM,...TL_TEAM,...MGMT_TEAM,...INDIAN_SPANISH,...COLUMBIA_TEAM,...ADHOC_TEAM]);
+  const flRows=df.filter(r=>{const a=String(r['Agent Name']||'');if(!a||a==='ai-decagon ai-decagon')return false;if(FRONTLINE_EXCLUDE.has(a))return false;return['Call','Email','Chat'].includes(String(r['Interaction']||''));});
+  const flTickets=flRows.filter(r=>r._isTicket);const flFCR=calcFCR(flRows);
+  const fPOGI={};rawDf.filter(r=>!r._isTicket&&r['OGI']).forEach(r=>{const k=String(r['OGI']);fPOGI[k]=(fPOGI[k]||0)+1;});
+  flTickets.forEach(r=>{const fc=r['OGI']?(fPOGI[String(r['OGI'])]||0):0;r._followups=fc;r._totalInts=1+fc;});
+  const agTD={};flTickets.forEach(r=>{const a=String(r['Agent Name']||'');if(!agTD[a])agTD[a]={tickets:0,totalInts:0,multi:0};agTD[a].tickets++;agTD[a].totalInts+=r._totalInts||1;if((r._followups||0)>0)agTD[a].multi++;});
+  const flMap=agStats(flRows);
+  G.agentData=Object.values(flMap).map(a=>{const fcr=flFCR[a.name];const td=agTD[a.name];const ahtS=agAHT[a.name]||0;return{...a,esc_rate:pct(a.escalations,a.total||1),fcr_pct:fcr?pct(fcr.f,fcr.t):100,avg_ints:td?Math.round(td.totalInts/td.tickets*100)/100:1,tl_reviews:a.tlreviews,aht_sec:ahtS};}).sort((a,b)=>b.total-a.total);
+
+  const cpx=[...G.agentData].filter(a=>a.total>=5).sort((a,b)=>b.avg_ints-a.avg_ints).slice(0,10);
+  if(cpx.length)mkBar('c-ipt',cpx.map(a=>a.name),[{data:cpx.map(a=>a.avg_ints),backgroundColor:cpx.map(a=>a.avg_ints>=1.5?'#f87171':a.avg_ints>=1.3?'#fbbf24':'#4ade80'),borderRadius:4,borderSkipped:false}],{yt:{callback:v=>v+'x'},ymin:1});
+
+  const tot=G.agentData.reduce((s,a)=>s+a.total,0);const bFCR=G.agentData.filter(a=>a.fcr_pct<FCR_TARGET&&a.total>=5).length;const hEsc=G.agentData.filter(a=>a.esc_rate>5).length;const hCpx=G.agentData.filter(a=>a.avg_ints>1.4&&a.total>=5).length;
+  document.getElementById('kpi13').innerHTML=mkKPI('Frontline agents',G.agentData.length)+mkKPI('Avg tickets/agent',Math.round(tot/Math.max(G.agentData.length,1)))+mkKPI('FCR below 80%',bFCR+' agents','min 5 tickets','rd')+mkKPI('High esc rate (>5%)',hEsc+' agents','','rd')+mkKPI('High complexity (>1.4x)',hCpx+' agents','','am')+mkKPI('AHT data','✓ from AG','agent-level AHT','gn');
+  document.getElementById('ag-foot').innerHTML=`<td>Total — ${G.agentData.length} agents</td><td class="n">${tot}</td><td class="n">${G.agentData.reduce((s,a)=>s+a.calls,0)}</td><td class="n">${G.agentData.reduce((s,a)=>s+a.emails,0)}</td><td class="n">${G.agentData.reduce((s,a)=>s+a.chats,0)}</td><td class="n">${G.agentData.reduce((s,a)=>s+(a.tl_reviews||0),0)}</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td>`;
+  renderAgents();
+}
+
+function sortAg(k){
+  if(AG_SORT===k)AG_ASC=!AG_ASC;else{AG_SORT=k;AG_ASC=false;}
+  document.querySelectorAll('[id^="ah-"]').forEach(el=>{el.classList.remove('asc','desc');});
+  const el=document.getElementById('ah-'+k);if(el){el.classList.add(AG_ASC?'asc':'desc');}
+  renderAgents();
+}
+
+function renderAgents(){
+  if(!G.agentData)return;
+  const q=(document.getElementById('ag-srch').value||'').toLowerCase();
+  const f=document.getElementById('ag-flt').value;
+  let d=G.agentData.filter(a=>{if(!a.name.toLowerCase().includes(q))return false;if(f==='fcr-low')return a.fcr_pct<FCR_TARGET&&a.total>=5;if(f==='esc-high')return a.esc_rate>5;if(f==='complex')return a.avg_ints>1.4&&a.total>=5;return true;});
+  const sk=AG_SORT;d.sort((a,b)=>sk==='name'?(AG_ASC?a.name>b.name:a.name<b.name)?1:-1:AG_ASC?a[sk]-b[sk]:b[sk]-a[sk]);
+  document.getElementById('ag-cnt').textContent=d.length+' agents';
+  document.getElementById('ag-body').innerHTML=d.map((a,i)=>{const eC=a.esc_rate>5?'br':a.esc_rate>2?'ba':'bg';const fC=a.fcr_pct>=80?'bg':a.fcr_pct>=70?'ba':'br';const iC=a.avg_ints>=1.5?'br':a.avg_ints>=1.3?'ba':'bg';const tlr=a.tl_reviews||0;const ahtStr=a.aht_sec>0?secToMmss(a.aht_sec):'—';return`<tr><td>${i+1}. ${a.name}</td><td class="n" style="font-weight:600">${a.total}</td><td class="n">${a.calls}</td><td class="n">${a.emails}</td><td class="n">${a.chats}</td><td class="n">${tlr>0?`<span class="bx bb">${tlr}</span>`:'—'}</td><td class="n"><span class="bx ${eC}">${a.esc_rate}%</span></td><td class="n"><span class="bx ${fC}">${a.fcr_pct}%</span></td><td class="n"><span class="bx ${iC}">${a.avg_ints}x</span></td><td class="n">${ahtStr}</td></tr>`;}).join('');
+}
+
+// ═══════════════════════════════════════════════
+// UI
+// ═══════════════════════════════════════════════
+function showTab(id,el){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.t-btn').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(el)el.classList.add('active');
+}
+</script>
+</body>
+</html>
