@@ -600,57 +600,22 @@ const REVIEW_TEAM=['Muvithra M','Tharun Sunil Kumar','Jijo Papachan','Abhilash A
 const ADHOC_TEAM=['Vishnu MS'];
 const MGMT_TEAM=['Anju Mareeta Lean','Joyson Fernandez'];
 const INDIAN_SPANISH=['Pawan Kumar','NAUSHAD AHMAD','Javed Humayun Khan','MD Sattar Alam','Mohamed Jowhar','Ansar Alli','U Likhith','Mohammad Haider Ali','Siddarth Raj'];
-const COLUMBIA_TEAM=['Alexandra Morales','Andrea Ruiz','Angeles Soledad','Daniel Montoya','Karen Hopkins','Brianna Lundy','Karolyne Perez','Mauricio Leon','Nicholas Marquez','Oscar Perez','Sarah Gonzales','Valentina Torres','Selina Benavides','Gabriella Lacayo','Liliana Soledad'];
+const COLUMBIA_TEAM=['Alexandra Morales','Andrea Ruiz','Angeles Soledad','Daniel Montoya','Karen Hopkins','Brianna Lundy','Karolyne Perez','Mauricio Leon','Nicholas Marquez','Oscar Perez','Sarah Gonzales','Valentina Torres','Selina Benavides','Gabriella Lacayo','Liliana Soledad','Amanda Wagoner'];
 const CROSSSELL=['AS, Al-Ameen','Chacko, Samuel','Mathew, Daisy','R, Nivesh','S Nair, Goutham','S, Sreelakshmi','Selvia, Shyny','Sudarsanan, Vishnu','Ashok, Aathira'];
 const TL_ONLY=TL_TEAM;
 const TL_MATERNITY=['Aswini AS'];
 const DTL_TEAM=['Vidya Vijayan'];
 const SME_TEAM=['Althaf Z','LALITA LAMA'];
 const FRONTLINE_AGENTS=[
-  // Active frontline agents — names exactly as they appear in CRM data
-  'Abhi',                  // = Abhilash Lean
-  'Abhija Zakkir',
-  'Abhinav S B',
-  'Abhiraj Erenzath',
-  'Abhishek Kumar S',
-  'Abin Eappen',
-  'Abin Ferry',
-  'Ajeet A',
-  'Ajesh Mathew Varghese', // different from Ajesh varghese
-  'Ajesh varghese',        // different from Ajesh Mathew Varghese
-  'Akshay Vinod',
-  'Akshaya G S',
-  'Amal Krishna A',
-  'Ananthu',
-  'Arya J S',
-  'Aswin AV',
-  'Azhar Abdul Kalam',
-  'Bibin Selvan',
-  'Blessy Hillary',
-  'Catherine Benjamin',
-  'Devika S',
-  'Gokul',                 // = Gokul Sarath
-  'Haleema',               // = Haleema Raheem
-  'Hizana Noushad',
-  'Irfana Ibrahim',        // = Irfana S Ibrahim
-  'Irshad S',
-  'Jishnu Praveen',
-  'John Chacko',
-  'Karnan Jayaprakash',
-  'Nikhil Pradeep',
-  'Nimi',                  // = Nimi M Nair
-  'Rufus Johny',           // = Rufus H Johny
-  'Shinu Varghese',
-  'Sufaila Abdul Fathah',
-  'Swathy Peethambaran',
-  // Previously active — show as Absent/Inactive when not in uploaded data
-  'B I Sumith',            // = Sumith B I
-  'Dravya SP Naga',
-  'Najna Nizar',
-  'Pooja Jose',
-  // Team members absent last week — will show correctly when they appear in data
-  'Meenakshy RS',
-  'Jonathan Anil'
+  'Abhi','Abhija Zakkir','Abhinav S B','Abhiraj Erenzath','Abhishek Kumar S',
+  'Abin Eappen','Abin Ferry','Ajeet A','Ajesh Mathew Varghese','Ajesh varghese',
+  'Akshay Vinod','Akshaya G S','Amal Krishna A','Ananthu','Arya J S',
+  'Aswin AV','Azhar Abdul Kalam','Bibin Selvan','Blessy Hillary','Catherine Benjamin',
+  'Devika S','Gokul','Haleema','Hizana Noushad','Irfana Ibrahim','Irshad S',
+  'Jishnu Praveen','John Chacko','Karnan Jayaprakash','Nikhil Pradeep','Nimi',
+  'Rufus Johny','Shinu Varghese','Sufaila Abdul Fathah','Swathy Peethambaran',
+  'B I Sumith','Dravya SP Naga','Najna Nizar','Pooja Jose',
+  'Meenakshy RS','Jonathan Anil'
 ];
 const KNOWN_AGENTS=new Set([
   ...DISPUTE_TEAM,...TL_TEAM,...QC_TEAM,...L2_TEAM,...REVIEW_TEAM,
@@ -658,6 +623,8 @@ const KNOWN_AGENTS=new Set([
   ...TL_MATERNITY,...DTL_TEAM,...SME_TEAM,...FRONTLINE_AGENTS,
   'ai-decagon ai-decagon'
 ]);
+const AG_NAME_MAP={'Lean, Abhilash':'Abhi','Zakkir, Abhija':'Abhija Zakkir','S B, Abhinav':'Abhinav S B','Erenzath, Abhiraj':'Abhiraj Erenzath','Kumar S, Abhishek':'Abhishek Kumar S','Eappen, Abin':'Abin Eappen','Ferry, Abin':'Abin Ferry','A, Ajeet':'Ajeet A','Varghese, Ajesh Mathew':'Ajesh Mathew Varghese','Varghese, Ajesh':'Ajesh varghese','Vinod Nair, Akshay':'Akshay Vinod','G S, Akshaya':'Akshaya G S','Krishna, Amal':'Amal Krishna A','J R, Ananthu':'Ananthu','JS, Arya':'Arya J S','A.V, Aswin':'Aswin AV','Abdul Kalam, Azhar':'Azhar Abdul Kalam','Selvan, Bibin':'Bibin Selvan','Hillary, Blessy':'Blessy Hillary','Benjamin, Catherine':'Catherine Benjamin','S, Devika':'Devika S','Sarath, Gokul':'Gokul','Raheem, Haleema':'Haleema','Noushad, Hizana':'Hizana Noushad','Ibrahim, Irfana':'Irfana Ibrahim','S, Irshad':'Irshad S','Praveen, Jishnu':'Jishnu Praveen','Chacko, John':'John Chacko','Jayaprakash, Karnan':'Karnan Jayaprakash','Pradeep, Nikhil':'Nikhil Pradeep','M Nair, Nimi':'Nimi','Johny, Rufus H':'Rufus Johny','Varghese, Shinu':'Shinu Varghese','Abdul Fathah, Sufaila':'Sufaila Abdul Fathah','Peethambaran, Swathy':'Swathy Peethambaran','B I, Sumith':'B I Sumith','SP Naga, Dravya':'Dravya SP Naga','Nizar, Najna':'Najna Nizar','Jose, Pooja':'Pooja Jose','RS, Meenakshy':'Meenakshy RS','Anil, Jonathan':'Jonathan Anil','S, Gowri':'Gowri','MS, Subin':'Subin MS','RS, Greeshma':'Greeshma RS','Salam, Shiju':'Shiju Salam','V, Vishnu':'Vishnu V','Kiran, Bijoy':'Bijoy Kiran','Santhosh, Rashmika':'Rashmika Santhosh D','BS, Vishnu':'Vishnu BS','Suresh, Surya':'surya suresh','Varghese, Ansu':'Ansu Varghese','Nelson, Jaison':'Jaison Nelson','S, Henna Najim':'Henna Najim S','Vijayan, Vidya':'Vidya Vijayan','R, Reshma':'Reshma','Kumar, Rijisha S':'Rijisha S Kumar','Sunil, Reshma':'Reshma','S, Jithin':'Jithin S','M, Muvithra':'Muvithra M','Sunil Kumar, Tharun':'Tharun Sunil Kumar','Papachan, Jijo':'Jijo Papachan','Augustin, Abhilash':'Abhilash Augustin','MS, Vishnu':'Vishnu MS','Mareeta Lean, Anju':'Anju Mareeta Lean','Fernandez, Joyson':'Joyson Fernandez','Kumar, Pawan':'Pawan Kumar','Ahmad, Naushad':'NAUSHAD AHMAD','Khan, Javed Humayun':'Javed Humayun Khan','Alam, MD Sattar':'MD Sattar Alam','Alli, Ansar':'Ansar Alli','Likhith, Uppara':'U Likhith','Ali, Mohammad':'Mohammad Haider Ali','Raj, Siddarth':'Siddarth Raj','Morales, Alexandra':'Alexandra Morales','Ruiz, Andrea':'Andrea Ruiz','Soledad, Angeles':'Angeles Soledad','Montoya, Daniel':'Daniel Montoya','Hopkins, Karen':'Karen Hopkins','Lundy, Brianna':'Brianna Lundy','Perez, Karolyne':'Karolyne Perez','Leon, Mauricio':'Mauricio Leon','Marquez, Nicholas':'Nicholas Marquez','Perez, Oscar':'Oscar Perez','Gonzalez, Sarah':'Sarah Gonzales','Torres, Valentina':'Valentina Torres','Benavides, Selina':'Selina Benavides','Lacayo, Gabriella':'Gabriella Lacayo','Soledad, Liliana':'Liliana Soledad','Z, Althaf':'Althaf Z','Lama, Lalita':'LALITA LAMA','R, Sreela':'Sreelaraghavan','Wagoner, Amanda':'Amanda Wagoner'};
+function normalizeAgName(n){const s=String(n||'').trim();return AG_NAME_MAP[s]||s;}
 const FCR_EXCLUDE=['Dispute','TL Review','AI-Agent Call','Escalation Handled by TL','Escalation handled by Ops Team','User Reviews','QC Audit','Manager Review','Escalation Handled by Escalation Team'];
 const R_BCI_CARD=['BCI -Card refund','Before check-in, Card Refund','BCI - Refunded','Before Check-In -Refunded','Before Check-In - Way bucks offered customer denied Refunded back to card','Confirmed With Lot -Before Check-In -Way bucks offered customer denied Refunded back to card','Before check in - Refunded back to card','Before check in - Cancelled','BCI – Card Refund Issued','Card Refund issued','Card refund issued','Cancelled - Before check-In','Cancelled - Before Check-In','Before Check-In Cancelled','Before check in - cancelled','Before  check in - cancelled','Not Confirmed - Before Check-In - Way bucks offered customer denied Refunded back to card','LM Offered – Not Interested – Card refund','Confirmed with lot - LM Offered – Not Interested – Card refund','Confirmed with lot - LM Offered – Parked Elsewhere – Card refund'];
 const R_BCI_WB=['BCI -Way bucks issued','Before check-in, Wallet refunded','BCI – Waybucks issued','Confirmed With Lot -Before Check-In - Way bucks offered customer accepted','Way bucks issued'];
@@ -846,7 +813,7 @@ function initDashboard(raw){
   const df=raw.map(r=>{
     const dt=parseDate(r['Ticket_created_date']),idt=parseDate(r['Interaction created date']);
     // Normalise agent name — trim whitespace to fix e.g. 'Bijoy Kiran '
-    if(r['Agent Name'])r['Agent Name']=String(r['Agent Name']).trim();
+    if(r['Agent Name'])r['Agent Name']=normalizeAgName(String(r['Agent Name']).trim());
     return{...r,_dt:dt,_idt:idt,_dateKey:dt?dateKey(dt):'',
       _weekKey:dt?weekKey(dt):'',_monthKey:dt?monthKey(dt):'',
       _vertical:mapVertical(r),_refund:tagRefund(r['Action']),
@@ -866,7 +833,7 @@ function initDashboard(raw){
   // Process CC data if available
   if(CC_DATA){
     CC_DATA=CC_DATA.map(r=>{
-      if(r['Agent Name'])r['Agent Name']=String(r['Agent Name']).trim();
+      if(r['Agent Name'])r['Agent Name']=normalizeAgName(String(r['Agent Name']).trim());
       const dt=parseDate(r['Call Start Time']);
       return{...r,_dt:dt,_dateKey:dt?dateKey(dt):'',_weekKey:dt?weekKey(dt):'',_monthKey:dt?monthKey(dt):'',
         _talk:timeToDuration(r['Talk Time']),_hold:timeToDuration(r['Hold Time']),_wrap:timeToDuration(r['Wrap Up Time']),
@@ -875,7 +842,7 @@ function initDashboard(raw){
   }
   if(AG_DATA){
     AG_DATA=AG_DATA.map(r=>{
-      if(r['Agent Name'])r['Agent Name']=String(r['Agent Name']).trim();
+      if(r['Agent Name'])r['Agent Name']=normalizeAgName(String(r['Agent Name']).trim());
       const dt=parseDate(r['Call Start Time']);
       return{...r,_dt:dt,_dateKey:dt?dateKey(dt):'',_weekKey:dt?weekKey(dt):'',_monthKey:dt?monthKey(dt):'',
         _talk:timeToDuration(r['Talk Time']),_hold:timeToDuration(r['Hold Time']),_wrap:timeToDuration(r['Wrap Up Time'])};
@@ -1569,7 +1536,15 @@ function buildProductivityTab(){
   const totWrap=answered.reduce((s,r)=>s+r._wrap,0);
   const totHandle=totTalk+totHold+totWrap;
   const aht=totAns>0?totHandle/totAns:0;
-  const agCore=ag.filter(r=>!CROSSSELL.includes(String(r['Agent Name']||'')));
+  // Filter AG report to WAY CS team only — exclude crosssell, AI, and any unknown Nextiva users
+  const agCore=ag.filter(r=>{
+    const a=String(r['Agent Name']||'').trim();
+    if(!a)return false;
+    if(a==='ai-decagon ai-decagon')return false;
+    if(CROSSSELL.includes(a))return false;
+    if(!KNOWN_AGENTS.has(a))return false; // exclude non-CS Nextiva users
+    return true;
+  });
   const agOut=agCore.filter(r=>r['Call Type']==='Outbound');
   const agByDate={};agCore.forEach(r=>{if(!r._dateKey)return;if(!agByDate[r._dateKey])agByDate[r._dateKey]=new Set();agByDate[r._dateKey].add(String(r['Agent Name']||''));});
   const dailyActiveCounts=Object.values(agByDate).map(s=>s.size);
@@ -2179,13 +2154,34 @@ function buildReviewsTab(){
       </div>
     </div>`).join(''):`<div class="empty">No 1–3★ reviews</div>`;
 
-  document.getElementById('tb-rev').innerHTML=revs.map(r=>`<tr>
-    <td>${r['Agent Name']||'—'}</td>
-    <td>${r._rating?'★'.repeat(r._rating)+' ('+(r._rating)+')':String(r['Reason']||'')}</td>
-    <td style="font-size:11px;color:var(--tx2)">${String(r['Sub Reason']||'—').slice(0,50)}</td>
-    <td style="font-size:11px">${String(r['Action']||'—')}</td>
-    <td>${r._vertical}</td>
-  </tr>`).join('');
+  // Reason breakdown cards — what drives positive vs negative reviews
+  const posRevs=revs.filter(r=>r._rating>=4);
+  const negRevs=revs.filter(r=>r._rating<=3&&r._rating>=1);
+
+  function buildReasonCard(rows,elId,color){
+    const el=document.getElementById(elId);if(!el)return;
+    if(!rows||!rows.length){el.innerHTML='<div class="empty" style="padding:1rem;color:var(--tx3)">No data for this period</div>';return;}
+    const rc={};
+    rows.forEach(r=>{
+      const sub=String(r['Sub Reason']||'').trim();
+      const key=sub||'Reason not mentioned';
+      rc[key]=(rc[key]||0)+1;
+    });
+    const top=Object.entries(rc).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    if(!top.length){el.innerHTML='<div class="empty" style="padding:1rem;color:var(--tx3)">No data</div>';return;}
+    const mx=top[0][1];
+    el.innerHTML=top.map(([reason,c],i)=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">
+        <div style="width:22px;height:22px;border-radius:50%;background:${color==='#16a34a'?'#dcfce7':'#fee2e2'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${color};flex-shrink:0">${i+1}</div>
+        <div style="flex:1;font-size:12px;font-weight:500;line-height:1.3">${reason}</div>
+        <div style="width:80px;height:5px;background:var(--sf3);border-radius:3px;overflow:hidden;flex-shrink:0">
+          <div style="width:${Math.round(c/mx*100)}%;height:100%;border-radius:3px;background:${color}"></div>
+        </div>
+        <div style="font-size:14px;font-weight:700;color:${color};min-width:28px;text-align:right">${c}</div>
+      </div>`).join('');
+  }
+  buildReasonCard(posRevs,'rev-pos-reasons','#16a34a');
+  buildReasonCard(negRevs,'rev-neg-reasons','#dc2626');
 }
 
 // ═══════════════════════════════════════════════
@@ -2494,7 +2490,13 @@ function buildAgentTab(){
   // AHT lookup from AG report per agent
   const agAHT={};
   if(ag.length){
-    const agCore2=ag.filter(r=>!CROSSSELL.includes(String(r['Agent Name']||'')));
+    const agCore2=ag.filter(r=>{
+    const a=String(r['Agent Name']||'').trim();
+    if(!a||a==='ai-decagon ai-decagon')return false;
+    if(CROSSSELL.includes(a))return false;
+    if(!KNOWN_AGENTS.has(a))return false;
+    return true;
+  });
     const agInb2=agCore2.filter(r=>['Inbound ACD','Inbound'].includes(r['Call Type']));
     const agStats2={};
     agInb2.forEach(r=>{const a=String(r['Agent Name']||'');if(!a)return;if(!agStats2[a])agStats2[a]={talk:0,hold:0,wrap:0,calls:0};agStats2[a].talk+=r._talk;agStats2[a].hold+=r._hold;agStats2[a].wrap+=r._wrap;agStats2[a].calls++;});
@@ -2626,6 +2628,23 @@ function showTab(id,el){
   document.querySelectorAll('.t-btn').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if(el)el.classList.add('active');
+  // Re-render charts when tab becomes visible — charts rendered on hidden tabs have 0 dimensions
+  const rebuildMap={
+    't1':buildOverview,
+    't2':buildDriversTab,
+    't3':buildQueueTab,
+    't4':buildProductivityTab,
+    't5':buildDisputesTab,
+    't6':buildEscalationsTab,
+    't7':buildRefundsTab,
+    't8':buildTLTab,
+    't9':buildReviewsTab,
+    't10':buildAITab,
+    't11':buildPlatformsTab,
+    't12':buildTimeTab,
+    't13':buildAgentTab
+  };
+  if(rebuildMap[id])setTimeout(()=>rebuildMap[id](),80);
 }
 </script>
 </body>
