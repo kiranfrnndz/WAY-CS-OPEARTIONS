@@ -342,7 +342,10 @@ input[type=text]{width:180px}
         <div class="card"><div class="ct">By vertical</div><div class="leg" id="leg-ev"></div><div class="cw" style="height:170px"><canvas id="c-ev"></canvas></div></div>
         <div class="card"><div class="ct">By channel</div><div class="leg" id="leg-ec"></div><div class="cw" style="height:170px"><canvas id="c-ec"></canvas></div></div>
       </div>
-      <div class="card"><div class="ct">Top escalation reasons</div><div class="cw" style="height:240px"><canvas id="c-er"></canvas></div></div>
+      <div class="card">
+        <div class="ct">Top escalation reasons — click to expand contributors</div>
+        <div id="esc-drv-list"></div>
+      </div>
       <div class="card"><div class="ct">Status breakdown</div>
         <div class="tw"><table><thead><tr><th>Status</th><th class="n">Count</th><th class="n">%</th></tr></thead><tbody id="tb-es"></tbody></table></div>
       </div>
@@ -376,19 +379,19 @@ input[type=text]{width:180px}
         <span style="font-weight:400;font-size:10px;color:var(--tx3)">(8 TLs · Aswini AS on Maternity Leave)</span>
       </div>
       <div class="tw" style="margin-bottom:16px"><table>
-        <thead><tr><th>Name</th><th class="n">TL Reviews</th><th class="n">Esc (TL)</th><th class="n">Esc (Ops)</th><th class="n">Total</th><th>Status</th></tr></thead>
+        <thead><tr><th>Name</th><th class="n">TL Reviews</th><th class="n">Esc Handled</th><th class="n">Total</th><th>Status</th></tr></thead>
         <tbody id="tb-tl-tls"></tbody><tfoot><tr id="tf-tl-tls"></tr></tfoot>
       </table></div>
 
       <div class="team-hdr" style="--tc:#7c3aed">Acting DTL</div>
       <div class="tw" style="margin-bottom:16px"><table>
-        <thead><tr><th>Name</th><th>Role</th><th class="n">TL Reviews</th><th class="n">Esc handled</th><th class="n">Total</th></tr></thead>
+        <thead><tr><th>Name</th><th>Role</th><th class="n">TL Reviews</th><th class="n">Esc handled</th><th class="n">FL Calls</th><th class="n">FL Emails</th><th class="n">FL Chats</th><th class="n">FL Total</th><th class="n">FCR%</th><th class="n">Total</th></tr></thead>
         <tbody id="tb-tl-dtl"></tbody>
       </table></div>
 
       <div class="team-hdr" style="--tc:#d97706">SME</div>
       <div class="tw" style="margin-bottom:16px"><table>
-        <thead><tr><th>Name</th><th class="n">TL Reviews</th><th class="n">Esc handled</th><th class="n">Total</th></tr></thead>
+        <thead><tr><th>Name</th><th class="n">TL Reviews</th><th class="n">Esc handled</th><th class="n">FL Calls</th><th class="n">FL Emails</th><th class="n">FL Chats</th><th class="n">FL Total</th><th class="n">FCR%</th><th class="n">Total</th></tr></thead>
         <tbody id="tb-tl-sme"></tbody>
       </table></div>
     </div>
@@ -427,13 +430,44 @@ input[type=text]{width:180px}
     <!-- T10: AI AGENT -->
     <div class="sec" id="t10">
       <div class="ai-card"><div class="ai-tag"><div class="ai-dot"></div>AI Agent Active</div><div class="kpis" id="kpi10"></div></div>
+
       <div class="g2">
         <div class="card"><div class="ct">AI calls by vertical</div><div class="cw" style="height:180px"><canvas id="c-aiv"></canvas></div></div>
-        <div class="card"><div class="ct">AI call status</div><div class="cw" style="height:180px"><canvas id="c-ais"></canvas></div></div>
+        <div class="card"><div class="ct">AI resolution vs escalation by vertical</div><div class="cw" style="height:180px"><canvas id="c-ai-vt-stk"></canvas></div></div>
       </div>
-      <div class="card"><div class="ct">AI interactions detail</div>
+
+      <div class="g2">
+        <div class="card"><div class="ct">AI call status distribution</div><div class="cw" style="height:170px"><canvas id="c-ais"></canvas></div></div>
+        <div class="card"><div class="ct">AI hourly volume</div><div class="cw" style="height:170px"><canvas id="c-ai-hr"></canvas></div></div>
+      </div>
+
+      <div class="card">
+        <div class="ct">AI call drivers — click to expand lot breakdown</div>
+        <div id="ai-drv-list"></div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="ct" style="color:#16a34a">&#10003; Top lots — AI Resolved (successful)</div>
+          <div id="ai-lots-success"></div>
+        </div>
+        <div class="card">
+          <div class="ct" style="color:#dc2626">&#10007; Top lots — Escalated to Human (not resolved)</div>
+          <div id="ai-lots-fail"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ct">AI agent breakdown — who escalates after AI</div>
         <div class="tw"><table>
-          <thead><tr><th>Vertical</th><th>Reason</th><th>Sub reason</th><th>Status</th><th>Tag</th></tr></thead>
+          <thead><tr><th>Agent</th><th class="n">Picked up after AI</th><th class="n">Interaction type</th></tr></thead>
+          <tbody id="tb-ai-agents"></tbody>
+        </table></div>
+      </div>
+
+      <div class="card"><div class="ct">All AI interactions detail</div>
+        <div class="tw"><table>
+          <thead><tr><th>Vertical</th><th>Reason</th><th>Sub reason</th><th>Status</th><th>Classification</th></tr></thead>
           <tbody id="tb-ai"></tbody>
         </table></div>
       </div>
@@ -478,6 +512,12 @@ input[type=text]{width:180px}
       <div class="tw" style="margin-bottom:20px"><table><thead><tr><th>Name</th><th class="n">Reviews handled</th><th class="n">FL Calls</th><th class="n">FL Emails</th><th class="n">FL Chats</th><th class="n">FL Total</th><th class="n">FCR%</th><th class="n">Esc%</th></tr></thead><tbody id="rev-team-body"></tbody><tfoot><tr id="rev-team-foot"></tr></tfoot></table></div>
       <div class="team-hdr" style="--tc:#059669">Ad hoc &amp; Reporting</div>
       <div class="tw" style="margin-bottom:20px"><table><thead><tr><th>Name</th><th class="n">FL Calls</th><th class="n">FL Emails</th><th class="n">FL Chats</th><th class="n">Total</th></tr></thead><tbody id="adhoc-body"></tbody></table></div>
+      <div class="team-hdr" style="--tc:#6b7280">External Ops Team <span style="font-weight:400;font-size:10px;color:var(--tx3)">(non-CS interactions · info only)</span></div>
+      <div class="tw" style="margin-bottom:20px"><table>
+        <thead><tr><th>Interaction Type</th><th class="n">Count</th><th class="n">Note</th></tr></thead>
+        <tbody id="ext-ops-body"></tbody>
+      </table></div>
+
       <div class="team-hdr" style="--tc:#d97706">Indian Spanish Team <span id="isp-cnt" style="font-weight:400;font-size:10px;color:var(--tx3)"></span></div>
       <div class="tw" style="margin-bottom:20px"><table><thead><tr><th>Name</th><th class="n">Calls</th><th class="n">Emails</th><th class="n">Chats</th><th class="n">Total</th><th class="n">FCR%</th><th class="n">Esc%</th></tr></thead><tbody id="isp-body"></tbody><tfoot><tr id="isp-foot"></tr></tfoot></table></div>
       <div class="team-hdr" style="--tc:#be185d">Way+ / Columbia Team <span id="col-cnt" style="font-weight:400;font-size:10px;color:var(--tx3)"></span></div>
@@ -710,6 +750,8 @@ function categorize(row){
 function initDashboard(raw){
   const df=raw.map(r=>{
     const dt=parseDate(r['Ticket_created_date']),idt=parseDate(r['Interaction created date']);
+    // Normalise agent name — trim whitespace to fix e.g. 'Bijoy Kiran '
+    if(r['Agent Name'])r['Agent Name']=String(r['Agent Name']).trim();
     return{...r,_dt:dt,_idt:idt,_dateKey:dt?dateKey(dt):'',
       _weekKey:dt?weekKey(dt):'',_monthKey:dt?monthKey(dt):'',
       _vertical:mapVertical(r),_refund:tagRefund(r['Action']),
@@ -729,6 +771,7 @@ function initDashboard(raw){
   // Process CC data if available
   if(CC_DATA){
     CC_DATA=CC_DATA.map(r=>{
+      if(r['Agent Name'])r['Agent Name']=String(r['Agent Name']).trim();
       const dt=parseDate(r['Call Start Time']);
       return{...r,_dt:dt,_dateKey:dt?dateKey(dt):'',_weekKey:dt?weekKey(dt):'',_monthKey:dt?monthKey(dt):'',
         _talk:timeToDuration(r['Talk Time']),_hold:timeToDuration(r['Hold Time']),_wrap:timeToDuration(r['Wrap Up Time']),
@@ -737,6 +780,7 @@ function initDashboard(raw){
   }
   if(AG_DATA){
     AG_DATA=AG_DATA.map(r=>{
+      if(r['Agent Name'])r['Agent Name']=String(r['Agent Name']).trim();
       const dt=parseDate(r['Call Start Time']);
       return{...r,_dt:dt,_dateKey:dt?dateKey(dt):'',_weekKey:dt?weekKey(dt):'',_monthKey:dt?monthKey(dt):'',
         _talk:timeToDuration(r['Talk Time']),_hold:timeToDuration(r['Hold Time']),_wrap:timeToDuration(r['Wrap Up Time'])};
@@ -786,9 +830,10 @@ function buildSelBar(){
 
 function getFiltered(){
   const{df,followupOGIs}=G;
+  // If no active key set (single period or all data), return everything
   if(!ACTIVE_KEY)return{df,followupOGIs};
   const filtered=df.filter(r=>{
-    const d=r._idt||r._dt;if(!d)return false;
+    const d=r._idt||r._dt;if(!d)return true; // include rows with no date
     if(MODE==='daily')return dateKey(d)===ACTIVE_KEY;
     if(MODE==='weekly')return weekKey(d)===ACTIVE_KEY;
     if(MODE==='monthly')return monthKey(d)===ACTIVE_KEY;
@@ -798,8 +843,10 @@ function getFiltered(){
 }
 
 function getCCFiltered(){
-  return (CC_DATA||[]).filter(r=>{
-    if(!r._dt)return false;
+  if(!CC_DATA)return[];
+  if(!ACTIVE_KEY)return CC_DATA;
+  return CC_DATA.filter(r=>{
+    if(!r._dt)return true;
     if(MODE==='daily')return r._dateKey===ACTIVE_KEY;
     if(MODE==='weekly')return r._weekKey===ACTIVE_KEY;
     if(MODE==='monthly')return r._monthKey===ACTIVE_KEY;
@@ -808,8 +855,10 @@ function getCCFiltered(){
 }
 
 function getAGFiltered(){
-  return (AG_DATA||[]).filter(r=>{
-    if(!r._dt)return false;
+  if(!AG_DATA)return[];
+  if(!ACTIVE_KEY)return AG_DATA;
+  return AG_DATA.filter(r=>{
+    if(!r._dt)return true;
     if(MODE==='daily')return r._dateKey===ACTIVE_KEY;
     if(MODE==='weekly')return r._weekKey===ACTIVE_KEY;
     if(MODE==='monthly')return r._monthKey===ACTIVE_KEY;
@@ -856,6 +905,16 @@ function buildOverview(){
   const tlTotal=df.filter(r=>r._category==='TL').length;
   const reviews=df.filter(r=>r._category==='Review').length;
   const aiCalls=df.filter(r=>r._category==='AI').length;
+  const aiDatesPresent=df.filter(r=>r._category==='AI').some(r=>(r._idt||r._dt)>=AI_LAUNCH_DATE);
+  const aiKpiHtml=(aiCalls>0&&aiDatesPresent)?(()=>{
+    const aiRows=df.filter(r=>r._category==='AI');
+    const aiResolved=aiRows.filter(r=>String(r['TKT_IssueReason']||'')==='AI Handled').length;
+    const aiEscalated=aiRows.filter(r=>String(r['TKT_IssueReason']||'')==='Escalated').length;
+    const aiResRate=pct(aiResolved,aiCalls);
+    return mkKPI('AI Calls Handled',aiCalls,'since 25 May 2026','bl')+
+           mkKPI('AI Resolved',aiResolved,aiResRate+'% resolution rate','gn')+
+           mkKPI('AI Escalated to Human',aiEscalated,pct(aiEscalated,aiCalls)+'% escalated','rd');
+  })():''
   const fcrT=tickets.filter(r=>!FCR_EXCLUDE.includes(String(r['Interaction']||'')));
   fcrT.forEach(r=>{r._isFCR=r['OGI']?!followupOGIs.has(String(r['OGI'])):true;});
   const fcrPct=pct(fcrT.filter(r=>r._isFCR).length,fcrT.length);
@@ -868,7 +927,7 @@ function buildOverview(){
     mkKPI('Escalations',escs,pct(escs,tickets.length)+'% rate','rd')+
     mkKPI('Disputes',disputes,'separate team','rd')+
     mkKPI('TL Reviews',tlTotal,'quality checks','bl')+
-    mkKPI('User Reviews',reviews,'','pu')+mkKPI('AI Calls',aiCalls,'AI handled','bl');
+    mkKPI('User Reviews',reviews,'','pu')+aiKpiHtml;
   const chTot=callsInbound+callsOutbound+emails+chats;
   document.getElementById('leg-ch').innerHTML=[['Inbound',callsInbound,'#2563eb'],['Outbound',callsOutbound,'#60a5fa'],['Email',emails,'#4ade80'],['Chat',chats,'#f97316']].map(([l,v,c])=>`<span class="li"><span class="ld" style="background:${c}"></span>${l} ${pct(v,chTot)}%</span>`).join('');
   mkDonut('c-ch',['Inbound','Outbound','Email','Chat'],[callsInbound,callsOutbound,emails,chats],['#2563eb','#60a5fa','#4ade80','#f97316']);
@@ -876,7 +935,7 @@ function buildOverview(){
   const vO=Object.entries(vC).sort((a,b)=>b[1]-a[1]);
   document.getElementById('leg-vt').innerHTML=vO.map(([v,c],i)=>`<span class="li"><span class="ld" style="background:${COLORS[i%COLORS.length]}"></span>${v} ${pct(c,fl.length)}%</span>`).join('');
   mkDonut('c-vt',vO.map(v=>v[0]),vO.map(v=>v[1]),vO.map((_,i)=>COLORS[i%COLORS.length]));
-  const allT=[{l:'Call',v:calls,c:'#60a5fa'},{l:'Email',v:emails,c:'#4ade80'},{l:'Chat',v:chats,c:'#f97316'},{l:'TL Review',v:tlTotal,c:'#a78bfa'},{l:'User Reviews',v:reviews,c:'#f87171'},{l:'Dispute',v:disputes,c:'#fb923c'},{l:'AI Call',v:aiCalls,c:'#2dd4bf'}].filter(t=>t.v>0);
+  const allT=[{l:'Call',v:calls,c:'#60a5fa'},{l:'Email',v:emails,c:'#4ade80'},{l:'Chat',v:chats,c:'#f97316'},{l:'TL Review',v:tlTotal,c:'#a78bfa'},{l:'User Reviews',v:reviews,c:'#f87171'},{l:'Dispute',v:disputes,c:'#fb923c'},...(aiCalls>0&&aiDatesPresent?[{l:'AI Call',v:aiCalls,c:'#2dd4bf'}]:[])].filter(t=>t.v>0);
   mkBar('c-all',allT.map(t=>t.l),[{data:allT.map(t=>t.v),backgroundColor:allT.map(t=>t.c),borderRadius:4,borderSkipped:false}]);
   // Trend
   const tC=document.getElementById('trend-card');let showT=false,tL=[],tD=[];
@@ -943,12 +1002,124 @@ function toggleDrv(id,el){const b=document.getElementById(id);const a=el.querySe
 // ═══════════════════════════════════════════════
 // T3: QUEUE & ABANDON
 // ═══════════════════════════════════════════════
+// QUEUE NORMALISATION — maps raw CC queue names
+// into business vertical groups with Spanish split
+// ═══════════════════════════════════════════════
+function normalizeQueue(rawName){
+  const q=String(rawName||'').trim();
+  const MAP={
+    'airport':                                  'Airport Parking',
+    'all cs team india':                        'Airport Parking',
+    'esa':                                      'Airport Parking',
+    'global main':                              'Airport Parking',
+    'confirmation line':                        'Airport Parking',
+    'confirmation':                             'Airport Parking',
+    'cruise parking':                           'Airport Parking',
+    'spanish new':                              'Airport Parking',
+    'spanish_new':                              'Airport Parking',
+    'airport spanish':                          'Airport Parking',
+    'cruise parking spanish':                   'Airport Parking',
+    'global spanish':                           'Airport Parking',
+    'spanish':                                  'Airport Parking',
+    'city':                                     'City Parking',
+    'city spanish':                             'City Parking',
+    'monthly':                                  'Monthly Parking',
+    'monthly english':                          'Monthly Parking',
+    'monthly_english':                          'Monthly Parking',
+    'monthly spanish':                          'Monthly Parking',
+    'carwash':                                  'Car Wash',
+    'carwash spanish':                          'Car Wash',
+    'repair orders':                            'Repair & Maintenance',
+    'way repair':                               'Repair & Maintenance',
+    'wayrepairtech':                            'Repair & Maintenance',
+    'wrench cc':                                'Repair & Maintenance',
+    'onward cc':                                'Repair & Maintenance',
+    'rmspanish':                                'Repair & Maintenance',
+    'rm spanish':                               'Repair & Maintenance',
+    'wrench_spanish':                           'Repair & Maintenance',
+    'onward spanish':                           'Repair & Maintenance',
+    'cs insurance team india':                  'Insurance',
+    'insurance service team us':                'Insurance',
+    'insurance spanish':                        'Insurance',
+    'agency customer':                          'Insurance',
+    'cs auto refinance':                        'Insurance',
+    '3002 ins service team queue':              'Insurance',
+    '3002 insurance service team queue':        'Insurance',
+    '3025 insurance agency sales transfer':     'Insurance',
+    '3037 ins retention ported':                'Insurance',
+    '3037 insurance retention (ported)':        'Insurance',
+    '3037 insurance retention':                 'Insurance',
+    '3041 (insurance all) (ported)':            'Insurance',
+    '3041 insurance - cure agency':             'Insurance',
+    '3043 wayweb insurance':                    'Insurance',
+    '3043 wayweb insurance ported':             'Insurance',
+    '3043 (wayweb insurance) (ported)':         'Insurance',
+    'insurance commercial division (ported)':   'Insurance',
+    'insurance transfers':                      'Insurance',
+    'online bind':                              'Insurance',
+    'refi > ins main':                          'Insurance',
+    'agency line':                              'Insurance',
+    'wayplus':                                  'WAY+',
+    'commonwealth way plus':                    'WAY+',
+    'magnum english':                           'WAY+',
+    'propark':                                  'WAY+',
+    'avibra line':                              'WAY+',
+    'bridger':                                  'WAY+',
+    'amazon urgently way pro':                  'WAY+',
+    'amac_english':                             'WAY+',
+    'snoopdrive':                               'WAY+',
+    'harbor':                                   'WAY+',
+    'gas ev cc':                                'WAY+',
+    'batline':                                  'WAY+',
+    'way plus spanish':                         'WAY+',
+    'common wealth spanish':                    'WAY+',
+    'magnum spanish':                           'WAY+',
+    'bridger spanish':                          'WAY+',
+    'propark_spanish':                          'WAY+',
+    'cross sell':                               '_exclude',
+    'cs manager queue':                         '_manager',
+  };
+
+  const key=q.toLowerCase();
+  let vertical=MAP[key]||null;
+
+  // Fallback — prefix/keyword matching for unknown future queue names
+  if(!vertical){
+    const lk=key;
+    if(lk.startsWith('airport'))                        vertical='Airport Parking';
+    else if(lk.startsWith('city'))                      vertical='City Parking';
+    else if(lk.startsWith('monthly'))                   vertical='Monthly Parking';
+    else if(lk.includes('carwash')||lk.includes('car wash')) vertical='Car Wash';
+    else if(lk.includes('repair')||lk.includes('wrench')) vertical='Repair & Maintenance';
+    else if(lk.startsWith('3002')||lk.startsWith('3025')||lk.startsWith('3037')||
+            lk.startsWith('3041')||lk.startsWith('3043'))  vertical='Insurance';
+    else if(lk.includes('insur'))                       vertical='Insurance';
+    else if(lk.includes('wayplus')||lk.includes('way plus')||
+            lk.includes('commonwealth')||lk.includes('common wealth')) vertical='WAY+';
+    else                                                vertical='WAY+'; // catch-all
+  }
+
+  if(vertical==='_exclude') return null;
+  if(vertical==='_manager') return '_manager';
+
+  // Append Spanish suffix if queue name contains 'Spanish' (any case)
+  if(/spanish/i.test(q)) vertical=vertical+' - Spanish';
+
+  return vertical;
+}
+
 function buildQueueTab(){
   const el=document.getElementById('t3-content');
   const cc=getCCFiltered();
-  const answered=cc.filter(r=>r['Call Result']==='Answered');
-  const abandoned=cc.filter(r=>r['Call Result']==='Abandoned');
-  const total=cc.length,totAns=answered.length,totAbn=abandoned.length;
+
+  // Exclude Cross Sell (null) and CS Manager Queue (_manager) from queue metrics
+  const ccFiltered=cc.filter(r=>{const nq=normalizeQueue(r['Call Center Name']);return nq!==null&&nq!=='_manager';});
+  // CS Manager Queue calls — floor escalations transferred to supervisor
+  const ccMgrQueue=cc.filter(r=>normalizeQueue(r['Call Center Name'])==='_manager');
+
+  const answered=ccFiltered.filter(r=>r['Call Result']==='Answered');
+  const abandoned=ccFiltered.filter(r=>r['Call Result']==='Abandoned');
+  const total=ccFiltered.length,totAns=answered.length,totAbn=abandoned.length;
   const abn_ge30=abandoned.filter(r=>r._wait>=30).length;
   const abn_lt30=abandoned.filter(r=>r._wait<30).length;
   const arr=pct(abn_ge30,total);
@@ -956,58 +1127,222 @@ function buildQueueTab(){
   const totHold=answered.reduce((s,r)=>s+r._hold,0);
   const totWrap=answered.reduce((s,r)=>s+r._wrap,0);
   const aht=totAns>0?(totTalk+totHold+totWrap)/totAns:0;
-  // Queue breakdown
-  const queues={};cc.forEach(r=>{const q=String(r['Call Center Name']||'Other');if(!queues[q])queues[q]={total:0,answered:0,abandoned:0,talk:0,hold:0,wrap:0,wait:0,wc:0};queues[q].total++;if(r['Call Result']==='Answered'){queues[q].answered++;queues[q].talk+=r._talk;queues[q].hold+=r._hold;queues[q].wrap+=r._wrap;}if(r['Call Result']==='Abandoned'){queues[q].abandoned++;queues[q].wait+=r._wait;queues[q].wc++;}});
+
+  // Queue aggregation — group by normalizeQueue
+  const queues={};
+  ccFiltered.forEach(r=>{
+    const q=normalizeQueue(r['Call Center Name']); // already guaranteed non-null
+    if(!queues[q])queues[q]={total:0,answered:0,abandoned:0,abn_ge30:0,talk:0,hold:0,wrap:0,wait:0,wc:0};
+    queues[q].total++;
+    if(r['Call Result']==='Answered'){
+      queues[q].answered++;
+      queues[q].talk+=r._talk;
+      queues[q].hold+=r._hold;
+      queues[q].wrap+=r._wrap;
+    }
+    if(r['Call Result']==='Abandoned'){
+      queues[q].abandoned++;
+      queues[q].wait+=r._wait;
+      queues[q].wc++;
+      if(r._wait>=30) queues[q].abn_ge30++;
+    }
+  });
+
   const qList=Object.entries(queues).sort((a,b)=>b[1].total-a[1].total);
   const maxQ=qList[0]?.[1]?.total||1;
-  let qRows='',qFoot='';
+  let qRows='';
+  // Build queue data array for sortable table
   const qTots={total:0,ans:0,abn:0};
+  const qDataArr=[];
   qList.forEach(([name,d])=>{
     qTots.total+=d.total;qTots.ans+=d.answered;qTots.abn+=d.abandoned;
-    const qAHT=d.answered>0?(d.talk+d.hold+d.wrap)/d.answered:0;
-    const qAWait=d.wc>0?d.wait/d.wc:0;
-    const abr=pct(d.abandoned,d.total);
-    qRows+=`<tr><td>${name}</td><td class="n">${d.total}<span class="qbw"><span class="qb" style="width:${Math.round(d.total/maxQ*100)}%"></span></span></td><td class="n">${d.answered}</td><td class="n">${d.abandoned}</td><td class="n"><span class="bx ${abr>10?'br':abr>5?'ba':'bg'}">${abr}%</span></td><td class="n">${secToMmss(qAHT)}</td><td class="n">${secToMmss(qAWait)}</td><td class="n">${pct(d.total,total)}%</td></tr>`;
+    qDataArr.push({
+      name,total:d.total,answered:d.answered,abandoned:d.abandoned,
+      abn_ge30:d.abn_ge30,
+      aht:d.answered>0?(d.talk+d.hold+d.wrap)/d.answered:0,
+      avgWait:d.wc>0?d.wait/d.wc:0,
+      abnPct:pct(d.abandoned,d.total),
+      arrPct:pct(d.abn_ge30,d.total),
+      sharePct:pct(d.total,total)
+    });
   });
-  qFoot=`<td>Total</td><td class="n">${qTots.total}</td><td class="n">${qTots.ans}</td><td class="n">${qTots.abn}</td><td class="n">${pct(qTots.abn,qTots.total)}%</td><td class="n">${secToMmss(aht)}</td><td class="n">—</td><td class="n">100%</td>`;
-  // Wait time buckets
-  const buckets=[['0–30s',abandoned.filter(r=>r._wait<30).length],['31–60s',abandoned.filter(r=>r._wait>=31&&r._wait<=60).length],['61–120s',abandoned.filter(r=>r._wait>=61&&r._wait<=120).length],['121–300s',abandoned.filter(r=>r._wait>=121&&r._wait<=300).length],['>300s',abandoned.filter(r=>r._wait>300).length]];
-  let bktRows=buckets.map(([l,c])=>`<tr><td>${l}</td><td class="n">${c}</td><td class="n">${pct(c,totAbn)}%</td></tr>`).join('');
+  window._qData=qDataArr;
+  window._qSort=window._qSort||{col:'total',asc:false};
+
+  // Store abandoned rows for drill-down
+  window._qAbandonedRows=abandoned.map(r=>({
+    queue:normalizeQueue(r['Call Center Name'])||String(r['Call Center Name']||''),
+    rawQueue:String(r['Call Center Name']||''),
+    date:r._dt?r._dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'--',
+    time:r._dt?r._dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'--',
+    wait:r._wait, waitStr:secToMmss(r._wait),
+    bucket:r._wait<30?'0-30s':r._wait<=60?'31-60s':r._wait<=120?'61-120s':r._wait<=300?'121-300s':'>300s',
+    isGe30:r._wait>=30
+  }));
+
+  const qFoot=`<td>Total</td><td class="n">${qTots.total}</td><td class="n">${qTots.ans}</td><td class="n">${qTots.abn}</td><td class="n">${pct(qTots.abn,qTots.total)}%</td><td class="n">${arr.toFixed(2)}%</td><td class="n">${secToMmss(aht)}</td><td class="n">--</td><td class="n">100%</td>`;
+
+  const buckets=[
+    ['0-30s',  abandoned.filter(r=>r._wait<30).length],
+    ['31-60s', abandoned.filter(r=>r._wait>=31&&r._wait<=60).length],
+    ['61-120s',abandoned.filter(r=>r._wait>=61&&r._wait<=120).length],
+    ['121-300s',abandoned.filter(r=>r._wait>=121&&r._wait<=300).length],
+    ['>300s',  abandoned.filter(r=>r._wait>300).length],
+  ];
+  const bktRows=buckets.map(([l,c])=>
+    `<tr style="cursor:${c>0?'pointer':'default'}" onclick="${c>0?'showAbnDrill(\'bucket\',\''+l+'\')':''}">
+      <td>${l}</td>
+      <td class="n">${c>0?`<span style="color:var(--rd);font-weight:600;text-decoration:underline dotted">${c}</span>`:c}</td>
+      <td class="n">${pct(c,totAbn)}%</td>
+    </tr>`
+  ).join('');
+
+  // KPI labels/values/colours
+  const kpiDefs=[
+    {l:'Total Calls',       v:total.toLocaleString(),     sub:'',                              c:'var(--tx)',  key:''},
+    {l:'Answered',          v:totAns.toLocaleString(),    sub:pct(totAns,total)+'% answer rate',c:'#16a34a',   key:''},
+    {l:'Abandoned',         v:totAbn.toLocaleString(),    sub:'click to see details',           c:'#dc2626',   key:'all'},
+    {l:'Abn <30s',          v:abn_lt30,                   sub:'click to expand',                c:'var(--am)', key:'lt30'},
+    {l:'Abn ≥30s (ARR)',    v:abn_ge30,                   sub:'click to expand',                c:'#dc2626',   key:'ge30'},
+    {l:'ARR %',             v:arr.toFixed(2)+'%',         sub:'Abn≥30s / total calls',          c:arr<3?'#16a34a':arr<6?'var(--am)':'#dc2626', key:''},
+    {l:'Avg AHT',           v:secToMmss(aht),             sub:'Talk+Hold+Wrap',                 c:'var(--tx)', key:''},
+    {l:'Avg Talk',          v:secToMmss(totAns>0?totTalk/totAns:0), sub:'',                    c:'var(--tx)', key:''},
+    {l:'Avg Hold',          v:secToMmss(totAns>0?totHold/totAns:0), sub:'',                    c:'var(--tx)', key:''},
+  ];
+
   el.innerHTML=`
-    <div class="kpis">
-      ${mkKPI('Total Calls',total.toLocaleString())}
-      ${mkKPI('Answered',totAns.toLocaleString(),pct(totAns,total)+'% answer rate','gn')}
-      ${mkKPI('Abandoned',totAbn.toLocaleString(),pct(totAbn,total)+'% of calls','rd')}
-      ${mkKPI('Abn <30s',abn_lt30,'short abandonments')}
-      ${mkKPI('Abn ≥30s (ARR)',abn_ge30,'contributes to ARR')}
-      ${mkKPI('ARR %',arr.toFixed(2)+'%','Abn≥30s / total calls',arr<3?'gn':arr<6?'am':'rd')}
-      ${mkKPI('Avg AHT',secToMmss(aht),'Talk + Hold + Wrap')}
-      ${mkKPI('Avg Talk',secToMmss(totAns>0?totTalk/totAns:0))}
-      ${mkKPI('Avg Hold',secToMmss(totAns>0?totHold/totAns:0))}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px">
+      ${kpiDefs.map(k=>`
+        <div onclick="${k.key?'showAbnDrill(\'kpi\',\''+k.key+'\')':''}"
+          style="background:var(--sf);border:2px solid ${k.key?'#e5e7eb':'var(--bd)'};border-radius:var(--r);padding:.85rem 1rem;cursor:${k.key?'pointer':'default'};transition:border-color .15s"
+          ${k.key?'title="Click to see abandoned call details"':''}>
+          <div style="font-size:10px;color:var(--tx3);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:5px">${k.l}</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:${k.c};line-height:1">${k.v}</div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:3px">${k.sub}</div>
+        </div>`).join('')}
     </div>
-    <div class="card"><div class="ct">Queue performance</div>
-      <div class="tw"><table>
-        <thead><tr><th>Queue</th><th class="n">Total</th><th class="n">Answered</th><th class="n">Abandoned</th><th class="n">Abn%</th><th class="n">AHT</th><th class="n">Avg Wait</th><th class="n">% Share</th></tr></thead>
-        <tbody>${qRows}</tbody><tfoot><tr>${qFoot}</tr></tfoot>
+
+    <div id="abn-drill-panel" style="display:none;margin-bottom:12px"></div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="ct" style="margin-bottom:0">Queue performance</div>
+        <div style="font-size:11px;color:var(--tx3)">&#8645; Click column headers to sort</div>
+      </div>
+      <div class="tw"><table id="q-table">
+        <thead><tr>
+          <th onclick="sortQueueTable('name')" id="qh-name" style="cursor:pointer">Queue Group</th>
+          <th class="n sortable" onclick="sortQueueTable('total')" id="qh-total">Offered</th>
+          <th class="n sortable" onclick="sortQueueTable('answered')" id="qh-answered">Answered</th>
+          <th class="n sortable" onclick="sortQueueTable('abandoned')" id="qh-abandoned">Abandoned</th>
+          <th class="n sortable" onclick="sortQueueTable('abnPct')" id="qh-abnPct">Abn%</th>
+          <th class="n sortable" onclick="sortQueueTable('arrPct')" id="qh-arrPct">ARR%</th>
+          <th class="n sortable" onclick="sortQueueTable('aht')" id="qh-aht">AHT</th>
+          <th class="n sortable" onclick="sortQueueTable('avgWait')" id="qh-avgWait">Avg Wait</th>
+          <th class="n sortable" onclick="sortQueueTable('sharePct')" id="qh-sharePct">% Share</th>
+        </tr></thead>
+        <tbody id="q-tbody"></tbody>
+        <tfoot><tr>${qFoot}</tr></tfoot>
       </table></div>
     </div>
+
     <div class="g2">
-      <div class="card"><div class="ct">Abandon wait-time buckets</div>
+      <div class="card">
+        <div class="ct">Abandon wait-time buckets <span style="font-size:10px;color:var(--tx3)">(click count to expand)</span></div>
         <div class="tw"><table><thead><tr><th>Wait Time</th><th class="n">Count</th><th class="n">% of Abandoned</th></tr></thead><tbody>${bktRows}</tbody></table></div>
       </div>
       <div class="card"><div class="ct">Abandon distribution</div>
         <div class="cw" style="height:200px"><canvas id="c-abn-bkt"></canvas></div>
       </div>
     </div>`;
+
+  renderQueueTable();
+
   setTimeout(()=>{
     if(document.getElementById('c-abn-bkt'))
       mkBar('c-abn-bkt',buckets.map(b=>b[0]),[{data:buckets.map(b=>b[1]),backgroundColor:['#4ade80','#fbbf24','#f97316','#f87171','#dc2626'],borderRadius:4,borderSkipped:false}]);
   },50);
 }
 
+function renderQueueTable(){
+  const tbody=document.getElementById('q-tbody');if(!tbody)return;
+  const data=window._qData||[];
+  const {col,asc}=window._qSort||{col:'total',asc:false};
+  const sorted=[...data].sort((a,b)=>col==='name'?(asc?(a.name>b.name?1:-1):(a.name<b.name?1:-1)):asc?a[col]-b[col]:b[col]-a[col]);
+  const maxQ=sorted.reduce((m,r)=>Math.max(m,r.total),1);
+  tbody.innerHTML=sorted.map(r=>`<tr>
+    <td>${r.name}</td>
+    <td class="n">${r.total}<span class="qbw"><span class="qb" style="width:${Math.round(r.total/maxQ*100)}%"></span></span></td>
+    <td class="n">${r.answered}</td>
+    <td class="n">${r.abandoned}</td>
+    <td class="n"><span class="bx ${r.abnPct>10?'br':r.abnPct>5?'ba':'bg'}">${r.abnPct}%</span></td>
+    <td class="n"><span class="bx ${r.arrPct>6?'br':r.arrPct>3?'ba':'bg'}">${r.arrPct.toFixed(1)}%</span></td>
+    <td class="n">${secToMmss(r.aht)}</td>
+    <td class="n">${secToMmss(r.avgWait)}</td>
+    <td class="n">${r.sharePct}%</td>
+  </tr>`).join('');
+  document.querySelectorAll('[id^="qh-"]').forEach(el=>{el.classList.remove('asc','desc');});
+  const hdr=document.getElementById('qh-'+col);if(hdr)hdr.classList.add(asc?'asc':'desc');
+}
+
+function sortQueueTable(col){
+  const s=window._qSort||{col:'total',asc:false};
+  window._qSort={col,asc:s.col===col?!s.asc:false};
+  renderQueueTable();
+}
+
+function showAbnDrill(source,key){
+  const rows=window._qAbandonedRows||[];
+  let filtered=[],title='';
+  if(source==='kpi'){
+    if(key==='all'){filtered=rows;title='All Abandoned Calls';}
+    else if(key==='lt30'){filtered=rows.filter(r=>!r.isGe30);title='Abandoned under 30 seconds';}
+    else if(key==='ge30'){filtered=rows.filter(r=>r.isGe30);title='Abandoned 30s+ (ARR calls)';}
+  } else {
+    filtered=rows.filter(r=>r.bucket===key);
+    title='Abandoned — '+key+' wait';
+  }
+  title+=' ('+filtered.length+' calls)';
+  const panel=document.getElementById('abn-drill-panel');if(!panel)return;
+  const dkey=source+'_'+key;
+  if(panel.style.display!=='none'&&panel.dataset.key===dkey){panel.style.display='none';panel.dataset.key='';return;}
+  panel.dataset.key=dkey;
+  filtered=[...filtered].sort((a,b)=>b.wait-a.wait);
+  const bc=key==='ge30'?'#fca5a5':key==='lt30'?'#86efac':'#fcd34d';
+  panel.innerHTML=`
+    <div style="background:var(--sf);border:2px solid ${bc};border-radius:var(--r);padding:1.2rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--rd)">${title}</div>
+        <button onclick="document.getElementById('abn-drill-panel').style.display='none'" style="font-size:11px;padding:3px 10px;border:1px solid var(--bd2);border-radius:var(--rs);background:transparent;cursor:pointer">x Close</button>
+      </div>
+      <div class="tw" style="max-height:340px;overflow-y:auto">
+        <table><thead><tr>
+          <th>#</th><th>Queue Group</th><th>Raw Queue Name</th>
+          <th class="n">Date</th><th class="n">Time</th>
+          <th class="n">Wait Time</th><th class="n">Bucket</th>
+        </tr></thead>
+        <tbody>${filtered.map((r,i)=>`<tr>
+          <td style="font-size:11px;color:var(--tx3)">${i+1}</td>
+          <td style="font-weight:500">${r.queue}</td>
+          <td style="font-size:11px;color:var(--tx3)">${r.rawQueue}</td>
+          <td class="n">${r.date}</td>
+          <td class="n">${r.time}</td>
+          <td class="n" style="font-weight:600;color:${r.isGe30?'#dc2626':'var(--am)'}">${r.waitStr}</td>
+          <td class="n"><span class="bx ${r.isGe30?'br':'ba'}">${r.bucket}</span></td>
+        </tr>`).join('')}
+        </tbody></table>
+      </div>
+    </div>`;
+  panel.style.display='block';
+  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+
 // ═══════════════════════════════════════════════
 // T4: PRODUCTIVITY
 // ═══════════════════════════════════════════════
+let _prodSort={col:'inb',asc:false};
+let _prodData=[];
+
 function buildProductivityTab(){
   const el=document.getElementById('t4-content');
   const cc=getCCFiltered();const ag=getAGFiltered();
@@ -1019,38 +1354,101 @@ function buildProductivityTab(){
   const totHandle=totTalk+totHold+totWrap;
   const aht=totAns>0?totHandle/totAns:0;
   const agCore=ag.filter(r=>!CROSSSELL.includes(String(r['Agent Name']||'')));
-  const agInb=agCore.filter(r=>['Inbound ACD','Inbound'].includes(r['Call Type']));
   const agOut=agCore.filter(r=>r['Call Type']==='Outbound');
-  // Active agents by date
   const agByDate={};agCore.forEach(r=>{if(!r._dateKey)return;if(!agByDate[r._dateKey])agByDate[r._dateKey]=new Set();agByDate[r._dateKey].add(String(r['Agent Name']||''));});
   const dailyActiveCounts=Object.values(agByDate).map(s=>s.size);
-  const avgAgents=dailyActiveCounts.length>0?dailyActiveCounts.reduce((s,v)=>s+v,0)/dailyActiveCounts.length:agCore.length?[...new Set(agCore.map(r=>r['Agent Name']))].length:0;
-  // WP interactions per agent
+  const avgAgents=dailyActiveCounts.length>0?dailyActiveCounts.reduce((s,v)=>s+v,0)/dailyActiveCounts.length:0;
   const{df}=getFiltered();const wpInt=df.filter(r=>['Call','Email','Chat'].includes(r['Interaction']));
   const wpByDate={};wpInt.forEach(r=>{const d=r._idt||r._dt;if(!d)return;const k=dateKey(d);if(!wpByDate[k])wpByDate[k]={ints:0};wpByDate[k].ints++;});
   const agActiveDates=Object.keys(agByDate);
   const avgIntPerAgent=agActiveDates.length?agActiveDates.reduce((s,dk)=>{const ints=(wpByDate[dk]||{ints:0}).ints;const agents=agByDate[dk]?agByDate[dk].size:1;return s+ints/agents;},0)/agActiveDates.length:0;
-  // Agent table
-  const agStats={};agCore.forEach(r=>{const a=String(r['Agent Name']||'');if(!a)return;if(!agStats[a])agStats[a]={name:a,inb:0,out:0,talk:0,hold:0,wrap:0};if(['Inbound ACD','Inbound'].includes(r['Call Type'])){agStats[a].inb++;agStats[a].talk+=r._talk;agStats[a].hold+=r._hold;agStats[a].wrap+=r._wrap;}if(r['Call Type']==='Outbound')agStats[a].out++;});
-  const agList=Object.values(agStats).map(a=>({...a,aht:a.inb>0?(a.talk+a.hold+a.wrap)/a.inb:0})).sort((a,b)=>b.inb-a.inb);
-  let agRows=agList.slice(0,30).map(a=>`<tr><td>${a.name}</td><td class="n">${a.inb}</td><td class="n">${a.out}</td><td class="n">${secToMmss(a.inb>0?a.talk/a.inb:0)}</td><td class="n">${secToMmss(a.inb>0?a.hold/a.inb:0)}</td><td class="n">${secToMmss(a.aht)}</td><td class="n">${((a.talk+a.hold+a.wrap)/3600).toFixed(1)}h</td></tr>`).join('');
+
+  // ALL agents — no slice limit — with calls>10min and hold>5min flags
+  const agStats={};
+  agCore.forEach(r=>{
+    const a=String(r['Agent Name']||'');if(!a)return;
+    if(!agStats[a])agStats[a]={name:a,inb:0,out:0,talk:0,hold:0,wrap:0,long10:0,hold5:0};
+    if(['Inbound ACD','Inbound'].includes(r['Call Type'])){
+      agStats[a].inb++;
+      agStats[a].talk+=r._talk;
+      agStats[a].hold+=r._hold;
+      agStats[a].wrap+=r._wrap;
+      if(r._talk>600) agStats[a].long10++;
+      if(r._hold>300) agStats[a].hold5++;
+    }
+    if(r['Call Type']==='Outbound') agStats[a].out++;
+  });
+
+  _prodData=Object.values(agStats).map(a=>({
+    ...a,
+    aht:a.inb>0?(a.talk+a.hold+a.wrap)/a.inb:0,
+    avgTalk:a.inb>0?a.talk/a.inb:0,
+    avgHold:a.inb>0?a.hold/a.inb:0,
+    handleHrs:(a.talk+a.hold+a.wrap)/3600
+  }));
+
+  // Team-level long call and hold >5min totals
+  const totLong10=_prodData.reduce((s,a)=>s+a.long10,0);
+  const totHold5=_prodData.reduce((s,a)=>s+a.hold5,0);
+
   el.innerHTML=`
     <div class="kpis">
       ${mkKPI('Inbound Calls',totAns.toLocaleString())}
       ${mkKPI('Outbound Calls',agOut.length.toLocaleString(),'agent outbound')}
       ${mkKPI('Avg Talk',secToMmss(totAns>0?totTalk/totAns:0))}
       ${mkKPI('Avg Hold',secToMmss(totAns>0?totHold/totAns:0))}
-      ${mkKPI('AHT',secToMmss(aht),'Talk + Hold + Wrap')}
+      ${mkKPI('AHT',secToMmss(aht),'Talk+Hold+Wrap')}
       ${mkKPI('Total Handle',((totHandle)/3600).toFixed(1)+'h','team total')}
-      ${mkKPI('Avg Agents/Day',Math.round(avgAgents),'daily active headcount')}
-      ${mkKPI('Avg Interactions/Agent/Day',avgIntPerAgent.toFixed(1),'Calls+Emails+Chats')}
+      ${mkKPI('Avg Agents/Day',Math.round(avgAgents),'daily active')}
+      ${mkKPI('Avg Interactions/Agent',avgIntPerAgent.toFixed(1),'Call+Email+Chat')}
+      ${mkKPI('Calls >10 min',totLong10,'long calls — team total','rd')}
+      ${mkKPI('Hold >5 min',totHold5,'high hold — team total','am')}
     </div>
-    <div class="card"><div class="ct">Agent call metrics (top 30 by inbound calls — from CC report)</div>
-      <div class="tw"><table>
-        <thead><tr><th>Agent</th><th class="n">Inbound</th><th class="n">Outbound</th><th class="n">Avg Talk</th><th class="n">Avg Hold</th><th class="n">AHT</th><th class="n">Handle (hrs)</th></tr></thead>
-        <tbody>${agRows}</tbody>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="ct" style="margin-bottom:0">All frontline agent call metrics <span style="font-size:10px;color:var(--tx3);font-weight:400">(${_prodData.length} agents from CC report)</span></div>
+        <div style="font-size:11px;color:var(--tx3)">&#8645; Click headers to sort</div>
+      </div>
+      <div class="tw"><table id="prod-table">
+        <thead><tr>
+          <th onclick="sortProd('name')" id="ph-name" style="cursor:pointer">Agent</th>
+          <th class="n sortable" onclick="sortProd('inb')" id="ph-inb">Inbound</th>
+          <th class="n sortable" onclick="sortProd('out')" id="ph-out">Outbound</th>
+          <th class="n sortable" onclick="sortProd('avgTalk')" id="ph-avgTalk">Avg Talk</th>
+          <th class="n sortable" onclick="sortProd('avgHold')" id="ph-avgHold">Avg Hold</th>
+          <th class="n sortable" onclick="sortProd('aht')" id="ph-aht">AHT</th>
+          <th class="n sortable" onclick="sortProd('handleHrs')" id="ph-handleHrs">Handle (hrs)</th>
+          <th class="n sortable" onclick="sortProd('long10')" id="ph-long10" style="color:var(--rd)">Calls >10min</th>
+          <th class="n sortable" onclick="sortProd('hold5')" id="ph-hold5" style="color:var(--am)">Hold >5min</th>
+        </tr></thead>
+        <tbody id="prod-tbody"></tbody>
       </table></div>
     </div>`;
+  renderProdTable();
+}
+
+function renderProdTable(){
+  const tbody=document.getElementById('prod-tbody');if(!tbody)return;
+  const{col,asc}=_prodSort;
+  const sorted=[..._prodData].sort((a,b)=>col==='name'?(asc?(a.name>b.name?1:-1):(a.name<b.name?1:-1)):asc?a[col]-b[col]:b[col]-a[col]);
+  tbody.innerHTML=sorted.map(a=>`<tr>
+    <td>${a.name}</td>
+    <td class="n">${a.inb}</td>
+    <td class="n">${a.out}</td>
+    <td class="n">${secToMmss(a.avgTalk)}</td>
+    <td class="n">${secToMmss(a.avgHold)}</td>
+    <td class="n">${secToMmss(a.aht)}</td>
+    <td class="n">${a.handleHrs.toFixed(1)}h</td>
+    <td class="n">${a.long10>0?`<span class="bx br">${a.long10}</span>`:'—'}</td>
+    <td class="n">${a.hold5>0?`<span class="bx ba">${a.hold5}</span>`:'—'}</td>
+  </tr>`).join('');
+  document.querySelectorAll('[id^="ph-"]').forEach(el=>{el.classList.remove('asc','desc');});
+  const hdr=document.getElementById('ph-'+col);if(hdr)hdr.classList.add(asc?'asc':'desc');
+}
+
+function sortProd(col){
+  _prodSort={col,asc:_prodSort.col===col?!_prodSort.asc:false};
+  renderProdTable();
 }
 
 // ═══════════════════════════════════════════════
@@ -1092,15 +1490,88 @@ function buildEscalationsTab(){
   const{df}=getFiltered();const fl=df.filter(r=>r._category==='Frontline');
   const tickets=fl.filter(r=>r._isTicket);const escs=df.filter(r=>r._isEscalated);const tot=escs.length;
   const closed=escs.filter(r=>String(r['Status']||'').toLowerCase()==='closed').length;
-  document.getElementById('kpi6').innerHTML=mkKPI('Total escalated',tot,'','rd')+mkKPI('Escalation rate',pct(tot,tickets.length)+'%','of frontline tickets','rd')+mkKPI('Closed',closed,'',closed===tot?'gn':'am')+mkKPI('Still open',tot-closed,'',tot-closed>0?'rd':'gn');
-  const vO=Object.entries(countBy(escs,'_vertical')).sort((a,b)=>b[1]-a[1]);const lC3=vO.map((_,i)=>COLORS[i%COLORS.length]);
-  document.getElementById('leg-ev').innerHTML=vO.map(([v,c],i)=>`<span class="li"><span class="ld" style="background:${lC3[i]}"></span>${v} ${pct(c,tot)}%</span>`).join('');mkDonut('c-ev',vO.map(v=>v[0]),vO.map(v=>v[1]),lC3);
-  const cO=Object.entries(countBy(escs,'Interaction')).sort((a,b)=>b[1]-a[1]);const cC2=['#60a5fa','#4ade80','#f97316','#a78bfa','#f87171'];
-  document.getElementById('leg-ec').innerHTML=cO.map(([c,n],i)=>`<span class="li"><span class="ld" style="background:${cC2[i]}"></span>${c} ${pct(n,tot)}%</span>`).join('');mkDonut('c-ec',cO.map(c=>c[0]),cO.map(c=>c[1]),cC2);
-  const rO=Object.entries(countBy(escs,'_driver')).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  mkBar('c-er',rO.map(([r])=>r.length>35?r.slice(0,35)+'...':r),[{data:rO.map(([,c])=>c),backgroundColor:'#f87171',borderRadius:4,borderSkipped:false}],{h:true});
+  document.getElementById('kpi6').innerHTML=
+    mkKPI('Total escalated',tot,'','rd')+
+    mkKPI('Escalation rate',pct(tot,tickets.length)+'%','of frontline tickets','rd')+
+    mkKPI('Closed',closed,'',closed===tot?'gn':'am')+
+    mkKPI('Still open',tot-closed,'',tot-closed>0?'rd':'gn');
+
+  // Vertical donut
+  const vO=Object.entries(countBy(escs,'_vertical')).sort((a,b)=>b[1]-a[1]);
+  const lC3=vO.map((_,i)=>COLORS[i%COLORS.length]);
+  document.getElementById('leg-ev').innerHTML=vO.map(([v,c],i)=>`<span class="li"><span class="ld" style="background:${lC3[i]}"></span>${v} ${pct(c,tot)}%</span>`).join('');
+  mkDonut('c-ev',vO.map(v=>v[0]),vO.map(v=>v[1]),lC3);
+
+  // Channel donut
+  const cO=Object.entries(countBy(escs,'Interaction')).sort((a,b)=>b[1]-a[1]);
+  const cC2=['#60a5fa','#4ade80','#f97316','#a78bfa','#f87171'];
+  document.getElementById('leg-ec').innerHTML=cO.map(([c,n],i)=>`<span class="li"><span class="ld" style="background:${cC2[i]}"></span>${c} ${pct(n,tot)}%</span>`).join('');
+  mkDonut('c-ec',cO.map(c=>c[0]),cO.map(c=>c[1]),cC2);
+
+  // Status table
   const sO=Object.entries(countBy(escs,'Status')).sort((a,b)=>b[1]-a[1]);
   document.getElementById('tb-es').innerHTML=sO.map(([s,c])=>`<tr><td>${s||'Unknown'}</td><td class="n">${c}</td><td class="n"><span class="bx ${s==='Closed'?'bg':'ba'}">${pct(c,tot)}%</span></td></tr>`).join('');
+
+  // Driver list — like Call Drivers, click to expand contributors
+  const dC={};escs.forEach(r=>{dC[r._driver]=(dC[r._driver]||0)+1;});
+  const topDrivers=Object.entries(dC).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  if(!topDrivers.length){document.getElementById('esc-drv-list').innerHTML='<div class="empty">No escalation data</div>';return;}
+  const maxT=topDrivers[0][1];
+
+  document.getElementById('esc-drv-list').innerHTML=topDrivers.map(([driver,count],i)=>{
+    const dRows=escs.filter(r=>r._driver===driver);
+
+    // Top contributing agents
+    const agC={};dRows.forEach(r=>{const a=String(r['Agent Name']||'').trim();if(a)agC[a]=(agC[a]||0)+1;});
+    const topAg=Object.entries(agC).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const maxAg=topAg[0]?.[1]||1;
+
+    // Top lots
+    const ltC={};dRows.forEach(r=>{const l=String(r['Lot Name']||'').trim();if(l)ltC[l]=(ltC[l]||0)+1;});
+    const topLot=Object.entries(ltC).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const maxLt=topLot[0]?.[1]||1;
+
+    const hasDetail=topAg.length>0||topLot.length>0;
+    const bodyId='edb'+i;
+
+    const agHtml=topAg.length?`
+      <div style="margin-bottom:10px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--tx3);margin-bottom:6px">Top Agents</div>
+        ${topAg.map(([a,c])=>`<div class="lr">
+          <div class="ln">${a}${c===topAg[0][1]&&topAg[0][1]>1?'<span class="flag">top</span>':''}</div>
+          <div class="lbw"><div class="lb" style="width:${Math.round(c/maxAg*100)}%;background:${COLORS[i%COLORS.length]}"></div></div>
+          <div class="lc">${c}</div>
+        </div>`).join('')}
+      </div>`:'';
+
+    const lotHtml=topLot.length?`
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--tx3);margin-bottom:6px">Top Lots</div>
+        ${topLot.map(([l,c])=>`<div class="lr">
+          <div class="ln">${l}${c===topLot[0][1]&&topLot[0][1]>1?'<span class="flag">top</span>':''}</div>
+          <div class="lbw"><div class="lb" style="width:${Math.round(c/maxLt*100)}%;background:${COLORS[(i+3)%COLORS.length]}"></div></div>
+          <div class="lc">${c}</div>
+        </div>`).join('')}
+      </div>`:'';
+
+    return `<div class="drv">
+      <div class="drv-h" onclick="${hasDetail?`toggleDrv('${bodyId}',this)`:''}" style="${hasDetail?'':'cursor:default'}">
+        <div style="display:flex;align-items:center;gap:8px;flex:1">
+          <div style="width:${Math.round(count/maxT*120)}px;height:5px;border-radius:2px;background:${COLORS[i%COLORS.length]};flex-shrink:0"></div>
+          <div class="drv-lbl">${driver}</div>
+        </div>
+        <div class="drv-r">
+          <div class="drv-c">${count}</div>
+          ${hasDetail?'<div class="drv-a">&#9660;</div>':''}
+        </div>
+      </div>
+      ${hasDetail?`<div class="drv-b" id="${bodyId}">
+        <div style="display:grid;grid-template-columns:${topAg.length&&topLot.length?'1fr 1fr':'1fr'};gap:16px;padding:4px 0">
+          ${agHtml}${lotHtml}
+        </div>
+      </div>`:''}
+    </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════════════
@@ -1244,61 +1715,158 @@ const DTL_TEAM=['Vidya Vijayan'];
 const SME_TEAM=['Althaf Z','LALITA LAMA'];
 
 function buildTLTab(){
-  const{df}=getFiltered();const tlR=df.filter(r=>r._category==='TL');
+  const{df,followupOGIs}=getFiltered();
+  // Use ALL df rows for presence check (not just TL-category)
+  const tlR=df.filter(r=>r._category==='TL');
   const tlRev=tlR.filter(r=>r['Interaction']==='TL Review');
+  // Escalation by TL — agent name is on the row
   const escTL=tlR.filter(r=>r['Interaction']==='Escalation Handled by TL');
+  // Escalation by Ops — agent field is blank; count comes from ticket-level flag on original ticket
+  // So we count these separately from the TL table (they are ops-handled, not TL-attributed)
   const escOps=tlR.filter(r=>r['Interaction']==='Escalation handled by Ops Team');
+  const escTeam=tlR.filter(r=>r['Interaction']==='Escalation handled by Escalation Team');
+  const escMgr=tlR.filter(r=>r['Interaction']==='Escalation handled by Manager');
+
+  // KPI: TL Reviews = TL_ONLY only; show SME separately
+  const tlOnlyRev=tlRev.filter(r=>TL_ONLY.includes(String(r['Agent Name']||'')));
+  const smeRev=tlRev.filter(r=>[...SME_TEAM,...DTL_TEAM].includes(String(r['Agent Name']||'')));
+  const totalTLActivity=tlOnlyRev.length+smeRev.length+escTL.length+escTeam.length;
+
+  // CS Manager Queue calls from CC report — floor escalations routed to supervisor
+  const ccAll=getCCFiltered();
+  const mgrQueueCalls=ccAll.filter(r=>normalizeQueue(r['Call Center Name'])==='_manager').length;
 
   document.getElementById('kpi8').innerHTML=
-    mkKPI('TL Reviews',tlRev.length,'quality checks','bl')+
-    mkKPI('Esc by TL',escTL.length,'TL direct handling','am')+
-    mkKPI('Esc by Ops',escOps.length,'ops handling','am')+
-    mkKPI('Total TL activity',tlR.length);
+    mkKPI('TL Reviews (TLs)',tlOnlyRev.length,'8 team leaders','bl')+
+    mkKPI('DTL / SME Reviews',smeRev.length,'acting DTL + SMEs','pu')+
+    mkKPI('Esc handled by TL',escTL.length,'TL direct (WP)','am')+
+    mkKPI('Esc handled (Team)',escTeam.length,'L2 / escalation team','am')+
+    mkKPI('Floor Escalations (Mgr Queue)',mgrQueueCalls,'calls transferred to supervisor on floor','rd')+
+    mkKPI('Ops escalations',escOps.length,'no agent attributed','rd')+
+    mkKPI('Total (TLs + SMEs)',totalTLActivity,'reviews + escalations');
 
-  // Charts — TLs only
-  const tlOnlyRev=tlRev.filter(r=>TL_ONLY.includes(String(r['Agent Name']||'')));
-  const rC=countBy(tlOnlyRev,'Agent Name');const rO=Object.entries(rC).sort((a,b)=>b[1]-a[1]);
+  // Charts — TLs only for reviews
+  const rC=countBy(tlOnlyRev,'Agent Name');
+  const rO=Object.entries(rC).sort((a,b)=>b[1]-a[1]);
   if(rO.length)mkBar('c-tlr',rO.map(([a])=>a),[{data:rO.map(([,c])=>c),backgroundColor:'#a78bfa',borderRadius:4,borderSkipped:false}],{h:true});
-  const eR=[...escTL,...escOps].filter(r=>r['Agent Name']);const eC=countBy(eR,'Agent Name');const eO=Object.entries(eC).sort((a,b)=>b[1]-a[1]);
-  if(eO.length)mkBar('c-tle',eO.map(([a])=>a),[{data:eO.map(([,c])=>c),backgroundColor:'#fbbf24',borderRadius:4,borderSkipped:false}],{h:true,yt:{stepSize:1}});
 
-  // Helper
-  function agRow(name,df_all){
+  // Escalation chart — only attributed rows (agent not null)
+  const escWithAgent=[...escTL,...escTeam,...escMgr].filter(r=>r['Agent Name']&&String(r['Agent Name']).trim());
+  const eC=countBy(escWithAgent,'Agent Name');
+  const eO=Object.entries(eC).sort((a,b)=>b[1]-a[1]);
+  if(eO.length)mkBar('c-tle',eO.map(([a])=>a),[{data:eO.map(([,c])=>c),backgroundColor:'#fbbf24',borderRadius:4,borderSkipped:false}],{h:true,yt:{stepSize:1}});
+  else{const cv=document.getElementById('c-tle');if(cv){const ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);cv.closest('.card').querySelector('.ct').textContent='Escalation handling — none attributed to agents';}}
+
+  // Helper — check presence across ALL df rows (not just TL category)
+  function agRow(name){
     const r=tlRev.filter(x=>x['Agent Name']===name).length;
-    const et=escTL.filter(x=>x['Agent Name']===name).length;
-    const eo=escOps.filter(x=>x['Agent Name']===name).length;
-    return{rev:r,escTL:et,escOps:eo,total:r+et+eo,present:df_all.some(x=>x['Agent Name']===name)};
+    const et=[...escTL,...escTeam,...escMgr].filter(x=>x['Agent Name']===name).length;
+    const present=df.some(x=>x['Agent Name']===name);
+    return{rev:r,esc:et,total:r+et,present};
   }
 
   // ── TL Section
-  let tlTb='',tlTotR=0,tlTotET=0,tlTotEO=0;
+  let tlTb='',tlTotR=0,tlTotE=0;
   TL_ONLY.forEach(name=>{
-    const d=agRow(name,tlR);tlTotR+=d.rev;tlTotET+=d.escTL;tlTotEO+=d.escOps;
+    const d=agRow(name);
+    tlTotR+=d.rev; tlTotE+=d.esc;
     const status=d.present?'<span class="bx bg">Active</span>':'<span class="bx br">Absent</span>';
-    tlTb+=`<tr><td>${name}</td><td class="n">${d.rev}</td><td class="n">${d.escTL}</td><td class="n">${d.escOps}</td><td class="n"><b>${d.total}</b></td><td>${status}</td></tr>`;
+    tlTb+=`<tr><td>${name}</td><td class="n">${d.rev}</td><td class="n">${d.esc}</td><td class="n"><b>${d.total}</b></td><td>${status}</td></tr>`;
   });
-  // Maternity leave
   TL_MATERNITY.forEach(name=>{
-    tlTb+=`<tr style="opacity:.6"><td>${name} <span style="font-size:9px;padding:1px 6px;border-radius:3px;background:#fce7f3;color:#be185d;font-weight:600">🤱 Maternity Leave</span></td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td></td></tr>`;
+    tlTb+=`<tr style="opacity:.6"><td>${name} <span style="font-size:9px;padding:1px 6px;border-radius:3px;background:#fce7f3;color:#be185d;font-weight:600">🤱 Maternity Leave</span></td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td></td></tr>`;
   });
   document.getElementById('tb-tl-tls').innerHTML=tlTb;
   const tlFoot=document.getElementById('tf-tl-tls');
-  if(tlFoot)tlFoot.innerHTML=`<td>Total (${TL_ONLY.length} active TLs)</td><td class="n">${tlTotR}</td><td class="n">${tlTotET}</td><td class="n">${tlTotEO}</td><td class="n">${tlTotR+tlTotET+tlTotEO}</td><td></td>`;
+  if(tlFoot)tlFoot.innerHTML=`<td>Total (${TL_ONLY.length} active TLs)</td><td class="n">${tlTotR}</td><td class="n">${tlTotE}</td><td class="n">${tlTotR+tlTotE}</td><td></td>`;
+
+  // Floor escalation count from CC Manager Queue — show as info card
+  const ccAll2=getCCFiltered();
+  const mgrCalls=ccAll2.filter(r=>normalizeQueue(r['Call Center Name'])==='_manager');
+  const mgrTotal=mgrCalls.length;
+  // WP Escalation handled by Manager — these ARE attributed
+  const mgrAttr=df.filter(r=>r['Interaction']==='Escalation handled by Manager');
+  const mgrAttrByAgent={};mgrAttr.forEach(r=>{const a=String(r['Agent Name']||'');if(a){mgrAttrByAgent[a]=(mgrAttrByAgent[a]||0)+1;}});
+
+  // Inject floor esc card after TL table if container exists
+  const tlSection=document.getElementById('tb-tl-tls');
+  if(tlSection&&mgrTotal>0){
+    const existing=document.getElementById('mgr-queue-card');
+    if(existing)existing.remove();
+    const card=document.createElement('div');
+    card.id='mgr-queue-card';
+    card.style.cssText='background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--r);padding:1rem 1.2rem;margin-top:12px;margin-bottom:16px';
+    const attrRows=Object.entries(mgrAttrByAgent).sort((a,b)=>b[1]-a[1])
+      .map(([a,c])=>`<span style="font-size:11px;background:#fff;border:1px solid #fed7aa;border-radius:3px;padding:2px 8px;margin:2px">${a} <b>${c}</b></span>`).join('');
+    card.innerHTML=`
+      <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#c2410c;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">
+        📞 CS Manager Queue — Floor Escalations to Supervisor
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+        <div>
+          <div style="font-size:10px;color:#9a3412;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Total calls transferred</div>
+          <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:#c2410c">${mgrTotal}</div>
+          <div style="font-size:10px;color:#9a3412">CC report — no agent attributed (transferred calls)</div>
+        </div>
+        ${Object.keys(mgrAttrByAgent).length?`<div>
+          <div style="font-size:10px;color:#9a3412;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Handled by (WP attributed)</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">${attrRows}</div>
+        </div>`:''}
+      </div>`;
+    tlSection.closest('.tw').after(card);
+  }
+
+  // Helper — full stats per agent including frontline interactions
+  function agRowFull(name){
+    const tlRevCount=tlRev.filter(x=>x['Agent Name']===name).length;
+    const escCount=[...escTL,...escTeam,...escMgr].filter(x=>x['Agent Name']===name).length;
+    const allRows=df.filter(x=>x['Agent Name']===name);
+    const calls=allRows.filter(x=>x['Interaction']==='Call').length;
+    const emails=allRows.filter(x=>x['Interaction']==='Email').length;
+    const chats=allRows.filter(x=>x['Interaction']==='Chat').length;
+    const flTotal=calls+emails+chats;
+    // FCR for their frontline interactions
+    const fcrRows=allRows.filter(r=>r._isTicket&&!FCR_EXCLUDE.includes(String(r['Interaction']||'')));
+    fcrRows.forEach(r=>{r._isFCR=r['OGI']?!followupOGIs.has(String(r['OGI'])):true;});
+    const fcrPct=fcrRows.length?pct(fcrRows.filter(r=>r._isFCR).length,fcrRows.length):null;
+    const present=allRows.length>0;
+    return{rev:tlRevCount,esc:escCount,calls,emails,chats,flTotal,fcrPct,total:tlRevCount+escCount+flTotal,present};
+  }
 
   // ── Acting DTL Section
   let dtlTb='';
   DTL_TEAM.forEach(name=>{
-    const d=agRow(name,tlR);
-    const status=d.present?'<span class="bx bg">Active</span>':'<span class="bx br">Absent</span>';
-    dtlTb+=`<tr><td>${name}${d.present?'':' <span class="absent-tag">Absent</span>'}</td><td style="font-size:11px;color:var(--pu)">Acting DTL</td><td class="n">${d.rev}</td><td class="n">${d.escTL+d.escOps}</td><td class="n"><b>${d.total}</b></td></tr>`;
+    const d=agRowFull(name);
+    dtlTb+=`<tr>
+      <td>${name}${d.present?'':' <span class="absent-tag">Absent</span>'}</td>
+      <td style="font-size:11px;color:var(--pu)">Acting DTL</td>
+      <td class="n">${d.rev}</td>
+      <td class="n">${d.esc}</td>
+      <td class="n">${d.calls}</td>
+      <td class="n">${d.emails}</td>
+      <td class="n">${d.chats}</td>
+      <td class="n" style="font-weight:600">${d.flTotal}</td>
+      <td class="n">${d.fcrPct!==null?`<span class="bx ${d.fcrPct>=80?'bg':d.fcrPct>=70?'ba':'br'}">${d.fcrPct}%</span>`:'—'}</td>
+      <td class="n"><b>${d.total}</b></td>
+    </tr>`;
   });
   document.getElementById('tb-tl-dtl').innerHTML=dtlTb;
 
   // ── SME Section
   let smeTb='';
   SME_TEAM.forEach(name=>{
-    const d=agRow(name,tlR);
-    smeTb+=`<tr><td>${name}${d.present?'':' <span class="absent-tag">Absent</span>'}</td><td class="n">${d.rev}</td><td class="n">${d.escTL+d.escOps}</td><td class="n"><b>${d.total}</b></td></tr>`;
+    const d=agRowFull(name);
+    smeTb+=`<tr>
+      <td>${name}${d.present?'':' <span class="absent-tag">Absent</span>'}</td>
+      <td class="n">${d.rev}</td>
+      <td class="n">${d.esc}</td>
+      <td class="n">${d.calls}</td>
+      <td class="n">${d.emails}</td>
+      <td class="n">${d.chats}</td>
+      <td class="n" style="font-weight:600">${d.flTotal}</td>
+      <td class="n">${d.fcrPct!==null?`<span class="bx ${d.fcrPct>=80?'bg':d.fcrPct>=70?'ba':'br'}">${d.fcrPct}%</span>`:'—'}</td>
+      <td class="n"><b>${d.total}</b></td>
+    </tr>`;
   });
   document.getElementById('tb-tl-sme').innerHTML=smeTb;
 }
@@ -1422,13 +1990,211 @@ function buildReviewsTab(){
 // ═══════════════════════════════════════════════
 // T10: AI AGENT
 // ═══════════════════════════════════════════════
+const AI_LAUNCH_DATE=new Date('2026-05-25T00:00:00');
+
 function buildAITab(){
-  const{df}=getFiltered();const ai=df.filter(r=>r._category==='AI');
-  const closed=ai.filter(r=>String(r['Status']||'').toLowerCase()==='closed').length,open=ai.filter(r=>['open','in progress'].includes(String(r['Status']||'').toLowerCase())).length,aiH=ai.filter(r=>String(r['TKT_IssueReason']||'')==='AI Handled').length;
-  document.getElementById('kpi10').innerHTML=mkKPI('AI calls handled',ai.length,'','bl')+mkKPI('Fully resolved',aiH,'AI handled tag','gn')+mkKPI('Closed',closed,'','gn')+mkKPI('Open / In progress',open,'needs follow-up',open>0?'am':'gn');
-  const vO=Object.entries(countBy(ai,'_vertical')).sort((a,b)=>b[1]-a[1]);mkDonut('c-aiv',vO.map(v=>v[0]),vO.map(v=>v[1]),COLORS.slice(0,vO.length));
-  const sO=Object.entries(countBy(ai,'Status')).sort((a,b)=>b[1]-a[1]);mkDonut('c-ais',sO.map(s=>s[0]),sO.map(s=>s[1]),['#4ade80','#f97316','#f87171','#fbbf24']);
-  document.getElementById('tb-ai').innerHTML=ai.map(r=>`<tr><td>${r._vertical}</td><td>${r['Reason']||'—'}</td><td style="font-size:11px;color:var(--tx2)">${r['Sub Reason']||'—'}</td><td><span class="bx ${r['Status']==='Closed'?'bg':r['Status']==='Open'?'br':'ba'}">${r['Status']||'—'}</span></td><td><span class="bx bb">${r['TKT_IssueReason']||'—'}</span></td></tr>`).join('');
+  const{df,followupOGIs}=getFiltered();
+  const ai=df.filter(r=>r._category==='AI');
+  const total=ai.length;
+
+  // Guard: AI launched May 25 2026 — show notice if data is entirely before that
+  const aiDates=ai.map(r=>r._idt||r._dt).filter(Boolean);
+  const allBeforeLaunch=aiDates.length===0||aiDates.every(d=>d<AI_LAUNCH_DATE);
+  if(allBeforeLaunch){
+    const el10=document.getElementById('kpi10');
+    const cards=['c-aiv','c-ai-vt-stk','c-ais','c-ai-hr'];
+    if(el10)el10.innerHTML='';
+    ['ai-drv-list','ai-lots-success','ai-lots-fail','tb-ai-agents','tb-ai'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='';});
+    cards.forEach(id=>{const cv=document.getElementById(id);if(cv){const p=cv.closest('.card');if(p)p.style.display='none';}});
+    // Show notice in the ai-card banner area
+    const banner=document.querySelector('#t10 .ai-card');
+    if(banner)banner.innerHTML=`
+      <div style="display:flex;align-items:center;gap:14px;padding:.5rem 0">
+        <div style="font-size:32px">🤖</div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#1d4ed8;margin-bottom:4px">AI Agent — No Data for This Period</div>
+          <div style="font-size:12px;color:#3b82f6">AI Agent was introduced on <b>25 May 2026</b>. The uploaded data does not contain any AI interactions.</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:4px">Upload a report from 25 May 2026 onwards to see AI Agent analytics.</div>
+        </div>
+      </div>`;
+    return;
+  }
+  // Restore cards if previously hidden
+  ['c-aiv','c-ai-vt-stk','c-ais','c-ai-hr'].forEach(id=>{const cv=document.getElementById(id);if(cv){const p=cv.closest('.card');if(p)p.style.display='';}});
+
+  // Classify each AI ticket using OGI follow-up logic + TKT_IssueReason
+  // OGI follow-up rows (no Ticket ID) sharing same OGI = escalation evidence
+  const aiOGIs=new Set(ai.filter(r=>r['OGI']).map(r=>String(r['OGI'])));
+
+  // Non-AI rows on same OGI = escalated to human
+  const followupByOGI={};
+  df.filter(r=>r['OGI']&&aiOGIs.has(String(r['OGI']))&&r['Interaction']!=='AI-Agent Call').forEach(r=>{
+    const ogi=String(r['OGI']);
+    if(!followupByOGI[ogi])followupByOGI[ogi]={human:[],ai:[]};
+    followupByOGI[ogi].human.push(r);
+  });
+  // AI repeat calls on same OGI
+  df.filter(r=>r['OGI']&&aiOGIs.has(String(r['OGI']))&&r['Interaction']==='AI-Agent Call'&&r['Ticket ID']).forEach(r=>{
+    const ogi=String(r['OGI']);
+    if(!followupByOGI[ogi])followupByOGI[ogi]={human:[],ai:[]};
+  });
+
+  // Classify each AI row
+  ai.forEach(r=>{
+    const tag=String(r['TKT_IssueReason']||'');
+    const ogi=r['OGI']?String(r['OGI']):'';
+    const fu=followupByOGI[ogi];
+    if(tag==='AI Handled'&&(!fu||fu.human.length===0)){
+      r._aiClass='resolved';
+    } else if(tag==='Escalated'||(fu&&fu.human.length>0)){
+      r._aiClass='escalated';
+      r._escalatedTo=fu?fu.human.map(x=>String(x['Agent Name']||'')).filter(Boolean):[];
+      r._escalatedInt=fu?fu.human.map(x=>String(x['Interaction']||'')).filter(Boolean):[];
+    } else if(tag==='AI Handled'){
+      r._aiClass='resolved';
+    } else {
+      r._aiClass='open';
+    }
+  });
+
+  const resolved=ai.filter(r=>r._aiClass==='resolved');
+  const escalated=ai.filter(r=>r._aiClass==='escalated');
+  const aiRepeat=ai.filter(r=>r._aiClass==='repeat');
+  const stillOpen=ai.filter(r=>r._aiClass==='open');
+
+  const resRate=pct(resolved.length,total);
+  const escRate=pct(escalated.length,total);
+
+  document.getElementById('kpi10').innerHTML=
+    mkKPI('Total AI Calls',total,'','bl')+
+    mkKPI('AI Resolved',resolved.length,resRate+'% resolution rate','gn')+
+    mkKPI('Escalated to Human',escalated.length,escRate+'% failure rate','rd')+
+    mkKPI('AI Repeat Calls',aiRepeat.length,'customer called AI again','am')+
+    mkKPI('Still Open',stillOpen.length,'unresolved / pending',stillOpen.length>0?'am':'gn')+
+    mkKPI('Resolution Rate',resRate+'%','target: maximize','gn')+
+    mkKPI('Failure Rate',escRate+'%','target: minimize','rd');
+
+  // Vertical donut
+  const vO=Object.entries(countBy(ai,'_vertical')).sort((a,b)=>b[1]-a[1]);
+  mkDonut('c-aiv',vO.map(v=>v[0]),vO.map(v=>v[1]),COLORS.slice(0,vO.length));
+
+  // Vertical stacked bar: resolved vs escalated
+  const verts=[...new Set(ai.map(r=>r._vertical))].filter(Boolean);
+  const vRes=verts.map(v=>ai.filter(r=>r._vertical===v&&r._aiClass==='resolved').length);
+  const vEsc=verts.map(v=>ai.filter(r=>r._vertical===v&&r._aiClass==='escalated').length);
+  const vOpen=verts.map(v=>ai.filter(r=>r._vertical===v&&r._aiClass==='open').length);
+  if(CHARTS['c-ai-vt-stk'])CHARTS['c-ai-vt-stk'].destroy();
+  CHARTS['c-ai-vt-stk']=new Chart(document.getElementById('c-ai-vt-stk'),{
+    type:'bar',
+    data:{labels:verts,datasets:[
+      {label:'Resolved',data:vRes,backgroundColor:'#4ade80',borderRadius:2,stack:'s'},
+      {label:'Escalated',data:vEsc,backgroundColor:'#f87171',borderRadius:2,stack:'s'},
+      {label:'Open',data:vOpen,backgroundColor:'#fbbf24',borderRadius:2,stack:'s'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'top',labels:{font:{size:10},padding:8}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#9e9a94',font:{size:10}},stacked:true},
+              y:{grid:{color:'rgba(0,0,0,0.07)'},ticks:{color:'#9e9a94'},stacked:true}}}
+  });
+
+  // Status donut
+  const sO=Object.entries(countBy(ai,'Status')).sort((a,b)=>b[1]-a[1]);
+  mkDonut('c-ais',sO.map(s=>s[0]),sO.map(s=>s[1]),['#4ade80','#f97316','#f87171','#fbbf24']);
+
+  // Hourly distribution using Interaction created date
+  const aiHourly=new Array(24).fill(0);
+  ai.forEach(r=>{if(r._idt)aiHourly[r._idt.getHours()]++;else if(r._dt)aiHourly[r._dt.getHours()]++;});
+  const fH=h=>h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p';
+  mkBar('c-ai-hr',aiHourly.map((_,i)=>fH(i)),[{data:aiHourly,backgroundColor:'#818cf8',borderRadius:3,borderSkipped:false}],{xt:{maxRotation:0,font:{size:9}}});
+
+  // AI Call Drivers — expandable like Call Drivers
+  const dC={};ai.forEach(r=>{const d=(String(r['Reason']||'')+' > '+String(r['Sub Reason']||'')).replace(/ > $/,'').replace(/^ > /,'');dC[d]=(dC[d]||0)+1;});
+  const topDrivers=Object.entries(dC).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxD=topDrivers[0]?.[1]||1;
+  document.getElementById('ai-drv-list').innerHTML=topDrivers.map(([driver,count],i)=>{
+    const dRows=ai.filter(r=>(String(r['Reason']||'')+' > '+String(r['Sub Reason']||'')).replace(/ > $/,'').replace(/^ > /,'')=== driver);
+    const lC={};dRows.forEach(r=>{const l=String(r['Lot Name']||'').trim();if(l)lC[l]=(lC[l]||0)+1;});
+    const tL=Object.entries(lC).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const hL=tL.length>0;const mL=tL[0]?.[1]||1;
+    const resC=dRows.filter(r=>r._aiClass==='resolved').length;
+    const escC=dRows.filter(r=>r._aiClass==='escalated').length;
+    const bodyId='aidb'+i;
+    const lotHtml=hL?`<div class="drv-b" id="${bodyId}">
+      <div style="display:flex;gap:16px;padding:4px 0">
+        <div style="flex:1">
+          <div style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3);margin-bottom:6px">Top Lots</div>
+          ${tL.map(([lot,lc])=>`<div class="lr"><div class="ln">${lot}${lc===tL[0][1]&&tL[0][1]>1?'<span class="flag">top</span>':''}</div><div class="lbw"><div class="lb" style="width:${Math.round(lc/mL*100)}%;background:${COLORS[i%COLORS.length]}"></div></div><div class="lc">${lc}</div></div>`).join('')}
+        </div>
+        <div style="min-width:120px">
+          <div style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3);margin-bottom:6px">Outcome</div>
+          <div style="font-size:12px;color:#16a34a;margin-bottom:4px">&#10003; Resolved: <b>${resC}</b></div>
+          <div style="font-size:12px;color:#dc2626">&#10007; Escalated: <b>${escC}</b></div>
+        </div>
+      </div>
+    </div>`:'';
+    return`<div class="drv">
+      <div class="drv-h" onclick="${hL?`toggleDrv('${bodyId}',this)`:''}" style="${hL?'':'cursor:default'}">
+        <div style="display:flex;align-items:center;gap:8px;flex:1">
+          <div style="width:${Math.round(count/maxD*120)}px;height:5px;border-radius:2px;background:${COLORS[i%COLORS.length]};flex-shrink:0"></div>
+          <div class="drv-lbl">${driver}</div>
+        </div>
+        <div class="drv-r">
+          <span style="font-size:10px;color:#16a34a;margin-right:6px">&#10003;${resC}</span>
+          <span style="font-size:10px;color:#dc2626;margin-right:8px">&#10007;${escC}</span>
+          <div class="drv-c">${count}</div>
+          ${hL?'<div class="drv-a">&#9660;</div>':''}
+        </div>
+      </div>${lotHtml}
+    </div>`;
+  }).join('');
+
+  // Lot level: resolved vs escalated
+  function lotCard(rows,id){
+    const lm={};rows.forEach(r=>{const l=String(r['Lot Name']||'').trim();if(!l)return;lm[l]=(lm[l]||0)+1;});
+    const top=Object.entries(lm).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    if(!top.length){document.getElementById(id).innerHTML='<div class="empty">No lot data</div>';return;}
+    const mx=top[0][1];
+    document.getElementById(id).innerHTML=top.map(([lot,c],i)=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bd)">
+        <div style="width:20px;height:20px;border-radius:50%;background:${id.includes('success')?'#dcfce7':'#fee2e2'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${id.includes('success')?'#16a34a':'#dc2626'};flex-shrink:0">${i+1}</div>
+        <div style="flex:1;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${lot}">${lot}</div>
+        <div style="width:80px;height:5px;background:var(--sf3);border-radius:3px;overflow:hidden;flex-shrink:0">
+          <div style="width:${Math.round(c/mx*100)}%;height:100%;border-radius:3px;background:${id.includes('success')?'#4ade80':'#f87171'}"></div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:${id.includes('success')?'#16a34a':'#dc2626'};min-width:24px;text-align:right">${c}</div>
+      </div>`).join('');
+  }
+  lotCard(resolved,'ai-lots-success');
+  lotCard(escalated,'ai-lots-fail');
+
+  // Who picks up after AI escalation
+  const agEsc={};
+  escalated.forEach(r=>{
+    (r._escalatedTo||[]).forEach((a,i)=>{
+      if(!a)return;
+      if(!agEsc[a])agEsc[a]={count:0,types:{}};
+      agEsc[a].count++;
+      const t=(r._escalatedInt||[])[i]||'Call';
+      agEsc[a].types[t]=(agEsc[a].types[t]||0)+1;
+    });
+  });
+  const agEscList=Object.entries(agEsc).sort((a,b)=>b[1].count-a[1].count);
+  document.getElementById('tb-ai-agents').innerHTML=agEscList.length
+    ?agEscList.map(([a,d])=>`<tr><td>${a}</td><td class="n"><b>${d.count}</b></td><td style="font-size:11px">${Object.entries(d.types).map(([t,c])=>`<span class="bx bb" style="margin-right:3px">${t} ${c}</span>`).join('')}</td></tr>`).join('')
+    :'<tr><td colspan="3" class="empty">No escalation attribution data</td></tr>';
+
+  // Detail table
+  document.getElementById('tb-ai').innerHTML=ai.map(r=>{
+    const cls=r._aiClass==='resolved'?'bg':r._aiClass==='escalated'?'br':r._aiClass==='repeat'?'ba':'';
+    const lbl=r._aiClass==='resolved'?'AI Resolved':r._aiClass==='escalated'?'Escalated to Human':r._aiClass==='repeat'?'AI Repeat':'Open';
+    return`<tr>
+      <td>${r._vertical}</td>
+      <td>${r['Reason']||'—'}</td>
+      <td style="font-size:11px;color:var(--tx2)">${r['Sub Reason']||'—'}</td>
+      <td><span class="bx ${r['Status']==='Closed'?'bg':r['Status']==='Open'?'br':'ba'}">${r['Status']||'—'}</span></td>
+      <td><span class="bx ${cls}">${lbl}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════════════
@@ -1536,18 +2302,37 @@ function buildAgentTab(){
   const adhocRows=df.filter(r=>ADHOC_TEAM.includes(String(r['Agent Name']||'')));const adhocMap=agStats(adhocRows);
   document.getElementById('adhoc-body').innerHTML=ADHOC_TEAM.map(n=>{const d=adhocMap[n]||{calls:0,emails:0,chats:0,total:0};return`<tr><td>${n}${abTag(d.total>0)}</td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n" style="font-weight:600">${d.calls+d.emails+d.chats}</td></tr>`;}).join('');
 
+  // External Ops — Escalation handled by Ops Team (no agent name = system/ops row)
+  const extOpsTypes=['Escalation handled by Ops Team'];
+  const extOpsRows=df.filter(r=>extOpsTypes.includes(String(r['Interaction']||''))&&(!r['Agent Name']||String(r['Agent Name']).trim()===''));
+  const extOtherRows=df.filter(r=>['Escalation handled by Manager','BBB Reviews'].includes(String(r['Interaction']||'')));
+  const extOpsBody=document.getElementById('ext-ops-body');
+  if(extOpsBody){
+    const extMap={};
+    [...extOpsRows,...extOtherRows].forEach(r=>{
+      const k=String(r['Interaction']||'Unknown');
+      if(!extMap[k])extMap[k]={count:0,note:''};
+      extMap[k].count++;
+    });
+    extMap['Escalation handled by Ops Team']={count:extOpsRows.length,note:'No agent attributed — ops system entry'};
+    extOtherRows.forEach(r=>{const k=String(r['Interaction']||'Unknown');if(!extMap[k])extMap[k]={count:0,note:''};extMap[k].note=extMap[k].note||'Attributed to: '+([...new Set(extOtherRows.filter(x=>x['Interaction']===k).map(x=>x['Agent Name']))].join(', '));});
+    extOpsBody.innerHTML=Object.entries(extMap).map(([k,v],i)=>`<tr><td>${k}</td><td class="n">${v.count}</td><td style="font-size:11px;color:var(--tx3)">${v.note}</td></tr>`).join('');
+  }
+
   // Indian Spanish
   const ispRows=df.filter(r=>INDIAN_SPANISH.includes(String(r['Agent Name']||'')));const ispMap=agStats(ispRows);const ispFCR=calcFCR(ispRows);document.getElementById('isp-cnt').textContent='('+INDIAN_SPANISH.length+' agents)';const ispT={calls:0,emails:0,chats:0,total:0,escalations:0};
   document.getElementById('isp-body').innerHTML=INDIAN_SPANISH.map(n=>{const d=ispMap[n]||{calls:0,emails:0,chats:0,total:0,escalations:0};const fp=fcrP(ispFCR,n);const er=pct(d.escalations,d.total||1);['calls','emails','chats','total','escalations'].forEach(k=>ispT[k]+=(d[k]||0));return`<tr><td>${n}${abTag(d.total>0)}</td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n" style="font-weight:600">${d.total}</td><td class="n">${fcrB(fp)}</td><td class="n">${escB(er)}</td></tr>`;}).join('');
   document.getElementById('isp-foot').innerHTML=`<td>Total</td><td class="n">${ispT.calls}</td><td class="n">${ispT.emails}</td><td class="n">${ispT.chats}</td><td class="n">${ispT.total}</td><td class="n">—</td><td class="n">${escB(pct(ispT.escalations,ispT.total||1))}</td>`;
 
   // Columbia
-  const colRows=df.filter(r=>COLUMBIA_TEAM.includes(String(r['Agent Name']||'')));const colMap=agStats(colRows);const colFCR=calcFCR(colRows);document.getElementById('col-cnt').textContent='('+COLUMBIA_TEAM.length+' agents)';const colT={calls:0,emails:0,chats:0,total:0,escalations:0};
+  // Columbia team: frontline interactions only (Call/Email/Chat)
+  const colRows=df.filter(r=>COLUMBIA_TEAM.includes(String(r['Agent Name']||''))&&['Call','Email','Chat'].includes(String(r['Interaction']||'')));
+  const colMap=agStats(colRows);const colFCR=calcFCR(colRows);document.getElementById('col-cnt').textContent='('+COLUMBIA_TEAM.length+' agents)';const colT={calls:0,emails:0,chats:0,total:0,escalations:0};
   document.getElementById('col-body').innerHTML=COLUMBIA_TEAM.map(n=>{const d=colMap[n]||{calls:0,emails:0,chats:0,total:0,escalations:0};const fp=fcrP(colFCR,n);const er=pct(d.escalations,d.total||1);['calls','emails','chats','total','escalations'].forEach(k=>colT[k]+=(d[k]||0));return`<tr><td>${n}${abTag(d.total>0)}</td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n" style="font-weight:600">${d.total}</td><td class="n">${fcrB(fp)}</td><td class="n">${escB(er)}</td></tr>`;}).join('');
   document.getElementById('col-foot').innerHTML=`<td>Total</td><td class="n">${colT.calls}</td><td class="n">${colT.emails}</td><td class="n">${colT.chats}</td><td class="n">${colT.total}</td><td class="n">—</td><td class="n">${escB(pct(colT.escalations,colT.total||1))}</td>`;
 
   // Frontline
-  const FRONTLINE_EXCLUDE=new Set([...DISPUTE_TEAM,...TL_TEAM,...MGMT_TEAM,...INDIAN_SPANISH,...COLUMBIA_TEAM,...ADHOC_TEAM]);
+  const FRONTLINE_EXCLUDE=new Set([...DISPUTE_TEAM,...TL_TEAM,...DTL_TEAM,...SME_TEAM,...L2_TEAM,...MGMT_TEAM,...INDIAN_SPANISH,...COLUMBIA_TEAM,...ADHOC_TEAM]);
   const flRows=df.filter(r=>{const a=String(r['Agent Name']||'');if(!a||a==='ai-decagon ai-decagon')return false;if(FRONTLINE_EXCLUDE.has(a))return false;return['Call','Email','Chat'].includes(String(r['Interaction']||''));});
   const flTickets=flRows.filter(r=>r._isTicket);const flFCR=calcFCR(flRows);
   const fPOGI={};rawDf.filter(r=>!r._isTicket&&r['OGI']).forEach(r=>{const k=String(r['OGI']);fPOGI[k]=(fPOGI[k]||0)+1;});
