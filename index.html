@@ -1058,9 +1058,9 @@ function buildOverview(){
   mkBar('c-all',allT.map(t=>t.l),[{data:allT.map(t=>t.v),backgroundColor:allT.map(t=>t.c),borderRadius:4,borderSkipped:false}]);
   // Trend
   const tC=document.getElementById('trend-card');let showT=false,tL=[],tD=[];
-  if(MODE==='weekly'){const wD=dateKeys.filter(dk=>{const r=rawDf.find(r=>r._isTicket&&r._dateKey===dk);return r&&r._weekKey===ACTIVE_KEY;});if(wD.length>1){showT=true;document.getElementById('trend-title').textContent='Daily ticket volume (this week)';tL=wD.map(dk=>fmtDateShort(new Date(dk+'T12:00:00')));tD=wD.map(dk=>rawDf.filter(r=>r._isTicket&&r._dateKey===dk&&r._category==='Frontline').length);}}
+  if(MODE==='weekly'){const wD=dateKeys.filter(dk=>{const r=rawDf.find(r=>r._isTicket&&r._dateKey===dk);return r&&r._weekKey===ACTIVE_KEY;});if(wD.length>1){showT=true;document.getElementById('trend-title').textContent='Daily ticket volume (this week)';tL=wD.map(dk=>fmtDateShort(new Date(dk+'T12:00:00')));tD=wD.map(dk=>rawDf.filter(r=>r._dateKey===dk&&r._category!=='Other').length);}}
   else if(MODE==='monthly'){const mW=weekKeys.filter(wk=>{const r=rawDf.find(r=>r._isTicket&&r._weekKey===wk);return r&&r._monthKey===ACTIVE_KEY;});if(mW.length>1){showT=true;document.getElementById('trend-title').textContent='Weekly volume (this month)';tL=mW.map(wk=>fmtWeek(wk,rawDf));tD=mW.map(wk=>rawDf.filter(r=>r._isTicket&&r._weekKey===wk&&r._category==='Frontline').length);}}
-  else if(MODE==='daily'&&dateKeys.length>1){showT=true;document.getElementById('trend-title').textContent='Daily ticket volume';tL=dateKeys.map(dk=>fmtDateShort(new Date(dk+'T12:00:00')));tD=dateKeys.map(dk=>rawDf.filter(r=>r._isTicket&&r._dateKey===dk&&r._category==='Frontline').length);}
+  else if(MODE==='daily'&&dateKeys.length>1){showT=true;document.getElementById('trend-title').textContent='Daily ticket volume';tL=dateKeys.map(dk=>fmtDateShort(new Date(dk+'T12:00:00')));tD=dateKeys.map(dk=>rawDf.filter(r=>r._dateKey===dk&&r._category!=='Other').length);}
   tC.style.display=showT?'block':'none';
   if(showT)mkLine('c-trend',tL,[{data:tD,borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.1)',fill:true,tension:0.3,pointRadius:5,pointBackgroundColor:'#60a5fa',pointBorderColor:'#fff',pointBorderWidth:2}]);
   // FCR by channel
