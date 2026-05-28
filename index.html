@@ -290,9 +290,18 @@ input[type=text]{width:180px}
         <div class="card"><div class="ct">FCR by channel vs 80% target</div><div class="cw" style="height:160px"><canvas id="c-fcr-ch"></canvas></div></div>
         <div class="card"><div class="ct">FCR by vertical vs 80% target</div><div class="cw" style="height:160px"><canvas id="c-fcr-vt"></canvas></div></div>
       </div>
-      <div class="card"><div class="ct">Vertical summary</div>
-        <div class="tw"><table>
-          <thead><tr><th>Vertical</th><th class="n">Tickets</th><th class="n">Interactions</th><th class="n">Calls</th><th class="n">Emails</th><th class="n">Chats</th><th class="n">FCR</th><th class="n">Esc%</th></tr></thead>
+      <div class="card"><div class="ct">Vertical summary <span style="font-size:10px;color:var(--tx3);font-weight:400">&#8645; click headers to sort</span></div>
+        <div class="tw"><table id="vs-table">
+          <thead><tr>
+            <th onclick="sortVS('name')" id="vsh-name" style="cursor:pointer">Vertical</th>
+            <th class="n sortable" onclick="sortVS('tickets')" id="vsh-tickets">Tickets</th>
+            <th class="n sortable" onclick="sortVS('ints')" id="vsh-ints">Interactions</th>
+            <th class="n sortable" onclick="sortVS('calls')" id="vsh-calls">Calls</th>
+            <th class="n sortable" onclick="sortVS('emails')" id="vsh-emails">Emails</th>
+            <th class="n sortable" onclick="sortVS('chats')" id="vsh-chats">Chats</th>
+            <th class="n sortable" onclick="sortVS('fcr')" id="vsh-fcr">FCR</th>
+            <th class="n sortable" onclick="sortVS('esc')" id="vsh-esc">Esc%</th>
+          </tr></thead>
           <tbody id="tb-vs"></tbody><tfoot><tr id="tf-vs"></tr></tfoot>
         </table></div>
       </div>
@@ -465,10 +474,28 @@ input[type=text]{width:180px}
         </table></div>
       </div>
 
-      <div class="card"><div class="ct">All AI interactions detail</div>
+      <div class="card">
+        <div class="ct">AI interactions — grouped by reason &amp; sub reason</div>
         <div class="tw"><table>
-          <thead><tr><th>Vertical</th><th>Reason</th><th>Sub reason</th><th>Status</th><th>Classification</th></tr></thead>
+          <thead><tr>
+            <th>Reason</th><th>Sub Reason</th>
+            <th class="n">Total</th>
+            <th class="n" style="color:#16a34a">&#10003; Resolved</th>
+            <th class="n" style="color:#dc2626">&#10007; Escalated</th>
+            <th class="n">Open</th>
+          </tr></thead>
           <tbody id="tb-ai"></tbody>
+          <tfoot><tr id="tf-ai"></tr></tfoot>
+        </table></div>
+      </div>
+      <div class="card" id="ai-no-sub-card" style="display:none">
+        <div class="ct" style="color:#d97706">&#9888; Tickets with no sub reason — needs corrective action</div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">These AI tickets have no sub reason tagged. Review and update in CRM.</div>
+        <div class="tw"><table>
+          <thead><tr>
+            <th>Ticket ID</th><th>Reason</th><th>Status</th><th>Classification</th><th>Lot Name</th>
+          </tr></thead>
+          <tbody id="tb-ai-nosub"></tbody>
         </table></div>
       </div>
     </div>
@@ -686,6 +713,9 @@ function parseDate(val){
     const mo=parseInt(m[1])-1,dy=parseInt(m[2]),yr=parseInt(m[3]);
     const tm=s.match(/(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
     if(tm){let h=parseInt(tm[1]);const min=parseInt(tm[2]),sec=parseInt(tm[3]);if(tm[4].toUpperCase()==='PM'&&h<12)h+=12;if(tm[4].toUpperCase()==='AM'&&h===12)h=0;return new Date(yr,mo,dy,h,min,sec);}
+    // 24-hour format: MM/DD/YYYY, HH:MM:SS or MM/DD/YYYY HH:MM:SS
+    const tm24=s.match(/[,\s]+(\d{1,2}):(\d{2}):(\d{2})/);
+    if(tm24){return new Date(yr,mo,dy,parseInt(tm24[1]),parseInt(tm24[2]),parseInt(tm24[3]));}
     return new Date(yr,mo,dy);
   }
   // Try MM/DD/YYYY, HH:MM:SS
@@ -755,7 +785,7 @@ function initDashboard(raw){
     return{...r,_dt:dt,_idt:idt,_dateKey:dt?dateKey(dt):'',
       _weekKey:dt?weekKey(dt):'',_monthKey:dt?monthKey(dt):'',
       _vertical:mapVertical(r),_refund:tagRefund(r['Action']),
-      _driver:(String(r['Reason']||'').trim()+' > '+String(r['Sub Reason']||'').trim()).replace(/ > $/,'').replace(/^ > /,''),
+      _driver:normalizeDriver(r['Reason'],r['Sub Reason']),
       _isTicket:!!r['Ticket ID'],_isEscalated:String(r['TKT_IssueReason']||'')==='Escalated',
       _category:categorize(r)};
   });
@@ -877,7 +907,46 @@ function renderAll(){
 // HELPERS
 // ═══════════════════════════════════════════════
 function mkKPI(l,v,s='',c=''){return`<div class="kpi"><div class="kpi-l">${l}</div><div class="kpi-v ${c}">${v}</div>${s?`<div class="kpi-s">${s}</div>`:''}</div>`;}
+
+// Deduplicate rows by unique booking (OGI or GAP prefix), fallback to Ticket ID
+// Prevents double-counting when same booking has multiple interaction rows
+function dedupByBooking(rows){
+  const seen=new Set();
+  return rows.filter(r=>{
+    const ogi=String(r['OGI']||'').trim();
+    const tkt=String(r['Ticket ID']||'').trim();
+    // Use OGI/GAP as primary key (both are booking-level identifiers)
+    const key=(ogi&&(ogi.startsWith('OGI')||ogi.startsWith('GAP')))?ogi:(tkt||null);
+    if(!key)return true; // no key = can't dedup, include
+    if(seen.has(key))return false;
+    seen.add(key);return true;
+  });
+}
+
+// Sum amounts after deduplication by booking
+function sumAmountDeduped(rows){
+  return dedupByBooking(rows).reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
+}
+
+// Count unique bookings
+function countDeduped(rows){
+  return dedupByBooking(rows).length;
+}
 function pct(n,d){return d?Math.round(n/d*1000)/10:0;}
+
+function dedupByBooking(rows){
+  const seen=new Set();
+  return rows.filter(r=>{
+    const ogi=String(r['OGI']||'').trim();
+    const tkt=String(r['Ticket ID']||'').trim();
+    const key=(ogi&&(ogi.startsWith('OGI')||ogi.startsWith('GAP')))?ogi:(tkt||null);
+    if(!key)return true;
+    if(seen.has(key))return false;
+    seen.add(key);return true;
+  });
+}
+function sumAmountDeduped(rows){return dedupByBooking(rows).reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);}
+function countDeduped(rows){return dedupByBooking(rows).length;}
 function fmt$(n){return'$'+Math.round(n).toLocaleString();}
 function countBy(arr,key){const r={};arr.forEach(x=>{const k=String(x[key]||'');r[k]=(r[k]||0)+1;});return r;}
 const GC='rgba(0,0,0,0.07)',TC='#9e9a94';
@@ -890,6 +959,36 @@ function mkLine(id,labels,datasets){if(CHARTS[id])CHARTS[id].destroy();CHARTS[id
 // ═══════════════════════════════════════════════
 // T1: OVERVIEW
 // ═══════════════════════════════════════════════
+let _vsSort={col:'tickets',asc:false};
+let _vsData=[];
+
+function sortVS(col){
+  _vsSort={col,asc:_vsSort.col===col?!_vsSort.asc:false};
+  renderVSTable();
+}
+
+function renderVSTable(){
+  const tbody=document.getElementById('tb-vs');if(!tbody)return;
+  const{col,asc}=_vsSort;
+  const sorted=[..._vsData].sort((a,b)=>{
+    if(col==='name')return asc?(a.name>b.name?1:-1):(a.name<b.name?1:-1);
+    return asc?a[col]-b[col]:b[col]-a[col];
+  });
+  const verts_order=['Airport Parking','City Parking','Wayplus','General','Insurance','Carwash','R&M','Gas'];
+  tbody.innerHTML=sorted.map(r=>`<tr>
+    <td>${r.name}</td>
+    <td class="n">${r.tickets.toLocaleString()}</td>
+    <td class="n">${r.ints.toLocaleString()}</td>
+    <td class="n">${r.calls}</td>
+    <td class="n">${r.emails}</td>
+    <td class="n">${r.chats}</td>
+    <td class="n">${r.fcrP!==null?`<span class="bx ${r.fcrP>=80?'bg':'br'}">${r.fcrP}%</span>`:'—'}</td>
+    <td class="n"><span class="bx ${r.esc>5?'br':'ba'}">${r.esc}%</span></td>
+  </tr>`).join('');
+  document.querySelectorAll('[id^="vsh-"]').forEach(el=>{el.classList.remove('asc','desc');});
+  const hdr=document.getElementById('vsh-'+col);if(hdr)hdr.classList.add(asc?'asc':'desc');
+}
+
 function buildOverview(){
   const{df:rawDf,followupOGIs,dateKeys,weekKeys,monthKeys}=G;
   const{df}=getFiltered();
@@ -950,7 +1049,8 @@ function buildOverview(){
   mkBar('c-fcr-ch',chK,[{data:chF,backgroundColor:chF.map(v=>v>=FCR_TARGET?'#4ade80':'#f87171'),borderRadius:4,borderSkipped:false},{data:chK.map(()=>FCR_TARGET),type:'line',borderColor:'#f97316',borderDash:[4,4],borderWidth:1.5,pointRadius:0,fill:false}],{yt:{callback:v=>v+'%'},ymin:50});
   // Vertical table
   const verts=['Airport Parking','City Parking','Wayplus','General','Insurance','Carwash','R&M','Gas'];
-  let tbody='';let totT=0,totI=0,totC=0,totE=0,totCh2=0,totEsc=0;
+  let totT=0,totI=0,totC=0,totE=0,totCh2=0,totEsc=0;
+  _vsData=[];
   verts.forEach(v=>{
     const vI=fl.filter(r=>r._vertical===v),vT=tickets.filter(r=>r._vertical===v),vF=fcrT.filter(r=>r._vertical===v);
     const vFP=vF.length?pct(vF.filter(r=>r._isFCR).length,vF.length):null;
@@ -958,9 +1058,9 @@ function buildOverview(){
     const vEsc=vT.filter(r=>r._isEscalated).length;
     if(!t)return;
     totT+=t;totI+=ints;totC+=c;totE+=e;totCh2+=ch;totEsc+=vEsc;
-    tbody+=`<tr><td>${v}</td><td class="n">${t.toLocaleString()}</td><td class="n">${ints.toLocaleString()}</td><td class="n">${c}</td><td class="n">${e}</td><td class="n">${ch}</td><td class="n">${vFP!==null?`<span class="bx ${vFP>=80?'bg':'br'}">${vFP}%</span>`:'—'}</td><td class="n"><span class="bx ${pct(vEsc,t)>5?'br':'ba'}">${pct(vEsc,t)}%</span></td></tr>`;
+    _vsData.push({name:v,tickets:t,ints,calls:c,emails:e,chats:ch,fcrP:vFP,esc:pct(vEsc,t)});
   });
-  document.getElementById('tb-vs').innerHTML=tbody;
+  renderVSTable();
   const tf=pct(fcrT.filter(r=>r._isFCR).length,fcrT.length);
   document.getElementById('tf-vs').innerHTML=`<td>Total</td><td class="n">${totT.toLocaleString()}</td><td class="n">${totI.toLocaleString()}</td><td class="n">${totC}</td><td class="n">${totE}</td><td class="n">${totCh2}</td><td class="n">${tf}%</td><td class="n">${pct(totEsc,totT)}%</td>`;
   const vFD=verts.map(v=>{const vf=fcrT.filter(r=>r._vertical===v);return vf.length?pct(vf.filter(r=>r._isFCR).length,vf.length):null;});
@@ -1106,6 +1206,42 @@ function normalizeQueue(rawName){
   if(/spanish/i.test(q)) vertical=vertical+' - Spanish';
 
   return vertical;
+}
+
+// ═══════════════════════════════════════════════
+// DRIVER NORMALISATION — collapses Reason+SubReason
+// into clean grouped labels for charts/lists
+// ═══════════════════════════════════════════════
+function normalizeDriver(reason, subReason){
+  const r=String(reason||'').trim();
+  const s=String(subReason||'').trim();
+  const rl=r.toLowerCase();
+  const sl=s.toLowerCase();
+
+  // ── SHUTTLE (keep Enquiry and Issue separate, collapse sub-reasons)
+  if(rl==='shuttle enquiry'||rl.startsWith('shuttle enquiry')) return 'Shuttle Enquiry';
+  if(rl==='shuttle issue'||rl.startsWith('shuttle issue'))     return 'Shuttle Issue';
+
+  // ── LOT ISSUE — normalize sub-reasons into clean groups
+  if(rl==='lot issue'){
+    if(/charged at lot|charged at lot/i.test(s))              return 'Charged at Lot';
+    if(/lot full/i.test(s))                                   return 'Lot Full';
+    if(/lot closed/i.test(s))                                 return 'Lot Closed';
+    if(/rude behav|rude behav/i.test(s))                      return 'Lot Staff Rude';
+    if(/no attendant/i.test(s))                               return 'No Attendant at Lot';
+    if(/oversized|truck|suv charges/i.test(s))                return 'Oversized / Truck Issue';
+    if(/under construction/i.test(s))                         return 'Lot Under Construction';
+    if(/extension|didn.t honor|didn.t accept/i.test(s))       return 'Lot Refused Booking';
+    if(/self park|collected key/i.test(s))                    return 'Lot Self-Park Issue';
+    return 'Lot Issue — Other';
+  }
+
+  // ── EDIT/EXTEND (keep sub-reasons as-is, just clean parent)
+  if(rl==='edit/extend reservation') return 'Edit/Extend — '+(s||'Other');
+
+  // ── Everything else: return Reason > Sub Reason as before
+  if(s) return r+' > '+s;
+  return r;
 }
 
 function buildQueueTab(){
@@ -1521,10 +1657,14 @@ function buildEscalationsTab(){
   document.getElementById('esc-drv-list').innerHTML=topDrivers.map(([driver,count],i)=>{
     const dRows=escs.filter(r=>r._driver===driver);
 
-    // Top contributing agents
-    const agC={};dRows.forEach(r=>{const a=String(r['Agent Name']||'').trim();if(a)agC[a]=(agC[a]||0)+1;});
+    // Top contributing FL agents only (exclude TL/DTL/SME/Mgmt/Dispute)
+    const NON_FL_ESC=new Set([...TL_TEAM,...DTL_TEAM,...SME_TEAM,...L2_TEAM,...MGMT_TEAM,...DISPUTE_TEAM,...REVIEW_TEAM,...ADHOC_TEAM]);
+    const agC={};dRows.forEach(r=>{const a=String(r['Agent Name']||'').trim();if(a&&!NON_FL_ESC.has(a))agC[a]=(agC[a]||0)+1;});
     const topAg=Object.entries(agC).sort((a,b)=>b[1]-a[1]).slice(0,5);
     const maxAg=topAg[0]?.[1]||1;
+    // For lot-issue reasons, hide agents, show lots only
+    // Normalized lot drivers all start without 'Lot Issue >' prefix now
+    const isLotReason=/^(Charged at Lot|Lot Full|Lot Closed|Lot Staff Rude|No Attendant|Oversized|Lot Under|Lot Refused|Lot Self-Park|Lot Issue)/i.test(driver)||/^Lot Issue/i.test(driver);
 
     // Top lots
     const ltC={};dRows.forEach(r=>{const l=String(r['Lot Name']||'').trim();if(l)ltC[l]=(ltC[l]||0)+1;});
@@ -1534,9 +1674,9 @@ function buildEscalationsTab(){
     const hasDetail=topAg.length>0||topLot.length>0;
     const bodyId='edb'+i;
 
-    const agHtml=topAg.length?`
+    const agHtml=(!isLotReason&&topAg.length)?`
       <div style="margin-bottom:10px">
-        <div style="font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--tx3);margin-bottom:6px">Top Agents</div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--tx3);margin-bottom:6px">Top FL Agents</div>
         ${topAg.map(([a,c])=>`<div class="lr">
           <div class="ln">${a}${c===topAg[0][1]&&topAg[0][1]>1?'<span class="flag">top</span>':''}</div>
           <div class="lbw"><div class="lb" style="width:${Math.round(c/maxAg*100)}%;background:${COLORS[i%COLORS.length]}"></div></div>
@@ -1581,7 +1721,8 @@ let ACTIVE_REFUND_TYPE=null;
 
 function buildRefundsTab(){
   const{df}=getFiltered();const fl=df.filter(r=>r._category==='Frontline');const refs=fl.filter(r=>r._refund);
-  const sum=arr=>arr.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
+  const sum=arr=>sumAmountDeduped(arr);
+  const cnt=arr=>countDeduped(arr);
   const bC=refs.filter(r=>r._refund==='BCI Card'),aF=refs.filter(r=>r._refund==='ACI Full'),
     aP=refs.filter(r=>r._refund==='ACI Partial'),aD=refs.filter(r=>r._refund==='ACI Denied'),
     sC=refs.filter(r=>r._refund==='Sub Refund'),bW=refs.filter(r=>r._refund==='BCI Waybucks'),
@@ -1591,13 +1732,13 @@ function buildRefundsTab(){
   // Clickable KPI strip
   const kpiDefs=[
     {type:null,label:'Total Refund Actions',val:refs.length,sub:'click a type below',color:'',bg:'var(--sf)'},
-    {type:'BCI Card',label:'BCI Card Refunds',val:fmt$(sum(bC)),sub:bC.length+' cases',color:'#dc2626',bg:'#fff5f5'},
-    {type:'BCI Waybucks',label:'BCI Waybucks',val:bW.length,sub:fmt$(sum(bW)),color:'#2563eb',bg:'#eff6ff'},
-    {type:'ACI Full',label:'ACI Full Refunds',val:fmt$(sum(aF)),sub:aF.length+' cases',color:'#ea580c',bg:'#fff7ed'},
-    {type:'ACI Partial',label:'ACI Partial',val:fmt$(sum(aP)),sub:aP.length+' cases',color:'#d97706',bg:'#fffbeb'},
-    {type:'ACI Waybucks',label:'ACI Waybucks',val:aW.length,sub:fmt$(sum(aW)),color:'#16a34a',bg:'#f0fdf4'},
-    {type:'ACI Denied',label:'ACI Denied (Saved)',val:fmt$(sum(aD)),sub:aD.length+' cases',color:'#16a34a',bg:'#f0fdf4'},
-    {type:'Sub Refund',label:'Sub Cancellations',val:sC.length,sub:refs.filter(r=>r._refund==='Sub No Refund').length+' not refunded',color:'#7c3aed',bg:'#faf5ff'},
+    {type:'BCI Card',label:'BCI Card Refunds',val:fmt$(sum(bC)),sub:cnt(bC)+' bookings',color:'#dc2626',bg:'#fff5f5'},
+    {type:'BCI Waybucks',label:'BCI Waybucks',val:fmt$(sum(bW)),sub:cnt(bW)+' bookings',color:'#2563eb',bg:'#eff6ff'},
+    {type:'ACI Full',label:'ACI Full Refunds',val:fmt$(sum(aF)),sub:cnt(aF)+' bookings',color:'#ea580c',bg:'#fff7ed'},
+    {type:'ACI Partial',label:'ACI Partial',val:fmt$(sum(aP)),sub:cnt(aP)+' bookings',color:'#d97706',bg:'#fffbeb'},
+    {type:'ACI Waybucks',label:'ACI Waybucks',val:fmt$(sum(aW)),sub:cnt(aW)+' bookings',color:'#16a34a',bg:'#f0fdf4'},
+    {type:'ACI Denied',label:'ACI Denied (Saved)',val:fmt$(sum(aD)),sub:cnt(aD)+' bookings',color:'#16a34a',bg:'#f0fdf4'},
+    {type:'Sub Refund',label:'Sub Cancellations',val:cnt(sC),sub:countDeduped(refs.filter(r=>r._refund==='Sub No Refund'))+' not refunded',color:'#7c3aed',bg:'#faf5ff'},
   ];
   const strip=document.getElementById('ref-kpi-strip');
   strip.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px">`+
@@ -2101,18 +2242,18 @@ function buildAITab(){
   const sO=Object.entries(countBy(ai,'Status')).sort((a,b)=>b[1]-a[1]);
   mkDonut('c-ais',sO.map(s=>s[0]),sO.map(s=>s[1]),['#4ade80','#f97316','#f87171','#fbbf24']);
 
-  // Hourly distribution using Interaction created date
+  // Hourly distribution — use Ticket created date (_dt) as interaction date has no time
   const aiHourly=new Array(24).fill(0);
-  ai.forEach(r=>{if(r._idt)aiHourly[r._idt.getHours()]++;else if(r._dt)aiHourly[r._dt.getHours()]++;});
+  ai.forEach(r=>{if(r._dt)aiHourly[r._dt.getHours()]++;});
   const fH=h=>h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p';
   mkBar('c-ai-hr',aiHourly.map((_,i)=>fH(i)),[{data:aiHourly,backgroundColor:'#818cf8',borderRadius:3,borderSkipped:false}],{xt:{maxRotation:0,font:{size:9}}});
 
   // AI Call Drivers — expandable like Call Drivers
-  const dC={};ai.forEach(r=>{const d=(String(r['Reason']||'')+' > '+String(r['Sub Reason']||'')).replace(/ > $/,'').replace(/^ > /,'');dC[d]=(dC[d]||0)+1;});
+  const dC={};ai.forEach(r=>{const d=normalizeDriver(r['Reason'],r['Sub Reason']);dC[d]=(dC[d]||0)+1;});
   const topDrivers=Object.entries(dC).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const maxD=topDrivers[0]?.[1]||1;
   document.getElementById('ai-drv-list').innerHTML=topDrivers.map(([driver,count],i)=>{
-    const dRows=ai.filter(r=>(String(r['Reason']||'')+' > '+String(r['Sub Reason']||'')).replace(/ > $/,'').replace(/^ > /,'')=== driver);
+    const dRows=ai.filter(r=>normalizeDriver(r['Reason'],r['Sub Reason'])===driver);
     const lC={};dRows.forEach(r=>{const l=String(r['Lot Name']||'').trim();if(l)lC[l]=(lC[l]||0)+1;});
     const tL=Object.entries(lC).sort((a,b)=>b[1]-a[1]).slice(0,5);
     const hL=tL.length>0;const mL=tL[0]?.[1]||1;
@@ -2148,24 +2289,30 @@ function buildAITab(){
     </div>`;
   }).join('');
 
-  // Lot level: resolved vs escalated
-  function lotCard(rows,id){
-    const lm={};rows.forEach(r=>{const l=String(r['Lot Name']||'').trim();if(!l)return;lm[l]=(lm[l]||0)+1;});
+  // Lot level — count per lot for resolved and escalated separately
+  function renderLotCard(rows, id, color, bgColor){
+    const el=document.getElementById(id);if(!el)return;
+    const lm={};
+    rows.forEach(r=>{
+      const l=String(r['Lot Name']||'').trim();
+      if(!l||l==='undefined'||l==='null')return;
+      lm[l]=(lm[l]||0)+1;
+    });
     const top=Object.entries(lm).sort((a,b)=>b[1]-a[1]).slice(0,8);
-    if(!top.length){document.getElementById(id).innerHTML='<div class="empty">No lot data</div>';return;}
+    if(!top.length){el.innerHTML='<div class="empty" style="padding:1rem">No lot data for this period</div>';return;}
     const mx=top[0][1];
-    document.getElementById(id).innerHTML=top.map(([lot,c],i)=>`
+    el.innerHTML=top.map(([lot,c],i)=>`
       <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bd)">
-        <div style="width:20px;height:20px;border-radius:50%;background:${id.includes('success')?'#dcfce7':'#fee2e2'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${id.includes('success')?'#16a34a':'#dc2626'};flex-shrink:0">${i+1}</div>
+        <div style="width:22px;height:22px;border-radius:50%;background:${bgColor};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${color};flex-shrink:0">${i+1}</div>
         <div style="flex:1;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${lot}">${lot}</div>
         <div style="width:80px;height:5px;background:var(--sf3);border-radius:3px;overflow:hidden;flex-shrink:0">
-          <div style="width:${Math.round(c/mx*100)}%;height:100%;border-radius:3px;background:${id.includes('success')?'#4ade80':'#f87171'}"></div>
+          <div style="width:${Math.round(c/mx*100)}%;height:100%;border-radius:3px;background:${color}"></div>
         </div>
-        <div style="font-size:13px;font-weight:700;color:${id.includes('success')?'#16a34a':'#dc2626'};min-width:24px;text-align:right">${c}</div>
+        <div style="font-size:14px;font-weight:700;color:${color};min-width:28px;text-align:right">${c}</div>
       </div>`).join('');
   }
-  lotCard(resolved,'ai-lots-success');
-  lotCard(escalated,'ai-lots-fail');
+  renderLotCard(resolved,'ai-lots-success','#16a34a','#dcfce7');
+  renderLotCard(escalated,'ai-lots-fail','#dc2626','#fee2e2');
 
   // Who picks up after AI escalation
   const agEsc={};
@@ -2183,16 +2330,49 @@ function buildAITab(){
     ?agEscList.map(([a,d])=>`<tr><td>${a}</td><td class="n"><b>${d.count}</b></td><td style="font-size:11px">${Object.entries(d.types).map(([t,c])=>`<span class="bx bb" style="margin-right:3px">${t} ${c}</span>`).join('')}</td></tr>`).join('')
     :'<tr><td colspan="3" class="empty">No escalation attribution data</td></tr>';
 
-  // Detail table
-  document.getElementById('tb-ai').innerHTML=ai.map(r=>{
-    const cls=r._aiClass==='resolved'?'bg':r._aiClass==='escalated'?'br':r._aiClass==='repeat'?'ba':'';
-    const lbl=r._aiClass==='resolved'?'AI Resolved':r._aiClass==='escalated'?'Escalated to Human':r._aiClass==='repeat'?'AI Repeat':'Open';
+  // Grouped summary table — Reason + Sub Reason with resolved/escalated counts
+  const grpMap={};
+  ai.forEach(r=>{
+    const reason=String(r['Reason']||'—');
+    const sub=String(r['Sub Reason']||'').trim();
+    const key=reason+'|||'+sub;
+    if(!grpMap[key])grpMap[key]={reason,sub,total:0,resolved:0,escalated:0,open:0};
+    grpMap[key].total++;
+    if(r._aiClass==='resolved')grpMap[key].resolved++;
+    else if(r._aiClass==='escalated')grpMap[key].escalated++;
+    else grpMap[key].open++;
+  });
+  const grpList=Object.values(grpMap).sort((a,b)=>b.total-a.total);
+  let totRes=0,totEsc=0,totOpn=0;
+  document.getElementById('tb-ai').innerHTML=grpList.map(g=>{
+    totRes+=g.resolved;totEsc+=g.escalated;totOpn+=g.open;
+    const subDisplay=g.sub||'<span style="color:var(--am);font-style:italic">No sub reason ⚠</span>';
     return`<tr>
-      <td>${r._vertical}</td>
-      <td>${r['Reason']||'—'}</td>
-      <td style="font-size:11px;color:var(--tx2)">${r['Sub Reason']||'—'}</td>
+      <td style="font-weight:500">${g.reason}</td>
+      <td style="font-size:11px;color:var(--tx2)">${subDisplay}</td>
+      <td class="n" style="font-weight:600">${g.total}</td>
+      <td class="n" style="color:#16a34a;font-weight:600">${g.resolved||'—'}</td>
+      <td class="n" style="color:#dc2626;font-weight:600">${g.escalated||'—'}</td>
+      <td class="n">${g.open||'—'}</td>
+    </tr>`;
+  }).join('');
+  const tfoot=document.getElementById('tf-ai');
+  if(tfoot)tfoot.innerHTML=`<td>Total</td><td></td><td class="n">${ai.length}</td><td class="n" style="color:#16a34a">${totRes}</td><td class="n" style="color:#dc2626">${totEsc}</td><td class="n">${totOpn}</td>`;
+
+  // Tickets with no sub reason — actionable list with Ticket IDs
+  const noSub=ai.filter(r=>!String(r['Sub Reason']||'').trim()&&r['Ticket ID']);
+  const noSubCard=document.getElementById('ai-no-sub-card');
+  if(noSubCard)noSubCard.style.display=noSub.length?'block':'none';
+  const noSubBody=document.getElementById('tb-ai-nosub');
+  if(noSubBody)noSubBody.innerHTML=noSub.map(r=>{
+    const cls=r._aiClass==='resolved'?'bg':r._aiClass==='escalated'?'br':'ba';
+    const lbl=r._aiClass==='resolved'?'AI Resolved':r._aiClass==='escalated'?'Escalated to Human':'Open';
+    return`<tr>
+      <td><span style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--bl)">${r['Ticket ID']||'—'}</span></td>
+      <td style="font-weight:500">${r['Reason']||'—'}</td>
       <td><span class="bx ${r['Status']==='Closed'?'bg':r['Status']==='Open'?'br':'ba'}">${r['Status']||'—'}</span></td>
       <td><span class="bx ${cls}">${lbl}</span></td>
+      <td style="font-size:11px;color:var(--tx2)">${r['Lot Name']||'—'}</td>
     </tr>`;
   }).join('');
 }
@@ -2268,7 +2448,10 @@ function buildAgentTab(){
     t.forEach(r=>{const a=String(r['Agent Name']||'');if(!fcr[a])fcr[a]={t:0,f:0};fcr[a].t++;if(r._isFCR)fcr[a].f++;});return fcr;
   }
   function fcrP(fcr,n){const f=fcr[n];return f?pct(f.f,f.t):null;}
-  function abTag(p){return p?'':'<span class="absent-tag">Absent</span>';}
+  function abTag(p){
+    if(MODE==='daily') return p?'':'<span class="absent-tag">Absent</span>';
+    return p?'<span style="font-size:9px;padding:1px 6px;border-radius:3px;background:var(--gn-bg);color:var(--gn);margin-left:6px;font-weight:600;font-family:DM Mono,monospace">Active</span>':'<span style="font-size:9px;padding:1px 6px;border-radius:3px;background:var(--sf2);color:var(--tx3);margin-left:6px;font-weight:600;font-family:DM Mono,monospace">Inactive</span>';
+  }
   function fcrB(p){if(p===null)return'—';return`<span class="bx ${p>=80?'bg':p>=70?'ba':'br'}">${p}%</span>`;}
   function escB(r){return`<span class="bx ${r>5?'br':r>2?'ba':'bg'}">${r}%</span>`;}
   function ahtCell(name){const s=agAHT[name];return s?`<td class="n">${secToMmss(s)}</td>`:'<td class="n">—</td>';}
