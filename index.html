@@ -600,8 +600,64 @@ const REVIEW_TEAM=['Muvithra M','Tharun Sunil Kumar','Jijo Papachan','Abhilash A
 const ADHOC_TEAM=['Vishnu MS'];
 const MGMT_TEAM=['Anju Mareeta Lean','Joyson Fernandez'];
 const INDIAN_SPANISH=['Pawan Kumar','NAUSHAD AHMAD','Javed Humayun Khan','MD Sattar Alam','Mohamed Jowhar','Ansar Alli','U Likhith','Mohammad Haider Ali','Siddarth Raj'];
-const COLUMBIA_TEAM=['Alexandra Morales','Andrea Ruiz','Angeles Soledad','Daniel Montoya','Karen Hopkins','Brianna Lundy','Karolyne Perez','Mauricio Leon','Nicholas Marquez','Oscar Perez','Sarah Gonzales','Valentina Torres','Selina Benavides','Gabriella Lacayo'];
+const COLUMBIA_TEAM=['Alexandra Morales','Andrea Ruiz','Angeles Soledad','Daniel Montoya','Karen Hopkins','Brianna Lundy','Karolyne Perez','Mauricio Leon','Nicholas Marquez','Oscar Perez','Sarah Gonzales','Valentina Torres','Selina Benavides','Gabriella Lacayo','Liliana Soledad'];
 const CROSSSELL=['AS, Al-Ameen','Chacko, Samuel','Mathew, Daisy','R, Nivesh','S Nair, Goutham','S, Sreelakshmi','Selvia, Shyny','Sudarsanan, Vishnu','Ashok, Aathira'];
+const TL_ONLY=TL_TEAM;
+const TL_MATERNITY=['Aswini AS'];
+const DTL_TEAM=['Vidya Vijayan'];
+const SME_TEAM=['Althaf Z','LALITA LAMA'];
+const FRONTLINE_AGENTS=[
+  // Active frontline agents — names exactly as they appear in CRM data
+  'Abhi',                  // = Abhilash Lean
+  'Abhija Zakkir',
+  'Abhinav S B',
+  'Abhiraj Erenzath',
+  'Abhishek Kumar S',
+  'Abin Eappen',
+  'Abin Ferry',
+  'Ajeet A',
+  'Ajesh Mathew Varghese', // different from Ajesh varghese
+  'Ajesh varghese',        // different from Ajesh Mathew Varghese
+  'Akshay Vinod',
+  'Akshaya G S',
+  'Amal Krishna A',
+  'Ananthu',
+  'Arya J S',
+  'Aswin AV',
+  'Azhar Abdul Kalam',
+  'Bibin Selvan',
+  'Blessy Hillary',
+  'Catherine Benjamin',
+  'Devika S',
+  'Gokul',                 // = Gokul Sarath
+  'Haleema',               // = Haleema Raheem
+  'Hizana Noushad',
+  'Irfana Ibrahim',        // = Irfana S Ibrahim
+  'Irshad S',
+  'Jishnu Praveen',
+  'John Chacko',
+  'Karnan Jayaprakash',
+  'Nikhil Pradeep',
+  'Nimi',                  // = Nimi M Nair
+  'Rufus Johny',           // = Rufus H Johny
+  'Shinu Varghese',
+  'Sufaila Abdul Fathah',
+  'Swathy Peethambaran',
+  // Previously active — show as Absent/Inactive when not in uploaded data
+  'B I Sumith',            // = Sumith B I
+  'Dravya SP Naga',
+  'Najna Nizar',
+  'Pooja Jose',
+  // Team members absent last week — will show correctly when they appear in data
+  'Meenakshy RS',
+  'Jonathan Anil'
+];
+const KNOWN_AGENTS=new Set([
+  ...DISPUTE_TEAM,...TL_TEAM,...QC_TEAM,...L2_TEAM,...REVIEW_TEAM,
+  ...ADHOC_TEAM,...MGMT_TEAM,...INDIAN_SPANISH,...COLUMBIA_TEAM,...CROSSSELL,
+  ...TL_MATERNITY,...DTL_TEAM,...SME_TEAM,...FRONTLINE_AGENTS,
+  'ai-decagon ai-decagon'
+]);
 const FCR_EXCLUDE=['Dispute','TL Review','AI-Agent Call','Escalation Handled by TL','Escalation handled by Ops Team','User Reviews','QC Audit','Manager Review','Escalation Handled by Escalation Team'];
 const R_BCI_CARD=['BCI -Card refund','Before check-in, Card Refund','BCI - Refunded','Before Check-In -Refunded','Before Check-In - Way bucks offered customer denied Refunded back to card','Confirmed With Lot -Before Check-In -Way bucks offered customer denied Refunded back to card','Before check in - Refunded back to card','Before check in - Cancelled','BCI – Card Refund Issued','Card Refund issued','Card refund issued','Cancelled - Before check-In','Cancelled - Before Check-In','Before Check-In Cancelled','Before check in - cancelled','Before  check in - cancelled','Not Confirmed - Before Check-In - Way bucks offered customer denied Refunded back to card','LM Offered – Not Interested – Card refund','Confirmed with lot - LM Offered – Not Interested – Card refund','Confirmed with lot - LM Offered – Parked Elsewhere – Card refund'];
 const R_BCI_WB=['BCI -Way bucks issued','Before check-in, Wallet refunded','BCI – Waybucks issued','Confirmed With Lot -Before Check-In - Way bucks offered customer accepted','Way bucks issued'];
@@ -1690,68 +1746,33 @@ function buildEscalationsTab(){
   const sO=Object.entries(countBy(escs,'Status')).sort((a,b)=>b[1]-a[1]);
   document.getElementById('tb-es').innerHTML=sO.map(([s,c])=>`<tr><td>${s||'Unknown'}</td><td class="n">${c}</td><td class="n"><span class="bx ${s==='Closed'?'bg':'ba'}">${pct(c,tot)}%</span></td></tr>`).join('');
 
-  // Driver list — like Call Drivers, click to expand contributors
+  // Driver list — lots only, no agents
   const dC={};escs.forEach(r=>{dC[r._driver]=(dC[r._driver]||0)+1;});
   const topDrivers=Object.entries(dC).sort((a,b)=>b[1]-a[1]).slice(0,15);
   if(!topDrivers.length){document.getElementById('esc-drv-list').innerHTML='<div class="empty">No escalation data</div>';return;}
   const maxT=topDrivers[0][1];
-
   document.getElementById('esc-drv-list').innerHTML=topDrivers.map(([driver,count],i)=>{
     const dRows=escs.filter(r=>r._driver===driver);
-
-    // Top contributing FL agents only (exclude TL/DTL/SME/Mgmt/Dispute)
-    const NON_FL_ESC=new Set([...TL_TEAM,...DTL_TEAM,...SME_TEAM,...L2_TEAM,...MGMT_TEAM,...DISPUTE_TEAM,...REVIEW_TEAM,...ADHOC_TEAM]);
-    const agC={};dRows.forEach(r=>{const a=String(r['Agent Name']||'').trim();if(a&&!NON_FL_ESC.has(a))agC[a]=(agC[a]||0)+1;});
-    const topAg=Object.entries(agC).sort((a,b)=>b[1]-a[1]).slice(0,5);
-    const maxAg=topAg[0]?.[1]||1;
-    // For lot-issue reasons, hide agents, show lots only
-    // Normalized lot drivers all start without 'Lot Issue >' prefix now
-    const isLotReason=/^(Charged at Lot|Lot Full|Lot Closed|Lot Staff Rude|No Attendant|Oversized|Lot Under|Lot Refused|Lot Self-Park|Lot Issue)/i.test(driver)||/^Lot Issue/i.test(driver);
-
-    // Top lots
     const ltC={};dRows.forEach(r=>{const l=String(r['Lot Name']||'').trim();if(l)ltC[l]=(ltC[l]||0)+1;});
     const topLot=Object.entries(ltC).sort((a,b)=>b[1]-a[1]).slice(0,5);
     const maxLt=topLot[0]?.[1]||1;
-
-    const hasDetail=topAg.length>0||topLot.length>0;
+    const hasLots=topLot.length>0;
     const bodyId='edb'+i;
-
-    const agHtml=(!isLotReason&&topAg.length)?`
-      <div style="margin-bottom:10px">
-        <div style="font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--tx3);margin-bottom:6px">Top FL Agents</div>
-        ${topAg.map(([a,c])=>`<div class="lr">
-          <div class="ln">${a}${c===topAg[0][1]&&topAg[0][1]>1?'<span class="flag">top</span>':''}</div>
-          <div class="lbw"><div class="lb" style="width:${Math.round(c/maxAg*100)}%;background:${COLORS[i%COLORS.length]}"></div></div>
-          <div class="lc">${c}</div>
-        </div>`).join('')}
-      </div>`:'';
-
-    const lotHtml=topLot.length?`
-      <div>
-        <div style="font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--tx3);margin-bottom:6px">Top Lots</div>
-        ${topLot.map(([l,c])=>`<div class="lr">
-          <div class="ln">${l}${c===topLot[0][1]&&topLot[0][1]>1?'<span class="flag">top</span>':''}</div>
-          <div class="lbw"><div class="lb" style="width:${Math.round(c/maxLt*100)}%;background:${COLORS[(i+3)%COLORS.length]}"></div></div>
-          <div class="lc">${c}</div>
-        </div>`).join('')}
-      </div>`:'';
-
-    return `<div class="drv">
-      <div class="drv-h" onclick="${hasDetail?`toggleDrv('${bodyId}',this)`:''}" style="${hasDetail?'':'cursor:default'}">
+    const lotHtml=hasLots?`<div class="drv-b" id="${bodyId}"><div style="padding:4px 0">
+      ${topLot.map(([l,c])=>`<div class="lr">
+        <div class="ln">${l}${c===topLot[0][1]&&topLot[0][1]>1?'<span class="flag">top</span>':''}</div>
+        <div class="lbw"><div class="lb" style="width:${Math.round(c/maxLt*100)}%;background:${COLORS[i%COLORS.length]}"></div></div>
+        <div class="lc">${c}</div>
+      </div>`).join('')}
+    </div></div>`:'';
+    return`<div class="drv">
+      <div class="drv-h" onclick="${hasLots?`toggleDrv('${bodyId}',this)`:''}" style="${hasLots?'':'cursor:default'}">
         <div style="display:flex;align-items:center;gap:8px;flex:1">
           <div style="width:${Math.round(count/maxT*120)}px;height:5px;border-radius:2px;background:${COLORS[i%COLORS.length]};flex-shrink:0"></div>
           <div class="drv-lbl">${driver}</div>
         </div>
-        <div class="drv-r">
-          <div class="drv-c">${count}</div>
-          ${hasDetail?'<div class="drv-a">&#9660;</div>':''}
-        </div>
-      </div>
-      ${hasDetail?`<div class="drv-b" id="${bodyId}">
-        <div style="display:grid;grid-template-columns:${topAg.length&&topLot.length?'1fr 1fr':'1fr'};gap:16px;padding:4px 0">
-          ${agHtml}${lotHtml}
-        </div>
-      </div>`:''}
+        <div class="drv-r"><div class="drv-c">${count}</div>${hasLots?'<div class="drv-a">&#9660;</div>':''}</div>
+      </div>${lotHtml}
     </div>`;
   }).join('');
 }
@@ -1892,19 +1913,7 @@ function renderRefundDrill(type){
 // ═══════════════════════════════════════════════
 // T8: TL ACTIVITY
 // ═══════════════════════════════════════════════
-const TL_ONLY=TL_TEAM; // same list — TL_TEAM is the single source of truth
-const TL_MATERNITY=['Aswini AS'];
-const DTL_TEAM=['Vidya Vijayan'];
-const SME_TEAM=['Althaf Z','LALITA LAMA'];
-
-// KNOWN_AGENTS — complete whitelist of all Way CS team members
-// Anyone not in this set is excluded from all frontline/agent metrics
-const KNOWN_AGENTS=new Set([
-  ...DISPUTE_TEAM,...TL_TEAM,...QC_TEAM,...L2_TEAM,...REVIEW_TEAM,
-  ...ADHOC_TEAM,...MGMT_TEAM,...INDIAN_SPANISH,...COLUMBIA_TEAM,...CROSSSELL,
-  ...TL_MATERNITY,...DTL_TEAM,...SME_TEAM,
-  'ai-decagon ai-decagon' // AI agent — handled separately
-]);
+// TL_ONLY, DTL_TEAM, SME_TEAM, TL_MATERNITY, KNOWN_AGENTS moved to top constants block
 
 function buildTLTab(){
   const{df,followupOGIs}=getFiltered();
@@ -2067,10 +2076,10 @@ function buildTLTab(){
 // T9: REVIEWS
 // ═══════════════════════════════════════════════
 function getRating(reason){
-  const s=String(reason||'');
-  if(s.includes('5'))return 5;if(s.includes('4'))return 4;
-  if(s.includes('3'))return 3;if(s.includes('2'))return 2;
-  if(s.includes('1'))return 1;return null;
+  const s=String(reason||'').trim();
+  // Handle 'Review  5', 'Review 5', 'User Review 5', 'Review1' etc
+  const m=s.match(/(\d)/);
+  return m?parseInt(m[1]):null;
 }
 
 function buildReviewsTab(){
