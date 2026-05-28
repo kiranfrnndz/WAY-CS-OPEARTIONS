@@ -428,11 +428,15 @@ input[type=text]{width:180px}
           <div id="lots-negative"></div>
         </div>
       </div>
-      <div class="card"><div class="ct">All review interactions</div>
-        <div class="tw"><table>
-          <thead><tr><th>Agent</th><th>Rating</th><th>Sub reason</th><th>Action</th><th>Vertical</th></tr></thead>
-          <tbody id="tb-rev"></tbody>
-        </table></div>
+      <div class="g2">
+        <div class="card">
+          <div class="ct" style="color:#16a34a">&#9650; Top reasons driving positive reviews (4★ &amp; 5★)</div>
+          <div id="rev-pos-reasons"></div>
+        </div>
+        <div class="card">
+          <div class="ct" style="color:#dc2626">&#9660; Top reasons driving negative reviews (1★, 2★ &amp; 3★)</div>
+          <div id="rev-neg-reasons"></div>
+        </div>
       </div>
     </div>
 
@@ -467,9 +471,9 @@ input[type=text]{width:180px}
       </div>
 
       <div class="card">
-        <div class="ct">AI agent breakdown — who escalates after AI</div>
+        <div class="ct">Live agents who received AI-escalated calls</div>
         <div class="tw"><table>
-          <thead><tr><th>Agent</th><th class="n">Picked up after AI</th><th class="n">Interaction type</th></tr></thead>
+          <thead><tr><th>Agent</th><th class="n">AI escalations received</th><th class="n">Channel</th></tr></thead>
           <tbody id="tb-ai-agents"></tbody>
         </table></div>
       </div>
@@ -478,7 +482,7 @@ input[type=text]{width:180px}
         <div class="ct">AI interactions — grouped by reason &amp; sub reason</div>
         <div class="tw"><table>
           <thead><tr>
-            <th>Reason</th><th>Sub Reason</th>
+            <th colspan="2">Driver (normalized)</th>
             <th class="n">Total</th>
             <th class="n" style="color:#16a34a">&#10003; Resolved</th>
             <th class="n" style="color:#dc2626">&#10007; Escalated</th>
@@ -764,13 +768,18 @@ function mapVertical(row){
 }
 function tagRefund(a){const s=String(a||'').trim();if(R_BCI_CARD.includes(s))return'BCI Card';if(R_BCI_WB.includes(s))return'BCI Waybucks';if(R_ACI_FULL.includes(s))return'ACI Full';if(R_ACI_PARTIAL.includes(s))return'ACI Partial';if(R_ACI_WB.includes(s))return'ACI Waybucks';if(R_ACI_DENIED.includes(s))return'ACI Denied';if(R_SUB.includes(s))return'Sub Refund';if(R_SUB_NO.includes(s))return'Sub No Refund';return null;}
 function categorize(row){
-  const int=String(row['Interaction']||''),agent=String(row['Agent Name']||'');
+  const int=String(row['Interaction']||''),agent=String(row['Agent Name']||'').trim();
   if(DISPUTE_TEAM.includes(agent))return'Dispute';
   if(agent==='ai-decagon ai-decagon'||int==='AI-Agent Call')return'AI';
   if(int==='Dispute')return'Dispute';
   if(['TL Review','Escalation Handled by TL','Escalation handled by Ops Team','QC Audit','Manager Review','Escalation Handled by Escalation Team'].includes(int))return'TL';
   if(int==='User Reviews')return'Review';
-  if(['Call','Email','Chat'].includes(int))return'Frontline';
+  if(['Call','Email','Chat'].includes(int)){
+    // Only count as Frontline if agent is in our known roster
+    // Unknown agents (other Nextiva users) are excluded
+    if(agent&&!KNOWN_AGENTS.has(agent))return'Other';
+    return'Frontline';
+  }
   return'Other';
 }
 
@@ -1236,8 +1245,23 @@ function normalizeDriver(reason, subReason){
     return 'Lot Issue — Other';
   }
 
-  // ── EDIT/EXTEND (keep sub-reasons as-is, just clean parent)
-  if(rl==='edit/extend reservation') return 'Edit/Extend — '+(s||'Other');
+  // ── EDIT/EXTEND — collapse all sub-reasons into one group
+  if(rl==='edit/extend reservation') return 'Edit/Extend Reservation';
+
+  // ── GENERAL ENQUIRY — collapse sub-reason duplicate into one group
+  if(rl==='general enquiry') return 'General Enquiry';
+
+  // ── BOOKING ASSISTANCE — collapse sub-reasons
+  if(rl==='booking assistance') return 'Booking Assistance';
+
+  // ── PRE-BOOKING QUERIES — collapse
+  if(rl==='pre-booking queries') return 'Pre-Booking Queries';
+
+  // ── RESERVATION CONFIRMATION — collapse
+  if(rl==='reservation confirmation / verification') return 'Reservation Confirmation';
+
+  // ── OUTBOUND VENDOR CALL — collapse
+  if(rl==='outbound vendor call') return 'Outbound Vendor Call';
 
   // ── Everything else: return Reason > Sub Reason as before
   if(s) return r+' > '+s;
@@ -1594,7 +1618,7 @@ function buildDisputesTab(){
   const{df}=getFiltered();
   const dispR=df.filter(r=>DISPUTE_TEAM.includes(String(r['Agent Name']||'')));
   const pD=dispR.filter(r=>r['Interaction']==='Dispute');
-  const tA=pD.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
+  const tA=sumAmountDeduped(pD);
   const vO=Object.entries(countBy(pD,'_vertical')).sort((a,b)=>b[1]-a[1]);
   document.getElementById('kpi5').innerHTML=mkKPI('Total disputes',pD.length,'','rd')+mkKPI('Disputed amount',fmt$(tA),'booking value','rd')+mkKPI('Avg per dispute',fmt$(tA/Math.max(pD.length,1)))+mkKPI('All closed',pD.filter(r=>String(r['Status']||'').toLowerCase()==='closed').length,'',pD.filter(r=>String(r['Status']||'').toLowerCase()==='closed').length===pD.length?'gn':'am');
   const lC2=vO.map((_,i)=>COLORS[i%COLORS.length]);
@@ -1603,11 +1627,29 @@ function buildDisputesTab(){
   const oO=Object.entries(countBy(pD,'Action')).sort((a,b)=>b[1]-a[1]).slice(0,6);
   mkBar('c-do',oO.map(([o])=>o.length>20?o.slice(0,20)+'...':o),[{data:oO.map(([,c])=>c),backgroundColor:'#f87171',borderRadius:4,borderSkipped:false}],{yt:{stepSize:1}});
   const agM={};DISPUTE_TEAM.forEach(a=>{agM[a]={disputes:0,other:0,amount:0,present:false};});
-  dispR.forEach(r=>{const a=String(r['Agent Name']||'');if(!agM[a])agM[a]={disputes:0,other:0,amount:0,present:false};agM[a].present=true;if(r['Interaction']==='Dispute'){agM[a].disputes++;agM[a].amount+=(parseFloat(r['Amount'])||0);}else agM[a].other++;});
-  let tb='';let tD=0,tO=0,tAm=0;
-  Object.entries(agM).forEach(([a,d])=>{tD+=d.disputes;tO+=d.other;tAm+=d.amount;tb+=`<tr><td>${a}</td><td class="n">${d.disputes}</td><td class="n">${d.other}</td><td class="n">${d.disputes+d.other}</td><td class="n">${fmt$(d.amount)}</td><td>${d.present?'<span class="bx bg">Present</span>':'<span class="bx br">Absent</span>'}</td></tr>`;});
+  dispR.forEach(r=>{
+    const a=String(r['Agent Name']||'');
+    if(!agM[a])agM[a]={disputes:0,other:0,amount:0,present:false};
+    agM[a].present=true;
+    if(r['Interaction']==='Dispute'){agM[a].other++;}
+    else agM[a].other++;
+  });
+  // Dispute counts and amounts deduped by OGI/GAP/Ticket ID
+  const pD_deduped=dedupByBooking(pD);
+  DISPUTE_TEAM.forEach(a=>{
+    const agRows=pD.filter(r=>String(r['Agent Name']||'')===a);
+    const agDeduped=dedupByBooking(agRows);
+    agM[a].disputes=agDeduped.length;
+    agM[a].amount=agDeduped.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
+  });
+  const statusTag=(present)=>{
+    if(MODE==='daily') return present?'<span class="bx bg">Present</span>':'<span class="bx br">Absent</span>';
+    return present?'<span class="bx bg">Active</span>':'<span style="font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;font-family:DM Mono,monospace;background:var(--rd-bg);color:var(--rd)">Not Active</span>';
+  };
+  let tb='';let tD=0,tAm=0;
+  Object.entries(agM).forEach(([a,d])=>{tD+=d.disputes;tAm+=d.amount;tb+=`<tr><td>${a}</td><td class="n">${d.disputes}</td><td class="n">${d.other}</td><td class="n">${d.disputes+d.other}</td><td class="n">${fmt$(d.amount)}</td><td>${statusTag(d.present)}</td></tr>`;});
   document.getElementById('tb-dt').innerHTML=tb;
-  document.getElementById('tf-dt').innerHTML=`<td>Total</td><td class="n">${tD}</td><td class="n">${tO}</td><td class="n">${tD+tO}</td><td class="n">${fmt$(tAm)}</td><td></td>`;
+  document.getElementById('tf-dt').innerHTML=`<td>Total</td><td class="n">${pD_deduped.length}</td><td class="n"></td><td class="n">${dispR.length}</td><td class="n">${fmt$(pD_deduped.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0))}</td><td></td>`;
   let lH='';
   ['Airport Parking','City Parking','Carwash','Wayplus','General'].forEach(v=>{
     const vD=pD.filter(r=>r._vertical===v);if(!vD.length)return;
@@ -1850,10 +1892,19 @@ function renderRefundDrill(type){
 // ═══════════════════════════════════════════════
 // T8: TL ACTIVITY
 // ═══════════════════════════════════════════════
-const TL_ONLY=['Shiju Salam','Vishnu V','Bijoy Kiran','Rashmika Santhosh D','Vishnu BS','surya suresh','Ansu Varghese','Jaison Nelson'];
+const TL_ONLY=TL_TEAM; // same list — TL_TEAM is the single source of truth
 const TL_MATERNITY=['Aswini AS'];
 const DTL_TEAM=['Vidya Vijayan'];
 const SME_TEAM=['Althaf Z','LALITA LAMA'];
+
+// KNOWN_AGENTS — complete whitelist of all Way CS team members
+// Anyone not in this set is excluded from all frontline/agent metrics
+const KNOWN_AGENTS=new Set([
+  ...DISPUTE_TEAM,...TL_TEAM,...QC_TEAM,...L2_TEAM,...REVIEW_TEAM,
+  ...ADHOC_TEAM,...MGMT_TEAM,...INDIAN_SPANISH,...COLUMBIA_TEAM,...CROSSSELL,
+  ...TL_MATERNITY,...DTL_TEAM,...SME_TEAM,
+  'ai-decagon ai-decagon' // AI agent — handled separately
+]);
 
 function buildTLTab(){
   const{df,followupOGIs}=getFiltered();
@@ -2331,25 +2382,27 @@ function buildAITab(){
     :'<tr><td colspan="3" class="empty">No escalation attribution data</td></tr>';
 
   // Grouped summary table — Reason + Sub Reason with resolved/escalated counts
+  // Group by NORMALIZED driver (same as Call Drivers tab) — collapses duplicates
+  // Use dedupByBooking per group for accurate counts
   const grpMap={};
   ai.forEach(r=>{
-    const reason=String(r['Reason']||'—');
-    const sub=String(r['Sub Reason']||'').trim();
-    const key=reason+'|||'+sub;
-    if(!grpMap[key])grpMap[key]={reason,sub,total:0,resolved:0,escalated:0,open:0};
-    grpMap[key].total++;
-    if(r._aiClass==='resolved')grpMap[key].resolved++;
-    else if(r._aiClass==='escalated')grpMap[key].escalated++;
-    else grpMap[key].open++;
+    const driver=r._driver||normalizeDriver(r['Reason'],r['Sub Reason']);
+    if(!grpMap[driver])grpMap[driver]={driver,rows:[],resolved:0,escalated:0,open:0};
+    grpMap[driver].rows.push(r);
+    if(r._aiClass==='resolved')grpMap[driver].resolved++;
+    else if(r._aiClass==='escalated')grpMap[driver].escalated++;
+    else grpMap[driver].open++;
   });
-  const grpList=Object.values(grpMap).sort((a,b)=>b.total-a.total);
-  let totRes=0,totEsc=0,totOpn=0;
+  const grpList=Object.values(grpMap).map(g=>({
+    ...g,
+    total:countDeduped(g.rows)  // unique booking count per driver
+  })).sort((a,b)=>b.total-a.total);
+
+  let totRes=0,totEsc=0,totOpn=0,totAll=0;
   document.getElementById('tb-ai').innerHTML=grpList.map(g=>{
-    totRes+=g.resolved;totEsc+=g.escalated;totOpn+=g.open;
-    const subDisplay=g.sub||'<span style="color:var(--am);font-style:italic">No sub reason ⚠</span>';
+    totRes+=g.resolved;totEsc+=g.escalated;totOpn+=g.open;totAll+=g.total;
     return`<tr>
-      <td style="font-weight:500">${g.reason}</td>
-      <td style="font-size:11px;color:var(--tx2)">${subDisplay}</td>
+      <td style="font-weight:500" colspan="2">${g.driver}</td>
       <td class="n" style="font-weight:600">${g.total}</td>
       <td class="n" style="color:#16a34a;font-weight:600">${g.resolved||'—'}</td>
       <td class="n" style="color:#dc2626;font-weight:600">${g.escalated||'—'}</td>
@@ -2357,7 +2410,7 @@ function buildAITab(){
     </tr>`;
   }).join('');
   const tfoot=document.getElementById('tf-ai');
-  if(tfoot)tfoot.innerHTML=`<td>Total</td><td></td><td class="n">${ai.length}</td><td class="n" style="color:#16a34a">${totRes}</td><td class="n" style="color:#dc2626">${totEsc}</td><td class="n">${totOpn}</td>`;
+  if(tfoot)tfoot.innerHTML=`<td colspan="2">Total (${grpList.length} drivers)</td><td class="n">${totAll}</td><td class="n" style="color:#16a34a">${totRes}</td><td class="n" style="color:#dc2626">${totEsc}</td><td class="n">${totOpn}</td>`;
 
   // Tickets with no sub reason — actionable list with Ticket IDs
   const noSub=ai.filter(r=>!String(r['Sub Reason']||'').trim()&&r['Ticket ID']);
@@ -2516,7 +2569,13 @@ function buildAgentTab(){
 
   // Frontline
   const FRONTLINE_EXCLUDE=new Set([...DISPUTE_TEAM,...TL_TEAM,...DTL_TEAM,...SME_TEAM,...L2_TEAM,...MGMT_TEAM,...INDIAN_SPANISH,...COLUMBIA_TEAM,...ADHOC_TEAM]);
-  const flRows=df.filter(r=>{const a=String(r['Agent Name']||'');if(!a||a==='ai-decagon ai-decagon')return false;if(FRONTLINE_EXCLUDE.has(a))return false;return['Call','Email','Chat'].includes(String(r['Interaction']||''));});
+  const flRows=df.filter(r=>{
+    const a=String(r['Agent Name']||'').trim();
+    if(!a||a==='ai-decagon ai-decagon')return false;
+    if(FRONTLINE_EXCLUDE.has(a))return false;
+    if(!KNOWN_AGENTS.has(a))return false; // exclude anyone not in our team roster
+    return['Call','Email','Chat'].includes(String(r['Interaction']||''));
+  });
   const flTickets=flRows.filter(r=>r._isTicket);const flFCR=calcFCR(flRows);
   const fPOGI={};rawDf.filter(r=>!r._isTicket&&r['OGI']).forEach(r=>{const k=String(r['OGI']);fPOGI[k]=(fPOGI[k]||0)+1;});
   flTickets.forEach(r=>{const fc=r['OGI']?(fPOGI[String(r['OGI'])]||0):0;r._followups=fc;r._totalInts=1+fc;});
