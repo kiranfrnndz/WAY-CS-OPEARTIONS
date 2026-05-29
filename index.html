@@ -6,6 +6,8 @@
 <title>WAY Operations Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f5f4f0;--sf:#ffffff;--sf2:#f0ede8;--sf3:#e8e4de;--bd:#e2ddd6;--bd2:#ccc8c0;--tx:#1a1916;--tx2:#6b6760;--tx3:#a09c96;--gn:#16a34a;--gn-bg:#dcfce7;--rd:#dc2626;--rd-bg:#fee2e2;--am:#d97706;--am-bg:#fef3c7;--bl:#2563eb;--bl-bg:#dbeafe;--pu:#7c3aed;--ac:#ea580c;--r:8px;--rs:5px}
@@ -185,6 +187,16 @@ input[type=text]{width:180px}
 .sec-div-lbl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)}
 
 @media(max-width:700px){.g2,.g3{grid-template-columns:1fr}.up-grid{grid-template-columns:1fr}.content{padding:1rem}.up-title{font-size:26px}}
+@media print{
+  body{background:#fff !important}
+  .nav,.upload-bar,.sel-bar,.ctrl,.mode-bar,.t-tabs{display:none !important}
+  .sec{display:block !important}
+  .card{break-inside:avoid;box-shadow:none !important;border:1px solid #e5e0d8 !important;margin-bottom:12px}
+  .db{padding:0}
+  .cw canvas{max-height:180px}
+  #pdf-btn{display:none !important}
+  @page{margin:1.5cm;size:A4 landscape}
+}
 </style>
 <script>
 window.onerror = function(msg, src, line, col, err) {
@@ -259,7 +271,7 @@ window.onerror = function(msg, src, line, col, err) {
     </div>
     <div style="display:flex;align-items:center;gap:10px">
       <span style="font-size:11px;color:var(--tx3)">WP + CC + Agent reports · FCR target 80%</span>
-      <button class="new-btn" onclick="resetDB()">↑ New upload</button>
+      <button id="pdf-btn" onclick="exportPDF()" style="background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;margin-right:8px;font-family:inherit">&#8681; Export PDF</button><button class="new-btn" onclick="resetDB()">↑ New upload</button>
     </div>
   </div>
 
@@ -2611,6 +2623,91 @@ function renderAgents(){
 // ═══════════════════════════════════════════════
 // UI
 // ═══════════════════════════════════════════════
+async function exportPDF(){
+  const btn=document.getElementById('pdf-btn');
+  btn.textContent='⏳ Generating...';btn.disabled=true;
+
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'landscape',unit:'px',format:[1200,850]});
+
+  const tabs=[
+    {id:'t1',label:'Overview'},
+    {id:'t2',label:'Call Drivers'},
+    {id:'t3',label:'Queue & Abandon'},
+    {id:'t4',label:'Productivity'},
+    {id:'t5',label:'Disputes'},
+    {id:'t6',label:'Escalations'},
+    {id:'t7',label:'Refunds'},
+    {id:'t8',label:'TL Activity'},
+    {id:'t9',label:'Reviews'},
+    {id:'t10',label:'AI Agent'},
+    {id:'t11',label:'Platforms'},
+    {id:'t12',label:'Time Patterns'},
+    {id:'t13',label:'Agents'}
+  ];
+
+  // Show each tab, capture, add to PDF
+  for(let i=0;i<tabs.length;i++){
+    const{id,label}=tabs[i];
+    btn.textContent=`⏳ ${i+1}/${tabs.length} ${label}...`;
+
+    // Show this tab
+    document.querySelectorAll('.sec').forEach(s=>s.style.display='none');
+    const sec=document.getElementById(id);
+    sec.style.display='block';
+
+    // Re-render charts for this tab
+    const rebuildMap={t1:buildOverview,t2:buildDriversTab,t3:buildQueueTab,t4:buildProductivityTab,t5:buildDisputesTab,t6:buildEscalationsTab,t7:buildRefundsTab,t8:buildTLTab,t9:buildReviewsTab,t10:buildAITab,t11:buildPlatformsTab,t12:buildTimeTab,t13:buildAgentTab};
+    if(rebuildMap[id])rebuildMap[id]();
+
+    // Wait for charts to render
+    await new Promise(r=>setTimeout(r,400));
+
+    // Capture
+    const canvas=await html2canvas(sec,{
+      scale:1.5,
+      useCORS:true,
+      allowTaint:true,
+      backgroundColor:'#f5f1eb',
+      scrollX:0,scrollY:0,
+      width:sec.scrollWidth,
+      height:sec.scrollHeight,
+      windowWidth:1200
+    });
+
+    const imgData=canvas.toDataURL('image/jpeg',0.85);
+    const imgW=1200,imgH=Math.min(canvas.height*(1200/canvas.width),2400);
+
+    if(i>0)pdf.addPage([1200,Math.max(850,imgH+40)],'landscape');
+
+    // Header bar
+    pdf.setFillColor(29,78,216);
+    pdf.rect(0,0,1200,28,'F');
+    pdf.setTextColor(255,255,255);
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica','bold');
+    pdf.text('WAY Operations Dashboard',12,18);
+    pdf.setFont('helvetica','normal');
+    pdf.setFontSize(9);
+    const period=(document.getElementById('tb-period')?.textContent||'')+(document.querySelector('.sel-btn.active')?.textContent?' — '+document.querySelector('.sel-btn.active').textContent:'');
+    pdf.text(period,400,18);
+    pdf.text(label,1100,18,{align:'right'});
+
+    pdf.addImage(imgData,'JPEG',0,30,imgW,imgH);
+  }
+
+  // Restore active tab
+  document.querySelectorAll('.sec').forEach(s=>s.style.display='none');
+  document.getElementById('t1').classList.add('active');
+  document.querySelectorAll('.sec.active').forEach(s=>s.style.display='block');
+
+  // Save
+  const period=(document.querySelector('.sel-btn.active')?.textContent||'report').replace(/[^a-z0-9]/gi,'_');
+  pdf.save(`WAY_Dashboard_${period}.pdf`);
+
+  btn.textContent='↓ Export PDF';btn.disabled=false;
+}
+
 function showTab(id,el){
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.t-btn').forEach(t=>t.classList.remove('active'));
