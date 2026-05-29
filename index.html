@@ -317,6 +317,18 @@ window.onerror = function(msg, src, line, col, err) {
           <tbody id="tb-vs"></tbody><tfoot><tr id="tf-vs"></tr></tfoot>
         </table></div>
       </div>
+      <div class="card" id="repeat-contacts-card">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="ct" style="margin-bottom:0">Repeat OGI Contacts <span style="font-size:10px;color:var(--tx3);font-weight:400">— same booking contacted multiple times</span></div>
+        </div>
+        <div class="kpis" id="kpi-repeat" style="margin-top:12px"></div>
+        <div id="repeat-drill" style="display:none;margin-top:12px">
+          <div class="tw"><table>
+            <thead><tr><th>OGI / Booking</th><th class="n">Contacts</th><th class="n">Interactions</th><th>Vertical</th></tr></thead>
+            <tbody id="tb-repeat"></tbody>
+          </table></div>
+        </div>
+      </div>
     </div>
 
     <!-- T2: CALL DRIVERS -->
@@ -333,6 +345,10 @@ window.onerror = function(msg, src, line, col, err) {
     <!-- T3: QUEUE & ABANDON -->
     <div class="sec" id="t3">
       <div id="t3-content"></div>
+      <div class="card" id="peak-abandon-card">
+        <div class="ct">Peak abandonment hours</div>
+        <div id="peak-abandon-content"></div>
+      </div>
     </div>
 
     <!-- T4: PRODUCTIVITY -->
@@ -529,10 +545,12 @@ window.onerror = function(msg, src, line, col, err) {
     <div class="sec" id="t12">
       <div class="kpis" id="kpi12"></div>
       <div class="card">
-        <div class="ct">Hourly ticket volume (WP) — PST with shift overlay</div>
+        <div class="ct">Hourly volume vs active agents — staffing coverage</div>
         <div class="leg">
           <span class="li"><span class="ld" style="background:#4a6fa5"></span>Shift 1 (6:30PM–3:30AM)</span>
           <span class="li"><span class="ld" style="background:#4a8c5c"></span>Shift 2 (2:00AM–11:00AM)</span>
+          <span class="li"><span class="ld" style="background:#f97316;border-radius:50%"></span>Active agents (right axis)</span>
+          <span class="li"><span class="ld" style="background:#f97316;border-radius:50%"></span>Active agents (right axis)</span>
           <span class="li"><span class="ld" style="background:#8c6a2a"></span>Shift 3 (10:00AM–7:00PM)</span>
         </div>
         <div class="cw" style="height:260px"><canvas id="c-hr"></canvas></div>
@@ -807,7 +825,15 @@ function categorize(row){
   if(DISPUTE_TEAM.includes(agent))return'Dispute';
   if(agent==='ai-decagon ai-decagon'||int==='AI-Agent Call')return'AI';
   if(int==='Dispute')return'Dispute';
-  if(['TL Review','Escalation Handled by TL','Escalation handled by Ops Team','QC Audit','Manager Review','Escalation Handled by Escalation Team'].includes(int))return'TL';
+  // TL-type interactions — only count as 'TL' if agent is actual TL
+  // SME/DTL/L2 doing TL Reviews show in TL Activity tab but not in TL pool elsewhere
+  if(['TL Review','Escalation Handled by TL','Escalation handled by Ops Team','QC Audit','Manager Review','Escalation Handled by Escalation Team'].includes(int)){
+    const isTL=TL_TEAM.includes(agent)||TL_MATERNITY.includes(agent);
+    const isDualRole=[...SME_TEAM,...DTL_TEAM,...L2_TEAM].includes(agent);
+    if(isTL)return'TL';
+    if(isDualRole)return'DualRoleTL'; // shows in TL Activity only, not TL pool
+    return'TL'; // fallback for any other staff doing reviews
+  }
   if(int==='User Reviews')return'Review';
   if(['Call','Email','Chat'].includes(int)){
     // Only count as Frontline if agent is in our known roster
@@ -858,8 +884,50 @@ function initDashboard(raw){
       if(r['Agent Name'])r['Agent Name']=normalizeAgName(String(r['Agent Name']).trim());
       const dt=parseDate(r['Call Start Time']);
       return{...r,_dt:dt,_dateKey:dt?dateKey(dt):'',_weekKey:dt?weekKey(dt):'',_monthKey:dt?monthKey(dt):'',
-        _talk:timeToDuration(r['Talk Time']),_hold:timeToDuration(r['Hold Time']),_wrap:timeToDuration(r['Wrap Up Time'])};
+        _talk:timeToDuration(r['Talk Time']),_hold:timeToDuration(r['Hold Time']),_wrap:timeToDuration(r['Wrap Up Time']),
+        _validOutbound:r['Call Type']==='Outbound'?timeToDuration(r['Talk Time'])>30:true};
     });
+  }
+
+  // ── AUTO-TRIM SPILLOVER: keep only the primary date in each file
+  // (Reports are pulled with ~15min overlap into next day to catch late calls)
+  function trimToEarliestDate(rows, dateField){
+    if(!rows||!rows.length)return rows;
+    // Find earliest date across all rows
+    let minDate=null;
+    rows.forEach(r=>{
+      const d=r._dt||r._idt;
+      if(!d)return;
+      const day=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+      if(!minDate||day<minDate)minDate=day;
+    });
+    if(!minDate)return rows;
+    const minDay=minDate.toDateString();
+    return rows.filter(r=>{
+      const d=r._dt||r._idt;
+      if(!d)return true; // no date — keep
+      const day=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+      return day.toDateString()===minDay;
+    });
+  }
+
+  // Trim WP data
+  if(WP_DATA){
+    const before=WP_DATA.length;
+    WP_DATA=trimToEarliestDate(WP_DATA,'_dt');
+    if(WP_DATA.length<before)console.log(`WP trimmed: ${before-WP_DATA.length} spillover rows removed`);
+  }
+  // Trim CC data
+  if(CC_DATA){
+    const before=CC_DATA.length;
+    CC_DATA=trimToEarliestDate(CC_DATA,'_dt');
+    if(CC_DATA.length<before)console.log(`CC trimmed: ${before-CC_DATA.length} spillover rows removed`);
+  }
+  // Trim AG data
+  if(AG_DATA){
+    const before=AG_DATA.length;
+    AG_DATA=trimToEarliestDate(AG_DATA,'_dt');
+    if(AG_DATA.length<before)console.log(`AG trimmed: ${before-AG_DATA.length} spillover rows removed`);
   }
 
   // Update chips
@@ -982,12 +1050,54 @@ function mkLine(id,labels,datasets){if(CHARTS[id])CHARTS[id].destroy();CHARTS[id
 // ═══════════════════════════════════════════════
 // T1: OVERVIEW
 // ═══════════════════════════════════════════════
+function toggleRepeatDrill(ogiList, minCount){
+  const drill=document.getElementById('repeat-drill');
+  const tbody=document.getElementById('tb-repeat');
+  if(!drill||!tbody)return;
+  if(drill.style.display==='block'){drill.style.display='none';return;}
+  const filtered=ogiList.filter(o=>o.count>=minCount);
+  tbody.innerHTML=filtered.map(o=>`<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--bl)">${o.ogi}</td>
+    <td class="n"><span class="bx ${o.count>=4?'br':o.count>=3?'ba':'bg'}">${o.count}</span></td>
+    <td style="font-size:11px;color:var(--tx2)">${[...o.ints].join(', ')}</td>
+    <td style="font-size:11px">${o.vertical||'—'}</td>
+  </tr>`).join('');
+  drill.style.display='block';
+}
+
 let _vsSort={col:'tickets',asc:false};
 let _vsData=[];
 
 function sortVS(col){
   _vsSort={col,asc:_vsSort.col===col?!_vsSort.asc:false};
   renderVSTable();
+
+  // ── REPEAT OGI CONTACTS
+  const ogiMap={};
+  rawDf.forEach(r=>{
+    const ogi=String(r['OGI']||'').trim();
+    if(!ogi||(!ogi.startsWith('OGI')&&!ogi.startsWith('GAP')))return;
+    if(!ogiMap[ogi])ogiMap[ogi]={ogi,count:0,ints:new Set(),vertical:r._vertical};
+    ogiMap[ogi].count++;
+    ogiMap[ogi].ints.add(String(r['Interaction']||''));
+  });
+  const repeatOGIs=Object.values(ogiMap).filter(o=>o.count>1).sort((a,b)=>b.count-a.count);
+  const repeat2=repeatOGIs.filter(o=>o.count>=2).length;
+  const repeat3=repeatOGIs.filter(o=>o.count>=3).length;
+  const maxRepeat=repeatOGIs[0]?.count||0;
+
+  const kpiRepeat=document.getElementById('kpi-repeat');
+  if(kpiRepeat){
+    kpiRepeat.innerHTML=
+      mkKPI('Repeat Contacts',repeat2,'OGIs contacted 2+ times',repeat2>0?'am':'')+
+      mkKPI('3+ Contacts',repeat3,'OGIs contacted 3+ times',repeat3>0?'rd':'')+
+      mkKPI('Max Contacts',maxRepeat,'on a single booking',maxRepeat>3?'rd':maxRepeat>1?'am':'');
+    // Make counts clickable
+    kpiRepeat.querySelectorAll('.kpi').forEach((el,i)=>{
+      el.style.cursor='pointer';
+      el.onclick=()=>toggleRepeatDrill(repeatOGIs, i===1?3:2);
+    });
+  }
 }
 
 function renderVSTable(){
@@ -1024,7 +1134,7 @@ function buildOverview(){
   const chats=fl.filter(r=>r['Interaction']==='Chat').length;
   const escs=df.filter(r=>r._isEscalated).length;
   const disputes=df.filter(r=>r._category==='Dispute'&&r['Interaction']==='Dispute').length;
-  const tlTotal=df.filter(r=>r._category==='TL').length;
+  const tlTotal=df.filter(r=>r._category==='TL').length; // excludes DualRoleTL (SME/DTL/L2 reviews)
   const reviews=df.filter(r=>r._category==='Review').length;
   const aiCalls=df.filter(r=>r._category==='AI').length;
   const aiDatesPresent=df.filter(r=>r._category==='AI').some(r=>(r._idt||r._dt)>=AI_LAUNCH_DATE);
@@ -1084,6 +1194,33 @@ function buildOverview(){
     _vsData.push({name:v,tickets:t,ints,calls:c,emails:e,chats:ch,fcrP:vFP,esc:pct(vEsc,t)});
   });
   renderVSTable();
+
+  // ── REPEAT OGI CONTACTS
+  const ogiMap={};
+  rawDf.forEach(r=>{
+    const ogi=String(r['OGI']||'').trim();
+    if(!ogi||(!ogi.startsWith('OGI')&&!ogi.startsWith('GAP')))return;
+    if(!ogiMap[ogi])ogiMap[ogi]={ogi,count:0,ints:new Set(),vertical:r._vertical};
+    ogiMap[ogi].count++;
+    ogiMap[ogi].ints.add(String(r['Interaction']||''));
+  });
+  const repeatOGIs=Object.values(ogiMap).filter(o=>o.count>1).sort((a,b)=>b.count-a.count);
+  const repeat2=repeatOGIs.filter(o=>o.count>=2).length;
+  const repeat3=repeatOGIs.filter(o=>o.count>=3).length;
+  const maxRepeat=repeatOGIs[0]?.count||0;
+
+  const kpiRepeat=document.getElementById('kpi-repeat');
+  if(kpiRepeat){
+    kpiRepeat.innerHTML=
+      mkKPI('Repeat Contacts',repeat2,'OGIs contacted 2+ times',repeat2>0?'am':'')+
+      mkKPI('3+ Contacts',repeat3,'OGIs contacted 3+ times',repeat3>0?'rd':'')+
+      mkKPI('Max Contacts',maxRepeat,'on a single booking',maxRepeat>3?'rd':maxRepeat>1?'am':'');
+    // Make counts clickable
+    kpiRepeat.querySelectorAll('.kpi').forEach((el,i)=>{
+      el.style.cursor='pointer';
+      el.onclick=()=>toggleRepeatDrill(repeatOGIs, i===1?3:2);
+    });
+  }
   const tf=pct(fcrT.filter(r=>r._isFCR).length,fcrT.length);
   document.getElementById('tf-vs').innerHTML=`<td>Total</td><td class="n">${totT.toLocaleString()}</td><td class="n">${totI.toLocaleString()}</td><td class="n">${totC}</td><td class="n">${totE}</td><td class="n">${totCh2}</td><td class="n">${tf}%</td><td class="n">${pct(totEsc,totT)}%</td>`;
   const vFD=verts.map(v=>{const vf=fcrT.filter(r=>r._vertical===v);return vf.length?pct(vf.filter(r=>r._isFCR).length,vf.length):null;});
@@ -1509,6 +1646,37 @@ function showAbnDrill(source,key){
     </div>`;
   panel.style.display='block';
   setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+
+  // ── PEAK ABANDON HOURS
+  const paEl=document.getElementById('peak-abandon-content');
+  if(paEl&&abandoned.length){
+    const abnByHour={};
+    abandoned.forEach(r=>{
+      if(!r._dt)return;
+      const h=r._dt.getHours();
+      abnByHour[h]=(abnByHour[h]||0)+1;
+    });
+    const maxAbn=Math.max(...Object.values(abnByHour));
+    const sorted=Object.entries(abnByHour).sort((a,b)=>b[1]-a[1]);
+    const fH=h=>h===0?'12:00 AM':h<12?h+':00 AM':h===12?'12:00 PM':(h-12)+':00 PM';
+    paEl.innerHTML=`
+      <div style="margin-bottom:10px;font-size:11px;color:var(--tx3)">Hours with highest abandoned calls — focus staffing here</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${sorted.slice(0,8).map(([h,c])=>{
+          const pct2=Math.round(c/maxAbn*100);
+          const heat=pct2>=80?'#dc2626':pct2>=50?'#ea580c':pct2>=30?'#d97706':'#16a34a';
+          return`<div style="display:flex;align-items:center;gap:8px;background:var(--sf2);border-radius:8px;padding:8px 12px;min-width:140px">
+            <div style="width:36px;height:36px;border-radius:50%;background:${heat};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff">${c}</div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--tx1)">${fH(parseInt(h))}</div>
+              <div style="font-size:10px;color:var(--tx3)">${pct2}% of peak</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } else if(paEl){
+    paEl.innerHTML='<div class="empty">No abandoned calls in this period</div>';
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -1536,7 +1704,7 @@ function buildProductivityTab(){
     if(!KNOWN_AGENTS.has(a))return false; // exclude non-CS Nextiva users
     return true;
   });
-  const agOut=agCore.filter(r=>r['Call Type']==='Outbound');
+  const agOut=agCore.filter(r=>r['Call Type']==='Outbound'&&r._validOutbound);
   const agByDate={};agCore.forEach(r=>{if(!r._dateKey)return;if(!agByDate[r._dateKey])agByDate[r._dateKey]=new Set();agByDate[r._dateKey].add(String(r['Agent Name']||''));});
   const dailyActiveCounts=Object.values(agByDate).map(s=>s.size);
   const avgAgents=dailyActiveCounts.length>0?dailyActiveCounts.reduce((s,v)=>s+v,0)/dailyActiveCounts.length:0;
@@ -1558,7 +1726,7 @@ function buildProductivityTab(){
       if(r._talk>600) agStats[a].long10++;
       if(r._hold>300) agStats[a].hold5++;
     }
-    if(r['Call Type']==='Outbound') agStats[a].out++;
+    if(r['Call Type']==='Outbound'&&r._validOutbound) agStats[a].out++;
   });
 
   _prodData=Object.values(agStats).map(a=>({
@@ -2453,6 +2621,40 @@ function buildTimeTab(){
   document.getElementById('kpi12').innerHTML=mkKPI('Peak hour (PST)',fH(peak),hourly[peak]+' tickets')+mkKPI('Quietest hour',fH(quiet),hourly[quiet]+' tickets')+mkKPI('Shift 1 volume',s1,'6:30PM–3:30AM')+mkKPI('Shift 2 volume',s2,'2:00AM–11:00AM')+mkKPI('Shift 3 volume',s3,'10:00AM–7:00PM');
   function sC(h){if(h>=19||h<2)return'#4a6fa5';if(h>=2&&h<10)return'#4a8c5c';if(h>=10&&h<19)return'#8c6a2a';return'#4a6fa5';}
   mkBar('c-hr',hourly.map((_,i)=>fH(i)),[{data:hourly,backgroundColor:hourly.map((_,i)=>sC(i)),borderRadius:3,borderSkipped:false}],{xt:{maxRotation:0,font:{size:10}}});
+
+  // ── AGENT OVERLAY — active agents per hour from AG report
+  const agFiltered=getAGFiltered();
+  const agHourly=new Array(24).fill(0);
+  const agByHour={};
+  agFiltered.filter(r=>r['Call Type']&&r['Call Type']!=='Outbound'||r._validOutbound).forEach(r=>{
+    if(!r._dt)return;
+    const h=r._dt.getHours();
+    if(!agByHour[h])agByHour[h]=new Set();
+    agByHour[h].add(String(r['Agent Name']||''));
+  });
+  for(let h=0;h<24;h++)agHourly[h]=agByHour[h]?agByHour[h].size:0;
+
+  // Rebuild chart with dual axis — volume bars + agent line
+  if(CHARTS['c-hr'])CHARTS['c-hr'].destroy();
+  const fH2=h=>h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p';
+  CHARTS['c-hr']=new Chart(document.getElementById('c-hr'),{
+    type:'bar',
+    data:{
+      labels:hourly.map((_,i)=>fH2(i)),
+      datasets:[
+        {type:'bar',label:'Ticket Volume',data:hourly,backgroundColor:'rgba(96,165,250,0.6)',borderRadius:2,yAxisID:'y'},
+        {type:'line',label:'Active Agents',data:agHourly,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.1)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#f97316',fill:false,tension:0.3,yAxisID:'y2'}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+      scales:{
+        x:{grid:{color:GC},ticks:{color:TC,font:{size:9},maxRotation:0}},
+        y:{grid:{color:GC},ticks:{color:TC},title:{display:true,text:'Volume',color:TC,font:{size:9}},position:'left'},
+        y2:{grid:{display:false},ticks:{color:'#f97316'},title:{display:true,text:'Agents',color:'#f97316',font:{size:9}},position:'right'}
+      }
+    }
+  });
   // CC hourly if available
   const cc=getCCFiltered();
   if(cc.length){
@@ -2566,152 +2768,4 @@ function buildAgentTab(){
   // Columbia team: frontline interactions only (Call/Email/Chat)
   const colRows=df.filter(r=>COLUMBIA_TEAM.includes(String(r['Agent Name']||''))&&['Call','Email','Chat'].includes(String(r['Interaction']||'')));
   const colMap=agStats(colRows);const colFCR=calcFCR(colRows);document.getElementById('col-cnt').textContent='('+COLUMBIA_TEAM.length+' agents)';const colT={calls:0,emails:0,chats:0,total:0,escalations:0};
-  document.getElementById('col-body').innerHTML=COLUMBIA_TEAM.map(n=>{const d=colMap[n]||{calls:0,emails:0,chats:0,total:0,escalations:0};const fp=fcrP(colFCR,n);const er=pct(d.escalations,d.total||1);['calls','emails','chats','total','escalations'].forEach(k=>colT[k]+=(d[k]||0));return`<tr><td>${n}${abTag(d.total>0)}</td><td class="n">${d.calls}</td><td class="n">${d.emails}</td><td class="n">${d.chats}</td><td class="n" style="font-weight:600">${d.total}</td><td class="n">${fcrB(fp)}</td><td class="n">${escB(er)}</td></tr>`;}).join('');
-  document.getElementById('col-foot').innerHTML=`<td>Total</td><td class="n">${colT.calls}</td><td class="n">${colT.emails}</td><td class="n">${colT.chats}</td><td class="n">${colT.total}</td><td class="n">—</td><td class="n">${escB(pct(colT.escalations,colT.total||1))}</td>`;
-
-  // Frontline
-  const FRONTLINE_EXCLUDE=new Set([...DISPUTE_TEAM,...TL_TEAM,...DTL_TEAM,...SME_TEAM,...L2_TEAM,...MGMT_TEAM,...INDIAN_SPANISH,...COLUMBIA_TEAM,...ADHOC_TEAM]);
-  const flRows=df.filter(r=>{
-    const a=String(r['Agent Name']||'').trim();
-    if(!a||a==='ai-decagon ai-decagon')return false;
-    if(FRONTLINE_EXCLUDE.has(a))return false;
-    if(!KNOWN_AGENTS.has(a))return false; // exclude anyone not in our team roster
-    return['Call','Email','Chat'].includes(String(r['Interaction']||''));
-  });
-  const flTickets=flRows.filter(r=>r._isTicket);const flFCR=calcFCR(flRows);
-  const fPOGI={};rawDf.filter(r=>!r._isTicket&&r['OGI']).forEach(r=>{const k=String(r['OGI']);fPOGI[k]=(fPOGI[k]||0)+1;});
-  flTickets.forEach(r=>{const fc=r['OGI']?(fPOGI[String(r['OGI'])]||0):0;r._followups=fc;r._totalInts=1+fc;});
-  const agTD={};flTickets.forEach(r=>{const a=String(r['Agent Name']||'');if(!agTD[a])agTD[a]={tickets:0,totalInts:0,multi:0};agTD[a].tickets++;agTD[a].totalInts+=r._totalInts||1;if((r._followups||0)>0)agTD[a].multi++;});
-  const flMap=agStats(flRows);
-  G.agentData=Object.values(flMap).map(a=>{const fcr=flFCR[a.name];const td=agTD[a.name];const ahtS=agAHT[a.name]||0;return{...a,esc_rate:pct(a.escalations,a.total||1),fcr_pct:fcr?pct(fcr.f,fcr.t):100,avg_ints:td?Math.round(td.totalInts/td.tickets*100)/100:1,tl_reviews:a.tlreviews,aht_sec:ahtS};}).sort((a,b)=>b.total-a.total);
-
-  const cpx=[...G.agentData].filter(a=>a.total>=5).sort((a,b)=>b.avg_ints-a.avg_ints).slice(0,10);
-  if(cpx.length)mkBar('c-ipt',cpx.map(a=>a.name),[{data:cpx.map(a=>a.avg_ints),backgroundColor:cpx.map(a=>a.avg_ints>=1.5?'#f87171':a.avg_ints>=1.3?'#fbbf24':'#4ade80'),borderRadius:4,borderSkipped:false}],{yt:{callback:v=>v+'x'},ymin:1});
-
-  const tot=G.agentData.reduce((s,a)=>s+a.total,0);const bFCR=G.agentData.filter(a=>a.fcr_pct<FCR_TARGET&&a.total>=5).length;const hEsc=G.agentData.filter(a=>a.esc_rate>5).length;const hCpx=G.agentData.filter(a=>a.avg_ints>1.4&&a.total>=5).length;
-  document.getElementById('kpi13').innerHTML=mkKPI('Frontline agents',G.agentData.length)+mkKPI('Avg tickets/agent',Math.round(tot/Math.max(G.agentData.length,1)))+mkKPI('FCR below 80%',bFCR+' agents','min 5 tickets','rd')+mkKPI('High esc rate (>5%)',hEsc+' agents','','rd')+mkKPI('High complexity (>1.4x)',hCpx+' agents','','am')+mkKPI('AHT data','✓ from AG','agent-level AHT','gn');
-  document.getElementById('ag-foot').innerHTML=`<td>Total — ${G.agentData.length} agents</td><td class="n">${tot}</td><td class="n">${G.agentData.reduce((s,a)=>s+a.calls,0)}</td><td class="n">${G.agentData.reduce((s,a)=>s+a.emails,0)}</td><td class="n">${G.agentData.reduce((s,a)=>s+a.chats,0)}</td><td class="n">${G.agentData.reduce((s,a)=>s+(a.tl_reviews||0),0)}</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td>`;
-  renderAgents();
-}
-
-function sortAg(k){
-  if(AG_SORT===k)AG_ASC=!AG_ASC;else{AG_SORT=k;AG_ASC=false;}
-  document.querySelectorAll('[id^="ah-"]').forEach(el=>{el.classList.remove('asc','desc');});
-  const el=document.getElementById('ah-'+k);if(el){el.classList.add(AG_ASC?'asc':'desc');}
-  renderAgents();
-}
-
-function renderAgents(){
-  if(!G.agentData)return;
-  const q=(document.getElementById('ag-srch').value||'').toLowerCase();
-  const f=document.getElementById('ag-flt').value;
-  let d=G.agentData.filter(a=>{if(!a.name.toLowerCase().includes(q))return false;if(f==='fcr-low')return a.fcr_pct<FCR_TARGET&&a.total>=5;if(f==='esc-high')return a.esc_rate>5;if(f==='complex')return a.avg_ints>1.4&&a.total>=5;return true;});
-  const sk=AG_SORT;d.sort((a,b)=>sk==='name'?(AG_ASC?a.name>b.name:a.name<b.name)?1:-1:AG_ASC?a[sk]-b[sk]:b[sk]-a[sk]);
-  document.getElementById('ag-cnt').textContent=d.length+' agents';
-  document.getElementById('ag-body').innerHTML=d.map((a,i)=>{const eC=a.esc_rate>5?'br':a.esc_rate>2?'ba':'bg';const fC=a.fcr_pct>=80?'bg':a.fcr_pct>=70?'ba':'br';const iC=a.avg_ints>=1.5?'br':a.avg_ints>=1.3?'ba':'bg';const tlr=a.tl_reviews||0;const ahtStr=a.aht_sec>0?secToMmss(a.aht_sec):'—';return`<tr><td>${i+1}. ${a.name}</td><td class="n" style="font-weight:600">${a.total}</td><td class="n">${a.calls}</td><td class="n">${a.emails}</td><td class="n">${a.chats}</td><td class="n">${tlr>0?`<span class="bx bb">${tlr}</span>`:'—'}</td><td class="n"><span class="bx ${eC}">${a.esc_rate}%</span></td><td class="n"><span class="bx ${fC}">${a.fcr_pct}%</span></td><td class="n"><span class="bx ${iC}">${a.avg_ints}x</span></td><td class="n">${ahtStr}</td></tr>`;}).join('');
-}
-
-// ═══════════════════════════════════════════════
-// UI
-// ═══════════════════════════════════════════════
-
-async function exportPDF(){
-  const btn=document.getElementById('pdf-btn');
-  btn.textContent='⏳ Generating...';btn.disabled=true;
-  try{
-    const {jsPDF}=window.jspdf;
-    const pdf=new jsPDF({orientation:'landscape',unit:'px',format:[1200,850]});
-    // TL Activity (t8) and Agents (t13) excluded — too complex for reliable capture
-    const tabs=[
-      {id:'t1',label:'Overview'},
-      {id:'t2',label:'Call Drivers'},
-      {id:'t3',label:'Queue & Abandon'},
-      {id:'t4',label:'Productivity'},
-      {id:'t5',label:'Disputes'},
-      {id:'t6',label:'Escalations'},
-      {id:'t7',label:'Refunds'},
-      {id:'t9',label:'Reviews'},
-      {id:'t10',label:'AI Agent'},
-      {id:'t11',label:'Platforms'},
-      {id:'t12',label:'Time Patterns'}
-    ];
-    const rebuildMap={t1:buildOverview,t2:buildDriversTab,t3:buildQueueTab,t4:buildProductivityTab,t5:buildDisputesTab,t6:buildEscalationsTab,t7:buildRefundsTab,t9:buildReviewsTab,t10:buildAITab,t11:buildPlatformsTab,t12:buildTimeTab};
-    const period=(document.getElementById('tb-period')?.textContent||'')+(document.querySelector('.sel-btn.active')?.textContent?' — '+document.querySelector('.sel-btn.active').textContent:'');
-    for(let i=0;i<tabs.length;i++){
-      const{id,label}=tabs[i];
-      btn.textContent=`⏳ ${i+1}/${tabs.length} — ${label}`;
-      document.querySelectorAll('.sec').forEach(s=>s.style.display='none');
-      const sec=document.getElementById(id);
-      if(!sec)continue;
-      sec.style.display='block';
-      try{if(rebuildMap[id])rebuildMap[id]();}catch(e){}
-      const waitMs={'t10':900,'t12':900,'t11':700,'t2':700}[id]||600;
-      await new Promise(r=>setTimeout(r,waitMs));
-      // Convert canvases to images for html2canvas
-      sec.querySelectorAll('canvas').forEach(cv=>{
-        try{
-          const img=document.createElement('img');
-          img.src=cv.toDataURL('image/png');
-          img.style.cssText=`width:${cv.offsetWidth}px;height:${cv.offsetHeight}px;display:block`;
-          img.className='_pdfimg';
-          cv.parentNode.insertBefore(img,cv);
-          cv.style.display='none';
-        }catch(e){}
-      });
-      let imgData,imgH;
-      try{
-        const cv2=await html2canvas(sec,{scale:1.1,useCORS:true,allowTaint:true,backgroundColor:'#f5f1eb',scrollX:0,scrollY:0,width:1200,height:Math.min(sec.scrollHeight,4000),windowWidth:1280,windowHeight:Math.min(sec.scrollHeight,4000),logging:false,imageTimeout:15000});
-        imgData=cv2.toDataURL('image/jpeg',0.82);
-        imgH=Math.min(cv2.height*(1200/cv2.width),3800);
-      }catch(e){imgData=null;imgH=400;}
-      finally{
-        sec.querySelectorAll('._pdfimg').forEach(el=>el.remove());
-        sec.querySelectorAll('canvas').forEach(cv=>cv.style.display='');
-      }
-      const pageH=Math.max(850,imgH+40);
-      if(i>0)pdf.addPage([1200,pageH],'landscape');
-      pdf.setFillColor(29,78,216);pdf.rect(0,0,1200,26,'F');
-      pdf.setTextColor(255,255,255);pdf.setFontSize(10);pdf.setFont('helvetica','bold');
-      pdf.text('WAY Operations Dashboard',10,17);
-      pdf.setFont('helvetica','normal');pdf.setFontSize(9);
-      pdf.text(period,380,17);pdf.text(label,1190,17,{align:'right'});
-      if(imgData)pdf.addImage(imgData,'JPEG',0,28,1200,Math.min(imgH,pageH-30));
-      else{pdf.setTextColor(150,150,150);pdf.setFontSize(12);pdf.text(`[${label} — capture failed]`,600,200,{align:'center'});}
-    }
-    document.querySelectorAll('.sec').forEach(s=>s.style.display='none');
-    const act=document.querySelector('.t-btn.active');
-    const actId=act?act.getAttribute('onclick').match(/'(t\d+)'/)?.[1]:'t1';
-    const actSec=document.getElementById(actId||'t1');
-    if(actSec)actSec.style.display='block';
-    pdf.save('WAY_Dashboard_'+(document.querySelector('.sel-btn.active')?.textContent||'report').replace(/[^a-z0-9]/gi,'_')+'.pdf');
-    btn.textContent='↓ Export PDF';
-  }catch(err){alert('Export failed: '+err.message);btn.textContent='↓ Export PDF';}
-  btn.disabled=false;
-}
-
-function showTab(id,el){
-  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.t-btn').forEach(t=>t.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  if(el)el.classList.add('active');
-  // Re-render charts when tab becomes visible — charts rendered on hidden tabs have 0 dimensions
-  const rebuildMap={
-    't1':buildOverview,
-    't2':buildDriversTab,
-    't3':buildQueueTab,
-    't4':buildProductivityTab,
-    't5':buildDisputesTab,
-    't6':buildEscalationsTab,
-    't7':buildRefundsTab,
-    't8':buildTLTab,
-    't9':buildReviewsTab,
-    't10':buildAITab,
-    't11':buildPlatformsTab,
-    't12':buildTimeTab,
-    't13':buildAgentTab
-  };
-  if(rebuildMap[id])setTimeout(()=>rebuildMap[id](),80);
-}
-</script>
-</body>
-</html>
+  document.getElementById('col-body').innerHTML=COLUMBIA_TEAM.map(n=>{const d=colMap[n]||{calls:0,emails:0,chats:0,total:0,escalati
