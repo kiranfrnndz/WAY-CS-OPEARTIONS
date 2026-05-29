@@ -941,7 +941,6 @@ function initDashboard(raw){
   document.getElementById('db').style.display='block';
   document.getElementById('tb-period').textContent={daily:'Daily',weekly:'Weekly',monthly:'Monthly'}[MODE];
   showTab('t1',document.querySelector('.t-btn'));
-  renderAll();
 }
 
 // ═══════════════════════════════════════════════
@@ -963,7 +962,16 @@ function buildSelBar(){
     const btn=document.createElement('button');
     btn.className='sel-btn'+(k===ACTIVE_KEY?' active':'');
     btn.textContent=MODE==='daily'?fmtDate(new Date(k+'T12:00:00')):MODE==='weekly'?fmtWeek(k,G.df):fmtMonth(k);
-    btn.onclick=()=>{ACTIVE_KEY=k;document.querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAll();};
+    btn.onclick=()=>{
+      ACTIVE_KEY=k;
+      document.querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      // Only rebuild the currently active tab
+      const activeTab=document.querySelector('.t-btn.active');
+      const activeId=activeTab?activeTab.getAttribute('onclick').match(/'(t\d+)'/)?.[1]:'t1';
+      const rebuildMap={t1:buildOverview,t2:buildDriversTab,t3:buildQueueTab,t4:buildProductivityTab,t5:buildDisputesTab,t6:buildEscalationsTab,t7:buildRefundsTab,t8:buildTLTab,t9:buildReviewsTab,t10:buildAITab,t11:buildPlatformsTab,t12:buildTimeTab,t13:buildAgentTab};
+      if(rebuildMap[activeId])rebuildMap[activeId]();
+    };
     btns.appendChild(btn);
   });
 }
@@ -1540,6 +1548,46 @@ function buildQueueTab(){
   setTimeout(()=>{
     if(document.getElementById('c-abn-bkt'))
       mkBar('c-abn-bkt',buckets.map(b=>b[0]),[{data:buckets.map(b=>b[1]),backgroundColor:['#4ade80','#fbbf24','#f97316','#f87171','#dc2626'],borderRadius:4,borderSkipped:false}]);
+
+    // ── PEAK ABANDON HOURS — populate on tab load
+    const paEl=document.getElementById('peak-abandon-content');
+    const allAbn=window._qAbandonedRows||[];
+    if(paEl&&allAbn.length){
+      const abnByHour={};
+      allAbn.forEach(r=>{
+        if(!r.time||r.time==='--')return;
+        const parts=r.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if(!parts)return;
+        let h=parseInt(parts[1]);
+        if(parts[3].toUpperCase()==='PM'&&h<12)h+=12;
+        if(parts[3].toUpperCase()==='AM'&&h===12)h=0;
+        abnByHour[h]=(abnByHour[h]||0)+1;
+      });
+      if(Object.keys(abnByHour).length){
+        const maxAbn=Math.max(...Object.values(abnByHour));
+        const sorted=Object.entries(abnByHour).sort((a,b)=>b[1]-a[1]);
+        const fHp=h=>h===0?'12:00 AM':h<12?h+':00 AM':h===12?'12:00 PM':(h-12)+':00 PM';
+        paEl.innerHTML=`
+          <div style="margin-bottom:10px;font-size:11px;color:var(--tx3)">Hours with highest abandoned calls — focus staffing here</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            ${sorted.slice(0,8).map(([h,c])=>{
+              const p=Math.round(c/maxAbn*100);
+              const heat=p>=80?'#dc2626':p>=50?'#ea580c':p>=30?'#d97706':'#16a34a';
+              return`<div style="display:flex;align-items:center;gap:8px;background:var(--sf2);border-radius:8px;padding:8px 12px;min-width:140px">
+                <div style="width:36px;height:36px;border-radius:50%;background:${heat};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff">${c}</div>
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--tx1)">${fHp(parseInt(h))}</div>
+                  <div style="font-size:10px;color:var(--tx3)">${p}% of peak</div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>`;
+      } else {
+        paEl.innerHTML='<div class="empty">No abandoned calls in this period</div>';
+      }
+    } else if(paEl){
+      paEl.innerHTML='<div class="empty">No abandoned calls in this period</div>';
+    }
   },50);
 }
 
@@ -1730,7 +1778,7 @@ function buildProductivityTab(){
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div class="ct" style="margin-bottom:0">All frontline agent call metrics <span style="font-size:10px;color:var(--tx3);font-weight:400">(${_prodData.length} agents from CC report)</span></div>
+        <div class="ct" style="margin-bottom:0">All frontline agent call metrics <span style="font-size:10px;color:var(--tx3);font-weight:400">(${_prodData.length} agents · AG report)</span></div>
         <div style="font-size:11px;color:var(--tx3)">&#8645; Click headers to sort</div>
       </div>
       <div class="tw"><table id="prod-table">
