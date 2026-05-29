@@ -544,7 +544,6 @@ input[type=text]{width:180px}
           <span class="li"><span class="ld" style="background:#4a6fa5"></span>Shift 1 (6:30PM–3:30AM)</span>
           <span class="li"><span class="ld" style="background:#4a8c5c"></span>Shift 2 (2:00AM–11:00AM)</span>
           <span class="li"><span class="ld" style="background:#f97316;border-radius:50%"></span>Active agents (right axis)</span>
-          <span class="li"><span class="ld" style="background:#f97316;border-radius:50%"></span>Active agents (right axis)</span>
           <span class="li"><span class="ld" style="background:#8c6a2a"></span>Shift 3 (10:00AM–7:00PM)</span>
         </div>
         <div class="cw" style="height:260px"><canvas id="c-hr"></canvas></div>
@@ -862,8 +861,6 @@ function initDashboard(raw){
   const weekKeys=[...new Set(ticketRows.map(r=>{const d=r._idt||r._dt;return d?weekKey(d):'';}).filter(k=>k))].sort();
   const monthKeys=[...new Set(ticketRows.map(r=>{const d=r._idt||r._dt;return d?monthKey(d):'';}).filter(k=>k))].sort();
 
-  G={df,followupOGIs,dateKeys,weekKeys,monthKeys};
-
   // Process CC data if available
   if(CC_DATA){
     CC_DATA=CC_DATA.map(r=>{
@@ -906,12 +903,17 @@ function initDashboard(raw){
     });
   }
 
-  // Trim WP data
-  if(WP_DATA){
-    const before=WP_DATA.length;
-    WP_DATA=trimToEarliestDate(WP_DATA,'_dt');
-    if(WP_DATA.length<before)console.log(`WP trimmed: ${before-WP_DATA.length} spillover rows removed`);
-  }
+  // Trim WP data — df is the processed WP rows
+  const dfBefore=df.length;
+  const dfTrimmed=trimToEarliestDate(df,'_dt');
+  if(dfTrimmed.length<dfBefore)console.log(`WP trimmed: ${dfBefore-dfTrimmed.length} spillover rows removed`);
+  // Rebuild G with trimmed data
+  const followupOGIs2=new Set(dfTrimmed.filter(r=>!r._isTicket&&r['OGI']).map(r=>String(r['OGI'])));
+  const ticketRows2=dfTrimmed.filter(r=>r._isTicket&&(r._idt||r._dt));
+  const dateKeys2=[...new Set(ticketRows2.map(r=>{const d=r._idt||r._dt;return d?dateKey(d):'';}).filter(k=>k))].sort();
+  const weekKeys2=[...new Set(ticketRows2.map(r=>{const d=r._idt||r._dt;return d?weekKey(d):'';}).filter(k=>k))].sort();
+  const monthKeys2=[...new Set(ticketRows2.map(r=>{const d=r._idt||r._dt;return d?monthKey(d):'';}).filter(k=>k))].sort();
+  G={df:dfTrimmed,followupOGIs:followupOGIs2,dateKeys:dateKeys2,weekKeys:weekKeys2,monthKeys:monthKeys2};
   // Trim CC data
   if(CC_DATA){
     const before=CC_DATA.length;
@@ -1075,7 +1077,6 @@ function renderVSTable(){
     if(col==='name')return asc?(a.name>b.name?1:-1):(a.name<b.name?1:-1);
     return asc?a[col]-b[col]:b[col]-a[col];
   });
-  const verts_order=['Airport Parking','City Parking','Wayplus','General','Insurance','Carwash','R&M','Gas'];
   tbody.innerHTML=sorted.map(r=>`<tr>
     <td>${r.name}</td>
     <td class="n">${r.tickets.toLocaleString()}</td>
@@ -1429,7 +1430,6 @@ function buildQueueTab(){
 
   const qList=Object.entries(queues).sort((a,b)=>b[1].total-a[1].total);
   const maxQ=qList[0]?.[1]?.total||1;
-  let qRows='';
   // Build queue data array for sortable table
   const qTots={total:0,ans:0,abn:0};
   const qDataArr=[];
