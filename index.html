@@ -885,11 +885,12 @@ function initDashboard(raw){
   // (Reports are pulled with ~15min overlap into next day to catch late calls)
   function trimToEarliestDate(rows, dateField){
     if(!rows||!rows.length)return rows;
-    // Find earliest date across all rows
+    // Find earliest VALID date (after 2020 — guards against Excel serial garbage dates
+    // e.g. footer rows like "ACD Calls: 962" parse as 1902 dates)
     let minDate=null;
     rows.forEach(r=>{
       const d=r._dt||r._idt;
-      if(!d)return;
+      if(!d||d.getFullYear()<2020)return;
       const day=new Date(d.getFullYear(),d.getMonth(),d.getDate());
       if(!minDate||day<minDate)minDate=day;
     });
@@ -897,7 +898,7 @@ function initDashboard(raw){
     const minDay=minDate.toDateString();
     return rows.filter(r=>{
       const d=r._dt||r._idt;
-      if(!d)return true; // no date — keep
+      if(!d||d.getFullYear()<2020)return false; // drop garbage/footer rows
       const day=new Date(d.getFullYear(),d.getMonth(),d.getDate());
       return day.toDateString()===minDay;
     });
