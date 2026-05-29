@@ -187,16 +187,7 @@ input[type=text]{width:180px}
 .sec-div-lbl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)}
 
 @media(max-width:700px){.g2,.g3{grid-template-columns:1fr}.up-grid{grid-template-columns:1fr}.content{padding:1rem}.up-title{font-size:26px}}
-@media print{
-  body{background:#fff !important}
-  .nav,.upload-bar,.sel-bar,.ctrl,.mode-bar,.t-tabs{display:none !important}
-  .sec{display:block !important}
-  .card{break-inside:avoid;box-shadow:none !important;border:1px solid #e5e0d8 !important;margin-bottom:12px}
-  .db{padding:0}
-  .cw canvas{max-height:180px}
-  #pdf-btn{display:none !important}
-  @page{margin:1.5cm;size:A4 landscape}
-}
+
 </style>
 <script>
 window.onerror = function(msg, src, line, col, err) {
@@ -2623,14 +2614,14 @@ function renderAgents(){
 // ═══════════════════════════════════════════════
 // UI
 // ═══════════════════════════════════════════════
+
 async function exportPDF(){
   const btn=document.getElementById('pdf-btn');
   btn.textContent='⏳ Generating...';btn.disabled=true;
-
   try{
     const {jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'landscape',unit:'px',format:[1200,850]});
-
+    // TL Activity (t8) and Agents (t13) excluded — too complex for reliable capture
     const tabs=[
       {id:'t1',label:'Overview'},
       {id:'t2',label:'Call Drivers'},
@@ -2639,90 +2630,62 @@ async function exportPDF(){
       {id:'t5',label:'Disputes'},
       {id:'t6',label:'Escalations'},
       {id:'t7',label:'Refunds'},
-      {id:'t8',label:'TL Activity'},
       {id:'t9',label:'Reviews'},
       {id:'t10',label:'AI Agent'},
       {id:'t11',label:'Platforms'},
-      {id:'t12',label:'Time Patterns'},
-      {id:'t13',label:'Agents'}
+      {id:'t12',label:'Time Patterns'}
     ];
-
-    const rebuildMap={t1:buildOverview,t2:buildDriversTab,t3:buildQueueTab,t4:buildProductivityTab,t5:buildDisputesTab,t6:buildEscalationsTab,t7:buildRefundsTab,t8:buildTLTab,t9:buildReviewsTab,t10:buildAITab,t11:buildPlatformsTab,t12:buildTimeTab,t13:buildAgentTab};
+    const rebuildMap={t1:buildOverview,t2:buildDriversTab,t3:buildQueueTab,t4:buildProductivityTab,t5:buildDisputesTab,t6:buildEscalationsTab,t7:buildRefundsTab,t9:buildReviewsTab,t10:buildAITab,t11:buildPlatformsTab,t12:buildTimeTab};
     const period=(document.getElementById('tb-period')?.textContent||'')+(document.querySelector('.sel-btn.active')?.textContent?' — '+document.querySelector('.sel-btn.active').textContent:'');
-
     for(let i=0;i<tabs.length;i++){
       const{id,label}=tabs[i];
       btn.textContent=`⏳ ${i+1}/${tabs.length} — ${label}`;
-
-      // Show only this tab
       document.querySelectorAll('.sec').forEach(s=>s.style.display='none');
       const sec=document.getElementById(id);
-      if(!sec){continue;}
+      if(!sec)continue;
       sec.style.display='block';
-
-      // Rebuild — wrapped in try so one bad tab doesn't kill the whole PDF
-      try{if(rebuildMap[id])rebuildMap[id]();}catch(e){console.warn('rebuild failed:',id,e);}
-
-      // Give charts time to render — longer for chart-heavy tabs
-      const waitMs={'t8':800,'t10':800,'t12':800,'t11':600,'t2':600}[id]||500;
+      try{if(rebuildMap[id])rebuildMap[id]();}catch(e){}
+      const waitMs={'t10':900,'t12':900,'t11':700,'t2':700}[id]||600;
       await new Promise(r=>setTimeout(r,waitMs));
-
-      // Capture with error fallback
+      // Convert canvases to images for html2canvas
+      sec.querySelectorAll('canvas').forEach(cv=>{
+        try{
+          const img=document.createElement('img');
+          img.src=cv.toDataURL('image/png');
+          img.style.cssText=`width:${cv.offsetWidth}px;height:${cv.offsetHeight}px;display:block`;
+          img.className='_pdfimg';
+          cv.parentNode.insertBefore(img,cv);
+          cv.style.display='none';
+        }catch(e){}
+      });
       let imgData,imgH;
       try{
-        const canvas=await html2canvas(sec,{
-          scale:1.2,
-          useCORS:true,
-          allowTaint:true,
-          backgroundColor:'#f5f1eb',
-          scrollX:0,scrollY:0,
-          width:1200,
-          height:Math.min(sec.scrollHeight,3000),
-          windowWidth:1200,
-          logging:false
-        });
-        imgData=canvas.toDataURL('image/jpeg',0.82);
-        imgH=Math.min(canvas.height*(1200/canvas.width),2400);
-      }catch(e){
-        console.warn('capture failed:',id,e);
-        imgData=null;imgH=400;
+        const cv2=await html2canvas(sec,{scale:1.1,useCORS:true,allowTaint:true,backgroundColor:'#f5f1eb',scrollX:0,scrollY:0,width:1200,height:Math.min(sec.scrollHeight,4000),windowWidth:1280,windowHeight:Math.min(sec.scrollHeight,4000),logging:false,imageTimeout:15000});
+        imgData=cv2.toDataURL('image/jpeg',0.82);
+        imgH=Math.min(cv2.height*(1200/cv2.width),3800);
+      }catch(e){imgData=null;imgH=400;}
+      finally{
+        sec.querySelectorAll('._pdfimg').forEach(el=>el.remove());
+        sec.querySelectorAll('canvas').forEach(cv=>cv.style.display='');
       }
-
-      if(i>0)pdf.addPage([1200,Math.max(850,imgH+40)],'landscape');
-
-      // Blue header
-      pdf.setFillColor(29,78,216);
-      pdf.rect(0,0,1200,26,'F');
-      pdf.setTextColor(255,255,255);
-      pdf.setFontSize(10);pdf.setFont('helvetica','bold');
+      const pageH=Math.max(850,imgH+40);
+      if(i>0)pdf.addPage([1200,pageH],'landscape');
+      pdf.setFillColor(29,78,216);pdf.rect(0,0,1200,26,'F');
+      pdf.setTextColor(255,255,255);pdf.setFontSize(10);pdf.setFont('helvetica','bold');
       pdf.text('WAY Operations Dashboard',10,17);
       pdf.setFont('helvetica','normal');pdf.setFontSize(9);
-      pdf.text(period,380,17);
-      pdf.text(label,1190,17,{align:'right'});
-
-      if(imgData)pdf.addImage(imgData,'JPEG',0,28,1200,imgH);
-      else{
-        pdf.setTextColor(150,150,150);pdf.setFontSize(12);
-        pdf.text(`[${label} — capture failed]`,600,200,{align:'center'});
-      }
+      pdf.text(period,380,17);pdf.text(label,1190,17,{align:'right'});
+      if(imgData)pdf.addImage(imgData,'JPEG',0,28,1200,Math.min(imgH,pageH-30));
+      else{pdf.setTextColor(150,150,150);pdf.setFontSize(12);pdf.text(`[${label} — capture failed]`,600,200,{align:'center'});}
     }
-
-    // Restore dashboard state
     document.querySelectorAll('.sec').forEach(s=>s.style.display='none');
-    const activeTab=document.querySelector('.t-btn.active');
-    const activeId=activeTab?activeTab.getAttribute('onclick').match(/t\d+/)?.[0]:'t1';
-    const activeSec=document.getElementById(activeId||'t1');
-    if(activeSec)activeSec.style.display='block';
-
-    const fname='WAY_Dashboard_'+(document.querySelector('.sel-btn.active')?.textContent||'report').replace(/[^a-z0-9]/gi,'_')+'.pdf';
-    pdf.save(fname);
+    const act=document.querySelector('.t-btn.active');
+    const actId=act?act.getAttribute('onclick').match(/'(t\d+)'/)?.[1]:'t1';
+    const actSec=document.getElementById(actId||'t1');
+    if(actSec)actSec.style.display='block';
+    pdf.save('WAY_Dashboard_'+(document.querySelector('.sel-btn.active')?.textContent||'report').replace(/[^a-z0-9]/gi,'_')+'.pdf');
     btn.textContent='↓ Export PDF';
-
-  }catch(err){
-    console.error('PDF export failed:',err);
-    alert('PDF export failed: '+err.message);
-    btn.textContent='↓ Export PDF';
-  }
+  }catch(err){alert('Export failed: '+err.message);btn.textContent='↓ Export PDF';}
   btn.disabled=false;
 }
 
