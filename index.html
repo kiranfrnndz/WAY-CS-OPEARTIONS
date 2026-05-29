@@ -1066,33 +1066,6 @@ let _vsData=[];
 function sortVS(col){
   _vsSort={col,asc:_vsSort.col===col?!_vsSort.asc:false};
   renderVSTable();
-
-  // ── REPEAT OGI CONTACTS
-  const ogiMap={};
-  rawDf.forEach(r=>{
-    const ogi=String(r['OGI']||'').trim();
-    if(!ogi||(!ogi.startsWith('OGI')&&!ogi.startsWith('GAP')))return;
-    if(!ogiMap[ogi])ogiMap[ogi]={ogi,count:0,ints:new Set(),vertical:r._vertical};
-    ogiMap[ogi].count++;
-    ogiMap[ogi].ints.add(String(r['Interaction']||''));
-  });
-  const repeatOGIs=Object.values(ogiMap).filter(o=>o.count>1).sort((a,b)=>b.count-a.count);
-  const repeat2=repeatOGIs.filter(o=>o.count>=2).length;
-  const repeat3=repeatOGIs.filter(o=>o.count>=3).length;
-  const maxRepeat=repeatOGIs[0]?.count||0;
-
-  const kpiRepeat=document.getElementById('kpi-repeat');
-  if(kpiRepeat){
-    kpiRepeat.innerHTML=
-      mkKPI('Repeat Contacts',repeat2,'OGIs contacted 2+ times',repeat2>0?'am':'')+
-      mkKPI('3+ Contacts',repeat3,'OGIs contacted 3+ times',repeat3>0?'rd':'')+
-      mkKPI('Max Contacts',maxRepeat,'on a single booking',maxRepeat>3?'rd':maxRepeat>1?'am':'');
-    // Make counts clickable
-    kpiRepeat.querySelectorAll('.kpi').forEach((el,i)=>{
-      el.style.cursor='pointer';
-      el.onclick=()=>toggleRepeatDrill(repeatOGIs, i===1?3:2);
-    });
-  }
 }
 
 function renderVSTable(){
@@ -1644,11 +1617,17 @@ function showAbnDrill(source,key){
 
   // ── PEAK ABANDON HOURS
   const paEl=document.getElementById('peak-abandon-content');
-  if(paEl&&abandoned.length){
+  const allAbn=window._qAbandonedRows||[];
+  if(paEl&&allAbn.length){
     const abnByHour={};
-    abandoned.forEach(r=>{
-      if(!r._dt)return;
-      const h=r._dt.getHours();
+    allAbn.forEach(r=>{
+      if(!r.time||r.time==='--')return;
+      // extract hour from time string like "02:15 PM"
+      const parts=r.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if(!parts)return;
+      let h=parseInt(parts[1]);
+      if(parts[3].toUpperCase()==='PM'&&h<12)h+=12;
+      if(parts[3].toUpperCase()==='AM'&&h===12)h=0;
       abnByHour[h]=(abnByHour[h]||0)+1;
     });
     const maxAbn=Math.max(...Object.values(abnByHour));
