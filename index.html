@@ -2627,85 +2627,103 @@ async function exportPDF(){
   const btn=document.getElementById('pdf-btn');
   btn.textContent='⏳ Generating...';btn.disabled=true;
 
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF({orientation:'landscape',unit:'px',format:[1200,850]});
+  try{
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'landscape',unit:'px',format:[1200,850]});
 
-  const tabs=[
-    {id:'t1',label:'Overview'},
-    {id:'t2',label:'Call Drivers'},
-    {id:'t3',label:'Queue & Abandon'},
-    {id:'t4',label:'Productivity'},
-    {id:'t5',label:'Disputes'},
-    {id:'t6',label:'Escalations'},
-    {id:'t7',label:'Refunds'},
-    {id:'t8',label:'TL Activity'},
-    {id:'t9',label:'Reviews'},
-    {id:'t10',label:'AI Agent'},
-    {id:'t11',label:'Platforms'},
-    {id:'t12',label:'Time Patterns'},
-    {id:'t13',label:'Agents'}
-  ];
+    const tabs=[
+      {id:'t1',label:'Overview'},
+      {id:'t2',label:'Call Drivers'},
+      {id:'t3',label:'Queue & Abandon'},
+      {id:'t4',label:'Productivity'},
+      {id:'t5',label:'Disputes'},
+      {id:'t6',label:'Escalations'},
+      {id:'t7',label:'Refunds'},
+      {id:'t8',label:'TL Activity'},
+      {id:'t9',label:'Reviews'},
+      {id:'t10',label:'AI Agent'},
+      {id:'t11',label:'Platforms'},
+      {id:'t12',label:'Time Patterns'},
+      {id:'t13',label:'Agents'}
+    ];
 
-  // Show each tab, capture, add to PDF
-  for(let i=0;i<tabs.length;i++){
-    const{id,label}=tabs[i];
-    btn.textContent=`⏳ ${i+1}/${tabs.length} ${label}...`;
-
-    // Show this tab
-    document.querySelectorAll('.sec').forEach(s=>s.style.display='none');
-    const sec=document.getElementById(id);
-    sec.style.display='block';
-
-    // Re-render charts for this tab
     const rebuildMap={t1:buildOverview,t2:buildDriversTab,t3:buildQueueTab,t4:buildProductivityTab,t5:buildDisputesTab,t6:buildEscalationsTab,t7:buildRefundsTab,t8:buildTLTab,t9:buildReviewsTab,t10:buildAITab,t11:buildPlatformsTab,t12:buildTimeTab,t13:buildAgentTab};
-    if(rebuildMap[id])rebuildMap[id]();
-
-    // Wait for charts to render
-    await new Promise(r=>setTimeout(r,400));
-
-    // Capture
-    const canvas=await html2canvas(sec,{
-      scale:1.5,
-      useCORS:true,
-      allowTaint:true,
-      backgroundColor:'#f5f1eb',
-      scrollX:0,scrollY:0,
-      width:sec.scrollWidth,
-      height:sec.scrollHeight,
-      windowWidth:1200
-    });
-
-    const imgData=canvas.toDataURL('image/jpeg',0.85);
-    const imgW=1200,imgH=Math.min(canvas.height*(1200/canvas.width),2400);
-
-    if(i>0)pdf.addPage([1200,Math.max(850,imgH+40)],'landscape');
-
-    // Header bar
-    pdf.setFillColor(29,78,216);
-    pdf.rect(0,0,1200,28,'F');
-    pdf.setTextColor(255,255,255);
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica','bold');
-    pdf.text('WAY Operations Dashboard',12,18);
-    pdf.setFont('helvetica','normal');
-    pdf.setFontSize(9);
     const period=(document.getElementById('tb-period')?.textContent||'')+(document.querySelector('.sel-btn.active')?.textContent?' — '+document.querySelector('.sel-btn.active').textContent:'');
-    pdf.text(period,400,18);
-    pdf.text(label,1100,18,{align:'right'});
 
-    pdf.addImage(imgData,'JPEG',0,30,imgW,imgH);
+    for(let i=0;i<tabs.length;i++){
+      const{id,label}=tabs[i];
+      btn.textContent=`⏳ ${i+1}/${tabs.length} — ${label}`;
+
+      // Show only this tab
+      document.querySelectorAll('.sec').forEach(s=>s.style.display='none');
+      const sec=document.getElementById(id);
+      if(!sec){continue;}
+      sec.style.display='block';
+
+      // Rebuild — wrapped in try so one bad tab doesn't kill the whole PDF
+      try{if(rebuildMap[id])rebuildMap[id]();}catch(e){console.warn('rebuild failed:',id,e);}
+
+      // Give charts time to render — longer for chart-heavy tabs
+      const waitMs={'t8':800,'t10':800,'t12':800,'t11':600,'t2':600}[id]||500;
+      await new Promise(r=>setTimeout(r,waitMs));
+
+      // Capture with error fallback
+      let imgData,imgH;
+      try{
+        const canvas=await html2canvas(sec,{
+          scale:1.2,
+          useCORS:true,
+          allowTaint:true,
+          backgroundColor:'#f5f1eb',
+          scrollX:0,scrollY:0,
+          width:1200,
+          height:Math.min(sec.scrollHeight,3000),
+          windowWidth:1200,
+          logging:false
+        });
+        imgData=canvas.toDataURL('image/jpeg',0.82);
+        imgH=Math.min(canvas.height*(1200/canvas.width),2400);
+      }catch(e){
+        console.warn('capture failed:',id,e);
+        imgData=null;imgH=400;
+      }
+
+      if(i>0)pdf.addPage([1200,Math.max(850,imgH+40)],'landscape');
+
+      // Blue header
+      pdf.setFillColor(29,78,216);
+      pdf.rect(0,0,1200,26,'F');
+      pdf.setTextColor(255,255,255);
+      pdf.setFontSize(10);pdf.setFont('helvetica','bold');
+      pdf.text('WAY Operations Dashboard',10,17);
+      pdf.setFont('helvetica','normal');pdf.setFontSize(9);
+      pdf.text(period,380,17);
+      pdf.text(label,1190,17,{align:'right'});
+
+      if(imgData)pdf.addImage(imgData,'JPEG',0,28,1200,imgH);
+      else{
+        pdf.setTextColor(150,150,150);pdf.setFontSize(12);
+        pdf.text(`[${label} — capture failed]`,600,200,{align:'center'});
+      }
+    }
+
+    // Restore dashboard state
+    document.querySelectorAll('.sec').forEach(s=>s.style.display='none');
+    const activeTab=document.querySelector('.t-btn.active');
+    const activeId=activeTab?activeTab.getAttribute('onclick').match(/t\d+/)?.[0]:'t1';
+    const activeSec=document.getElementById(activeId||'t1');
+    if(activeSec)activeSec.style.display='block';
+
+    const fname='WAY_Dashboard_'+(document.querySelector('.sel-btn.active')?.textContent||'report').replace(/[^a-z0-9]/gi,'_')+'.pdf';
+    pdf.save(fname);
+    btn.textContent='↓ Export PDF';
+
+  }catch(err){
+    console.error('PDF export failed:',err);
+    alert('PDF export failed: '+err.message);
+    btn.textContent='↓ Export PDF';
   }
-
-  // Restore active tab
-  document.querySelectorAll('.sec').forEach(s=>s.style.display='none');
-  document.getElementById('t1').classList.add('active');
-  document.querySelectorAll('.sec.active').forEach(s=>s.style.display='block');
-
-  // Save
-  const period=(document.querySelector('.sel-btn.active')?.textContent||'report').replace(/[^a-z0-9]/gi,'_');
-  pdf.save(`WAY_Dashboard_${period}.pdf`);
-
-  btn.textContent='↓ Export PDF';btn.disabled=false;
+  btn.disabled=false;
 }
 
 function showTab(id,el){
