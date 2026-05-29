@@ -192,14 +192,8 @@ input[type=text]{width:180px}
 
 </head>
 <body>
-<script>
-// Stub critical onclick functions so they don't error if called before main script loads
-function setMode(){}
-function fileChosen(){}
-function resetDB(){}
-function showTab(){}
-function exportPDF(){}
-</script>
+
+
 
 <!-- ═══ UPLOAD SCREEN ═══ -->
 <div class="up-screen" id="upScreen">
@@ -208,9 +202,9 @@ function exportPDF(){}
   <p class="up-sub">Upload all three reports together to build the full dashboard</p>
 
   <div class="mode-picker">
-    <button class="mode-btn active" id="mode-daily" onclick="setMode('daily',this)"><div class="mode-icon">📅</div><div class="mode-name">Daily</div><div class="mode-sub">Single day</div></button>
-    <button class="mode-btn" id="mode-weekly" onclick="setMode('weekly',this)"><div class="mode-icon">📆</div><div class="mode-name">Weekly</div><div class="mode-sub">7-day period</div></button>
-    <button class="mode-btn" id="mode-monthly" onclick="setMode('monthly',this)"><div class="mode-icon">🗓️</div><div class="mode-name">Monthly</div><div class="mode-sub">Full month</div></button>
+    <button class="mode-btn active" id="mode-daily" onclick="if(window.setMode)setMode('daily',this)"><div class="mode-icon">📅</div><div class="mode-name">Daily</div><div class="mode-sub">Single day</div></button>
+    <button class="mode-btn" id="mode-weekly" onclick="if(window.setMode)setMode('weekly',this)"><div class="mode-icon">📆</div><div class="mode-name">Weekly</div><div class="mode-sub">7-day period</div></button>
+    <button class="mode-btn" id="mode-monthly" onclick="if(window.setMode)setMode('monthly',this)"><div class="mode-icon">🗓️</div><div class="mode-name">Monthly</div><div class="mode-sub">Full month</div></button>
   </div>
 
   <div class="up-grid">
@@ -262,7 +256,7 @@ function exportPDF(){}
     </div>
     <div style="display:flex;align-items:center;gap:10px">
       <span style="font-size:11px;color:var(--tx3)">WP + CC + Agent reports · FCR target 80%</span>
-      <button id="pdf-btn" onclick="exportPDF()" style="background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;margin-right:8px;font-family:inherit">&#8681; Export PDF</button><button class="new-btn" onclick="resetDB()">↑ New upload</button>
+      <button id="pdf-btn" onclick="if(window.exportPDF)exportPDF()" style="background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;margin-right:8px;font-family:inherit">&#8681; Export PDF</button><button class="new-btn" onclick="if(window.resetDB)resetDB()">↑ New upload</button>
     </div>
   </div>
 
@@ -272,19 +266,19 @@ function exportPDF(){}
   </div>
 
   <div class="tabs">
-    <button class="t-btn active" onclick="showTab('t1',this)">Overview</button>
-    <button class="t-btn" onclick="showTab('t2',this)">Call Drivers</button>
-    <button class="t-btn" onclick="showTab('t3',this)">Queue &amp; Abandon</button>
-    <button class="t-btn" onclick="showTab('t4',this)">Productivity</button>
-    <button class="t-btn" onclick="showTab('t5',this)">Disputes</button>
-    <button class="t-btn" onclick="showTab('t6',this)">Escalations</button>
-    <button class="t-btn" onclick="showTab('t7',this)">Refunds</button>
-    <button class="t-btn" onclick="showTab('t8',this)">TL Activity</button>
-    <button class="t-btn" onclick="showTab('t9',this)">Reviews</button>
-    <button class="t-btn" onclick="showTab('t10',this)">AI Agent</button>
-    <button class="t-btn" onclick="showTab('t11',this)">Platforms</button>
-    <button class="t-btn" onclick="showTab('t12',this)">Time Patterns</button>
-    <button class="t-btn" onclick="showTab('t13',this)">Agents</button>
+    <button class="t-btn active" onclick="if(window.showTab)showTab('t1',this)">Overview</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t2',this)">Call Drivers</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t3',this)">Queue &amp; Abandon</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t4',this)">Productivity</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t5',this)">Disputes</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t6',this)">Escalations</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t7',this)">Refunds</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t8',this)">TL Activity</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t9',this)">Reviews</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t10',this)">AI Agent</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t11',this)">Platforms</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t12',this)">Time Patterns</button>
+    <button class="t-btn" onclick="if(window.showTab)showTab('t13',this)">Agents</button>
   </div>
 
   <div class="content">
@@ -305,14 +299,14 @@ function exportPDF(){}
       <div class="card"><div class="ct">Vertical summary <span style="font-size:10px;color:var(--tx3);font-weight:400">&#8645; click headers to sort</span></div>
         <div class="tw"><table id="vs-table">
           <thead><tr>
-            <th onclick="sortVS('name')" id="vsh-name" style="cursor:pointer">Vertical</th>
-            <th class="n sortable" onclick="sortVS('tickets')" id="vsh-tickets">Tickets</th>
-            <th class="n sortable" onclick="sortVS('ints')" id="vsh-ints">Interactions</th>
-            <th class="n sortable" onclick="sortVS('calls')" id="vsh-calls">Calls</th>
-            <th class="n sortable" onclick="sortVS('emails')" id="vsh-emails">Emails</th>
-            <th class="n sortable" onclick="sortVS('chats')" id="vsh-chats">Chats</th>
-            <th class="n sortable" onclick="sortVS('fcr')" id="vsh-fcr">FCR</th>
-            <th class="n sortable" onclick="sortVS('esc')" id="vsh-esc">Esc%</th>
+            <th onclick="if(window.sortVS)sortVS('name')" id="vsh-name" style="cursor:pointer">Vertical</th>
+            <th class="n sortable" onclick="if(window.sortVS)sortVS('tickets')" id="vsh-tickets">Tickets</th>
+            <th class="n sortable" onclick="if(window.sortVS)sortVS('ints')" id="vsh-ints">Interactions</th>
+            <th class="n sortable" onclick="if(window.sortVS)sortVS('calls')" id="vsh-calls">Calls</th>
+            <th class="n sortable" onclick="if(window.sortVS)sortVS('emails')" id="vsh-emails">Emails</th>
+            <th class="n sortable" onclick="if(window.sortVS)sortVS('chats')" id="vsh-chats">Chats</th>
+            <th class="n sortable" onclick="if(window.sortVS)sortVS('fcr')" id="vsh-fcr">FCR</th>
+            <th class="n sortable" onclick="if(window.sortVS)sortVS('esc')" id="vsh-esc">Esc%</th>
           </tr></thead>
           <tbody id="tb-vs"></tbody><tfoot><tr id="tf-vs"></tr></tfoot>
         </table></div>
@@ -597,16 +591,16 @@ function exportPDF(){}
       </div>
       <div class="tw"><table>
         <thead><tr>
-          <th class="sortable" onclick="sortAg('name')" id="ah-name"># Agent</th>
-          <th class="n sortable" onclick="sortAg('total')" id="ah-total">Total</th>
-          <th class="n sortable" onclick="sortAg('calls')" id="ah-calls">Calls</th>
-          <th class="n sortable" onclick="sortAg('emails')" id="ah-emails">Emails</th>
-          <th class="n sortable" onclick="sortAg('chats')" id="ah-chats">Chats</th>
-          <th class="n sortable" onclick="sortAg('tl_reviews')" id="ah-tl_reviews">TL Rev</th>
-          <th class="n sortable" onclick="sortAg('esc_rate')" id="ah-esc_rate">Esc%</th>
-          <th class="n sortable" onclick="sortAg('fcr_pct')" id="ah-fcr_pct">FCR%</th>
-          <th class="n sortable" onclick="sortAg('avg_ints')" id="ah-avg_ints">Ints/ticket</th>
-          <th class="n sortable" onclick="sortAg('aht_sec')" id="ah-aht_sec">AHT</th>
+          <th class="sortable" onclick="if(window.sortAg)sortAg('name')" id="ah-name"># Agent</th>
+          <th class="n sortable" onclick="if(window.sortAg)sortAg('total')" id="ah-total">Total</th>
+          <th class="n sortable" onclick="if(window.sortAg)sortAg('calls')" id="ah-calls">Calls</th>
+          <th class="n sortable" onclick="if(window.sortAg)sortAg('emails')" id="ah-emails">Emails</th>
+          <th class="n sortable" onclick="if(window.sortAg)sortAg('chats')" id="ah-chats">Chats</th>
+          <th class="n sortable" onclick="if(window.sortAg)sortAg('tl_reviews')" id="ah-tl_reviews">TL Rev</th>
+          <th class="n sortable" onclick="if(window.sortAg)sortAg('esc_rate')" id="ah-esc_rate">Esc%</th>
+          <th class="n sortable" onclick="if(window.sortAg)sortAg('fcr_pct')" id="ah-fcr_pct">FCR%</th>
+          <th class="n sortable" onclick="if(window.sortAg)sortAg('avg_ints')" id="ah-avg_ints">Ints/ticket</th>
+          <th class="n sortable" onclick="if(window.sortAg)sortAg('aht_sec')" id="ah-aht_sec">AHT</th>
         </tr></thead>
         <tbody id="ag-body"></tbody>
         <tfoot><tr id="ag-foot"></tr></tfoot>
@@ -615,6 +609,7 @@ function exportPDF(){}
 
   </div><!-- /content -->
 </div><!-- /db -->
+
 
 <script>
 // ═══════════════════════════════════════════════
@@ -631,7 +626,7 @@ const ADHOC_TEAM=['Vishnu MS'];
 const MGMT_TEAM=['Anju Mareeta Lean','Joyson Fernandez'];
 const INDIAN_SPANISH=['Pawan Kumar','NAUSHAD AHMAD','Javed Humayun Khan','MD Sattar Alam','Mohamed Jowhar','Ansar Alli','U Likhith','Mohammad Haider Ali','Siddarth Raj'];
 const COLUMBIA_TEAM=['Alexandra Morales','Andrea Ruiz','Angeles Soledad','Daniel Montoya','Karen Hopkins','Brianna Lundy','Karolyne Perez','Mauricio Leon','Nicholas Marquez','Oscar Perez','Sarah Gonzales','Valentina Torres','Selina Benavides','Gabriella Lacayo','Liliana Soledad','Amanda Wagoner'];
-const CROSSSELL=['AS, Al-Ameen','Chacko, Samuel','Mathew, Daisy','R, Nivesh','S Nair, Goutham','S, Sreelakshmi','Selvia, Shyny','Sudarsanan, Vishnu','Ashok, Aathira'];
+const CROSSSELL=['AS, Al-Ameen','Chacko, Samuel','Mathew, Daisy','R, Nivesh','S Nair, Goutham','S, Sreelakshmi','Selvia, Shyny','Sudarsanan, Vishnu','Ashok, Aathira','Sudarsanan, Mike','Mike Sudarsanan'];
 const TL_ONLY=TL_TEAM;
 const TL_MATERNITY=['Aswini AS'];
 const DTL_TEAM=['Vidya Vijayan'];
@@ -1761,15 +1756,15 @@ function buildProductivityTab(){
       </div>
       <div class="tw"><table id="prod-table">
         <thead><tr>
-          <th onclick="sortProd('name')" id="ph-name" style="cursor:pointer">Agent</th>
-          <th class="n sortable" onclick="sortProd('inb')" id="ph-inb">Inbound</th>
-          <th class="n sortable" onclick="sortProd('out')" id="ph-out">Outbound</th>
-          <th class="n sortable" onclick="sortProd('avgTalk')" id="ph-avgTalk">Avg Talk</th>
-          <th class="n sortable" onclick="sortProd('avgHold')" id="ph-avgHold">Avg Hold</th>
-          <th class="n sortable" onclick="sortProd('aht')" id="ph-aht">AHT</th>
-          <th class="n sortable" onclick="sortProd('handleHrs')" id="ph-handleHrs">Handle (hrs)</th>
-          <th class="n sortable" onclick="sortProd('long10')" id="ph-long10" style="color:var(--rd)">Calls >10min</th>
-          <th class="n sortable" onclick="sortProd('hold5')" id="ph-hold5" style="color:var(--am)">Hold >5min</th>
+          <th onclick="if(window.sortProd)sortProd('name')" id="ph-name" style="cursor:pointer">Agent</th>
+          <th class="n sortable" onclick="if(window.sortProd)sortProd('inb')" id="ph-inb">Inbound</th>
+          <th class="n sortable" onclick="if(window.sortProd)sortProd('out')" id="ph-out">Outbound</th>
+          <th class="n sortable" onclick="if(window.sortProd)sortProd('avgTalk')" id="ph-avgTalk">Avg Talk</th>
+          <th class="n sortable" onclick="if(window.sortProd)sortProd('avgHold')" id="ph-avgHold">Avg Hold</th>
+          <th class="n sortable" onclick="if(window.sortProd)sortProd('aht')" id="ph-aht">AHT</th>
+          <th class="n sortable" onclick="if(window.sortProd)sortProd('handleHrs')" id="ph-handleHrs">Handle (hrs)</th>
+          <th class="n sortable" onclick="if(window.sortProd)sortProd('long10')" id="ph-long10" style="color:var(--rd)">Calls >10min</th>
+          <th class="n sortable" onclick="if(window.sortProd)sortProd('hold5')" id="ph-hold5" style="color:var(--am)">Hold >5min</th>
         </tr></thead>
         <tbody id="prod-tbody"></tbody>
       </table></div>
