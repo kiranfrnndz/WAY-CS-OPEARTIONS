@@ -163,10 +163,20 @@ tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: #faf9f7; }
 tbody tr.total-row { background: var(--bg); font-weight: 600; }
 tbody td     { padding: 8px 12px; vertical-align: middle; }
-tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
-tbody td.center { text-align: center; }
-thead th.num { text-align: right; }
-thead th.center { text-align: center; }
+tbody td       { padding: 8px 12px; vertical-align: middle; }
+tbody td.num   { text-align: right; font-variant-numeric: tabular-nums; padding-right: 16px; }
+tbody td.center{ text-align: center; }
+thead th       { padding: 8px 12px; text-align: left; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--border); background: var(--bg); white-space: nowrap; }
+thead th.num   { text-align: right; padding-right: 16px; }
+thead th.center{ text-align: center; }
+tfoot td       { padding: 8px 12px; font-weight: 600; background: var(--bg); border-top: 2px solid var(--border); }
+tfoot td.num   { text-align: right; padding-right: 16px; font-variant-numeric: tabular-nums; }
+tfoot td       { padding: 8px 12px; font-weight: 600; background: var(--bg); border-top: 2px solid var(--border); }
+tfoot td.num   { text-align: right; padding-right: 16px; font-variant-numeric: tabular-nums; }
+thead th[data-sort] { cursor: pointer; user-select: none; }
+thead th[data-sort]:hover { color: var(--text); background: #ece9e3; }
+thead th[data-sort].asc::after  { content: ' ↑'; font-size: 9px; color: var(--accent); }
+thead th[data-sort].desc::after { content: ' ↓'; font-size: 9px; color: var(--accent); }
 tbody td.center { text-align: center; }
 
 /* ── BADGES ───────────────────────────────────────────────────── */
@@ -396,7 +406,6 @@ select.filter-dd {
       </div>
       <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">Agents who received AI-escalated calls</span></div><div id="ai-agents-table"></div></div>
       <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">AI Interactions by Reason &amp; Sub Reason</span></div><div id="ai-reasons-table"></div></div>
-      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title" style="color:var(--red)">⚠ AI Tickets — No Sub Reason</span></div><div id="ai-nosub-table"></div></div>
       <div class="card mb16" id="ai-action-required" style="border-left:4px solid var(--red)"></div>
     </div>
 
@@ -531,17 +540,17 @@ select.filter-dd {
 const TEAM = {
   MANAGER          : ['Joyson Fernandez'],
   ASST_MANAGER     : ['Anju Mareeta Lean'],
-  TEAM_LEADS       : ['Shiju Salam','Vishnu V','Bijoy Kiran','Rashmika','Vishnu B S','Surya Suresh','Ansu Varghese','Jaison Nelson'],
-  SME              : ['Vidya Vijayan','Lalita Lama','Althaf Z'],
+  TEAM_LEADS       : ['Shiju Salam','Vishnu V','Bijoy Kiran','Rashmika Santhosh D','Vishnu BS','Surya Suresh','Ansu Varghese','Jaison Nelson'],
+  SME              : ['Vidya Vijayan','LALITA LAMA','Althaf Z'],
   L2               : ['Jithin S'],
-  QC               : ['Henna Najim','Reshma Sunil','Rijisha S Kumar'],
-  DISPUTES         : ['Gowri S','Greeshma R S','Sreela R','Subin M S'],
+  QC               : ['Henna Najim S','Reshma','Rijisha S Kumar'],
+  DISPUTES         : ['Gowri','Greeshma RS','Sreelaraghavan','Subin MS'],
   DATA_REPORTING   : ['Vishnu MS'],
   REVIEWS          : ['Tharun Sunil Kumar','Jijo Papachan','Muvithra M','Blessy Hillary','Abhilash Augustin'],
-  INDIAN_SPANISH   : ['Pawan Kumar','Naushad Ahmad','Javed Khan','Sattar Alam','Mohamed Jowhar','Ansar Alli','Uppara Likhith','MD Ali','Siddarth Raj'],
+  INDIAN_SPANISH   : ['Pawan Kumar','NAUSHAD AHMAD','Javed Humayun Khan','MD Sattar Alam','Mohamed Jowhar','Ansar Alli','Uppara Likhith','MD Ali','Siddarth Raj'],
   COLUMBIA_SPANISH : ['Alexandra Morales','Mauricio Leon','Angeles Soledad','Gabriella Lacayo','Daniel Montoya','Sarah Gonzales','Liliana Soledad'],
-  WAYPLUS_US       : ['Amanda Wagoner','Selina Benavides','Karen Hopkins','Karolyne Perez','Junie Cerna','Andrea Ruiz','Brianna Lundy','Nicholas Marques','Oscar Perez','Valentina Torres'],
-  FRONTLINE        : ['Abhiraj Erenzath','Abhishek Kumar S','Abin Eappen','Dravya SP Naga','Devika S','Ajesh Varghese','Gokul Sarath','Meenakshy RS','Rufus H Johny','Abhilash Lean','Sumith B I','Nikhil Pradeep','Arya J S','Najna Nizar','Amal Krishna A','Akshaya G S','Azhar Abdul Kalam','Irfana S Ibrahim','John Chacko','Ajeet A','Jishnu Praveen','Akshay Vinod Nair','Bibin Selvan','Hizana Noushad','Pooja Jose','Shinu Varghese','Swathy Peethambaran','Abhija Zakkir','Abin Ferry','Jonathan Anil','Abhinav S B','Catherine Benjamin','Ajesh Mathew Varghese','Ananthu J R'],
+  WAYPLUS_US       : ['Amanda Wagoner','Selina Benavides','Karen Hopkins','Karolyne Perez','Junie Cerna','Andrea Ruiz','Brianna Lundy','Nicholas Marquez','Oscar Perez','Valentina Torres'],
+  FRONTLINE        : ['Abhiraj Erenzath','Abhishek Kumar S','Abin Eappen','Dravya SP Naga','Devika S','Ajesh varghese','Gokul','Meenakshy RS','Rufus Johny','Abhilash Lean','B I Sumith','Nikhil Pradeep','Arya J S','Najna Nizar','Amal Krishna A','Akshaya G S','Azhar Abdul Kalam','Irfana Ibrahim','John Chacko','Ajeet A','Jishnu Praveen','Akshay Vinod','Bibin Selvan','Hizana Noushad','Pooja Jose','Shinu Varghese','Swathy Peethambaran','Abhija Zakkir','Abin Ferry','Jonathan Anil','Abhinav S B','Catherine Benjamin','Ajesh varghese','Ananthu'],
 };
 
 const ALL_KNOWN_AGENTS = new Set(Object.values(TEAM).flat());
@@ -559,35 +568,35 @@ Object.entries(TEAM).forEach(([role, agents]) => agents.forEach(a => AGENT_ROLE[
 const AG_NAME_MAP = {
   'Fernandez, Joyson':'Joyson Fernandez','Mareeta Lean, Anju':'Anju Mareeta Lean',
   'Salam, Shiju':'Shiju Salam','V, Vishnu':'Vishnu V','Kiran, Bijoy':'Bijoy Kiran',
-  'Santhosh, Rashmika':'Rashmika','BS, Vishnu':'Vishnu B S','Suresh, Surya':'Surya Suresh',
+  'Santhosh, Rashmika':'Rashmika Santhosh D','BS, Vishnu':'Vishnu BS','Suresh, Surya':'Surya Suresh',
   'Varghese, Ansu':'Ansu Varghese','Nelson, Jaison':'Jaison Nelson',
-  'Vijayan, Vidya':'Vidya Vijayan','Lama, Lalita':'Lalita Lama','Z, Althaf':'Althaf Z',
-  'S, Jithin':'Jithin S','S, Henna Najim':'Henna Najim','Sunil, Reshma':'Reshma Sunil',
-  'Kumar, Rijisha S':'Rijisha S Kumar','S, Gowri':'Gowri S','RS, Greeshma':'Greeshma R S',
-  'R, Sreela':'Sreela R','MS, Subin':'Subin M S','MS, Vishnu':'Vishnu MS',
+  'Vijayan, Vidya':'Vidya Vijayan','Lama, Lalita':'LALITA LAMA','Z, Althaf':'Althaf Z',
+  'S, Jithin':'Jithin S','S, Henna Najim':'Henna Najim S','Sunil, Reshma':'Reshma',
+  'Kumar, Rijisha S':'Rijisha S Kumar','S, Gowri':'Gowri','RS, Greeshma':'Greeshma RS',
+  'R, Sreela':'Sreelaraghavan','MS, Subin':'Subin MS','MS, Vishnu':'Vishnu MS',
   'Sunil Kumar, Tharun':'Tharun Sunil Kumar','Papachan, Jijo':'Jijo Papachan',
   'M, Muvithra':'Muvithra M','Hillary, Blessy':'Blessy Hillary','Augustin, Abhilash':'Abhilash Augustin',
-  'Kumar, Pawan':'Pawan Kumar','Ahmad, Naushad':'Naushad Ahmad','Khan, Javed Humayun':'Javed Khan',
-  'Alam, MD Sattar':'Sattar Alam','Alli, Ansar':'Ansar Alli','Likhith, Uppara':'Uppara Likhith',
+  'Kumar, Pawan':'Pawan Kumar','Ahmad, Naushad':'NAUSHAD AHMAD','Khan, Javed Humayun':'Javed Humayun Khan',
+  'Alam, MD Sattar':'MD Sattar Alam','Alli, Ansar':'Ansar Alli','Likhith, Uppara':'Uppara Likhith',
   'Ali, Mohammad':'MD Ali','Raj, Siddarth':'Siddarth Raj','Morales, Alexandra':'Alexandra Morales',
   'Leon, Mauricio':'Mauricio Leon','Soledad, Angeles':'Angeles Soledad','Lacayo, Gabriella':'Gabriella Lacayo',
   'Montoya, Daniel':'Daniel Montoya','Gonzalez, Sarah':'Sarah Gonzales','Soledad, Liliana':'Liliana Soledad',
   'Wagoner, Amanda':'Amanda Wagoner','Benavides, Selina':'Selina Benavides','Hopkins, Karen':'Karen Hopkins',
   'Perez, Karolyne':'Karolyne Perez','Cerna, Junie':'Junie Cerna','Ruiz, Andrea':'Andrea Ruiz',
-  'Lundy, Brianna':'Brianna Lundy','Marquez, Nicholas':'Nicholas Marques','Perez, Oscar':'Oscar Perez',
+  'Lundy, Brianna':'Brianna Lundy','Marquez, Nicholas':'Nicholas Marquez','Perez, Oscar':'Oscar Perez',
   'Torres, Valentina':'Valentina Torres','Erenzath, Abhiraj':'Abhiraj Erenzath',
   'Kumar S, Abhishek':'Abhishek Kumar S','Eappen, Abin':'Abin Eappen','SP Naga, Dravya':'Dravya SP Naga',
-  'S, Devika':'Devika S','Varghese, Ajesh':'Ajesh Varghese','Sarath, Gokul':'Gokul Sarath',
-  'RS, Meenakshy':'Meenakshy RS','Johny, Rufus H':'Rufus H Johny','Lean, Abhilash':'Abhilash Lean',
-  'B I, Sumith':'Sumith B I','Pradeep, Nikhil':'Nikhil Pradeep','JS, Arya':'Arya J S',
+  'S, Devika':'Devika S','Varghese, Ajesh':'Ajesh varghese','Sarath, Gokul':'Gokul',
+  'RS, Meenakshy':'Meenakshy RS','Johny, Rufus H':'Rufus Johny','Lean, Abhilash':'Abhilash Lean',
+  'B I, Sumith':'B I Sumith','Pradeep, Nikhil':'Nikhil Pradeep','JS, Arya':'Arya J S',
   'Nizar, Najna':'Najna Nizar','Krishna, Amal':'Amal Krishna A','G S, Akshaya':'Akshaya G S',
-  'Abdul Kalam, Azhar':'Azhar Abdul Kalam','Ibrahim, Irfana':'Irfana S Ibrahim','Chacko, John':'John Chacko',
-  'A, Ajeet':'Ajeet A','Praveen, Jishnu':'Jishnu Praveen','Vinod Nair, Akshay':'Akshay Vinod Nair',
+  'Abdul Kalam, Azhar':'Azhar Abdul Kalam','Ibrahim, Irfana':'Irfana Ibrahim','Chacko, John':'John Chacko',
+  'A, Ajeet':'Ajeet A','Praveen, Jishnu':'Jishnu Praveen','Vinod Nair, Akshay':'Akshay Vinod',
   'Selvan, Bibin':'Bibin Selvan','Noushad, Hizana':'Hizana Noushad','Jose, Pooja':'Pooja Jose',
   'Varghese, Shinu':'Shinu Varghese','Peethambaran, Swathy':'Swathy Peethambaran',
   'Zakkir, Abhija':'Abhija Zakkir','Ferry, Abin':'Abin Ferry','Anil, Jonathan':'Jonathan Anil',
   'S B, Abhinav':'Abhinav S B','Benjamin, Catherine':'Catherine Benjamin',
-  'Varghese, Ajesh Mathew':'Ajesh Mathew Varghese','J R, Ananthu':'Ananthu J R',
+  'Varghese, Ajesh Mathew':'Ajesh varghese','J R, Ananthu':'Ananthu',
 };
 
 // ── QUEUE → VERTICAL MAPPING ─────────────────────────────────────
@@ -791,8 +800,9 @@ function normalizeAgentName(n) {
 
 // ── WP DATA TAGGING ──────────────────────────────────────────────
 function mapVertical(row) {
-  const v  = String(row['Vertical']    || '').trim();
-  const sv = String(row['SubVertical'] || '').trim();
+  const v   = String(row['Vertical']    || '').trim();
+  const sv  = String(row['SubVertical'] || '').trim();
+  const lot = String(row['Lot Name']    || '').trim().toLowerCase();
   if (v === 'Parking' && (sv.includes('Airport') || sv.includes('Cruise'))) return 'Airport Parking';
   if (v === 'Parking' && (sv.includes('City') || sv.includes('Monthly')))   return 'City Parking';
   if (v === 'Parking')    return 'Airport Parking';
@@ -801,7 +811,13 @@ function mapVertical(row) {
   if (v === 'Auto Repair')return 'R&M';
   if (v === 'Insurance')  return 'Insurance';
   if (v === 'Gas')        return 'Gas';
-  if (v === 'General')    return 'General';
+  if (v === 'General') {
+    // Reclassify based on lot name
+    if (lot.includes('airport') || lot.includes('cruise') || lot.includes('terminal') || lot.includes('fly'))
+      return 'Airport Parking';
+    if (lot) return 'City Parking';
+    return 'Airport Parking'; // default for General with no lot
+  }
   return 'Other';
 }
 
@@ -1268,21 +1284,29 @@ function pct(n, d) { return d ? Math.round(n / d * 1000) / 10 : 0; }
 function fmt$(n)   { return '$' + Math.round(n).toLocaleString(); }
 
 function sortableTable(tableId, data, renderFn) {
-  // Make table headers clickable for sorting
   const table = document.getElementById(tableId);
   if (!table) return;
-  table.querySelectorAll('th[data-sort]').forEach(th => {
-    th.style.cursor = 'pointer';
-    th.addEventListener('click', () => {
+  table.querySelectorAll('th[data-sort]').forEach(function(th) {
+    th.addEventListener('click', function() {
       const col = th.dataset.sort;
-      const asc = th.dataset.asc === 'true' ? false : true;
-      table.querySelectorAll('th').forEach(t => { delete t.dataset.asc; t.classList.remove('asc','desc'); });
+      const asc = th.dataset.asc !== 'true';
+      table.querySelectorAll('th').forEach(function(t) {
+        delete t.dataset.asc;
+        t.classList.remove('asc','desc');
+      });
       th.dataset.asc = asc;
       th.classList.add(asc ? 'asc' : 'desc');
-      const sorted = [...data].sort((a, b) => {
-        if (col === 'name' || typeof a[col] === 'string')
-          return asc ? String(a[col]).localeCompare(String(b[col])) : String(b[col]).localeCompare(String(a[col]));
-        return asc ? (a[col] || 0) - (b[col] || 0) : (b[col] || 0) - (a[col] || 0);
+      const sorted = [...data].sort(function(a, b) {
+        const av = a[col], bv = b[col];
+        // Always try numeric first for known numeric columns
+        const na = parseFloat(av), nb = parseFloat(bv);
+        if (!isNaN(na) && !isNaN(nb))
+          return asc ? na-nb : nb-na;
+        if (typeof av === 'number' || typeof bv === 'number')
+          return asc ? (av||0)-(bv||0) : (bv||0)-(av||0);
+        return asc
+          ? String(av||'').localeCompare(String(bv||''))
+          : String(bv||'').localeCompare(String(av||''));
       });
       renderFn(sorted);
     });
@@ -1454,7 +1478,7 @@ function buildEscalations()  { const wp=getFiltered(APP.wpData); renderEscalatio
 function buildReviews()      { const wp=getFiltered(APP.wpData); renderReviews(wp); }
 function buildDomains()      { const wp=getFiltered(APP.wpData); renderDomains(wp); }
 function buildTimePatterns() { const wp=getFiltered(APP.wpData),cc=getFiltered(APP.ccData),ag=getFiltered(APP.agData); renderTimePatterns(wp,cc,ag); }
-function buildTLActivity()   { const wp=getFiltered(APP.wpData),cc=getFiltered(APP.ccData); renderTLActivity(wp,cc); }
+function buildTLActivity()   { const wp=getFiltered(APP.wpData),cc=getFiltered(APP.ccData),ag=getFiltered(APP.agData); renderTLActivity(wp,cc,ag); }
 function buildProductivity() { const ag=getFiltered(APP.agData),wp=getFiltered(APP.wpData); renderProductivity(ag,wp); }
 
 // ── HELPER: empty placeholder ────────────────────────────────────
@@ -1470,6 +1494,45 @@ function miniBar(val, max, color) {
 }
 
 // ── HELPER: driver accordion ─────────────────────────────────────
+function buildDriverAccordionWithPlans(containerId, drivers, colorArr) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!drivers.length) { el.innerHTML='<div class="empty">No data</div>'; return; }
+  const max = drivers[0].count;
+  const items = drivers.map(function(d, i) {
+    const color  = colorArr ? colorArr[i % colorArr.length] : COLORS[i % COLORS.length];
+    const itemId = 'di-' + containerId + '-' + i;
+    const barW   = Math.round(d.count / max * 100);
+    // Plans take priority over lots (e.g. Subscription Cancellation shows Sapphire/Jasper)
+    const subItems = (d.plans && d.plans.length > 0) ? d.plans : (d.lots || []);
+    const subMax   = subItems.length > 0 ? subItems[0].count : 1;
+    const subRows  = subItems.slice(0, 5).map(function(l, li) {
+      return '<div class="lot-row">' +
+        (li === 0 ? '<span class="top-badge">top</span>' : '<span style="min-width:28px"></span>') +
+        '<span class="lot-name">' + l.name + '</span>' +
+        miniBar(l.count, subMax, color) +
+        '<span class="lot-count">' + l.count + '</span>' +
+      '</div>';
+    }).join('');
+    return '<div class="driver-item" id="' + itemId + '">' +
+      '<div class="driver-row">' +
+        '<div class="driver-bar-bg"><div class="driver-bar-fg" style="width:' + barW + '%;background:' + color + '"></div></div>' +
+        '<span style="flex:1;font-size:12px;padding-left:8px;">' + d.name + '</span>' +
+        '<span class="driver-count">' + d.count + '</span>' +
+        '<span class="driver-expand">&#9660;</span>' +
+      '</div>' +
+      '<div class="driver-lots">' + subRows + '</div>' +
+    '</div>';
+  });
+  el.innerHTML = items.join('');
+  el.querySelectorAll('.driver-row').forEach(function(row) {
+    row.addEventListener('click', function() {
+      const item = row.closest('.driver-item');
+      if (item) item.classList.toggle('open');
+    });
+  });
+}
+
 function buildDriverAccordion(containerId, drivers, colorArr) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -1642,7 +1705,7 @@ function renderAI(wp) {
     if (lot) driverMap[d].lots[lot] = (driverMap[d].lots[lot]||0)+1;
   });
 
-  const drivers = Object.entries(driverMap).sort(function(a,b){return b[1].count-a[1].count;})
+  const drivers = Object.entries(driverMap).sort(function(a,b){return b[1].count-a[1].count;}).slice(0,10)
     .map(function(entry){
       const name=entry[0], d=entry[1];
       const pct = aiTotal ? Math.round(d.count/aiTotal*100) : 0;
@@ -1687,7 +1750,7 @@ function renderAI(wp) {
   // Agents table
   const agEl = document.getElementById('ai-agents-table');
   if (agEl) {
-    const agData = Object.entries(agentsReceived).sort((a,b)=>b[1].count-a[1].count);
+    const agData = Object.entries(agentsReceived).sort((a,b)=>b[1].count-a[1].count).slice(0,10);
     if (!agData.length) { agEl.innerHTML='<div class="empty">No escalated calls</div>'; }
     else agEl.innerHTML='<table><thead><tr><th data-sort="name">Agent</th><th data-sort="count" class="num">AI Escalations</th><th>Channels</th></tr></thead><tbody>'+
       agData.map(([a,d])=>'<tr><td>'+a+'</td><td class="num">'+d.count+'</td><td>'+[...d.channels].join(', ')+'</td></tr>').join('')+
@@ -1716,7 +1779,7 @@ function renderAI(wp) {
       else if (status === 'Closed' && sub) reasMap[key].resolved++;
       else reasMap[key].open++;
     });
-    const rData = Object.entries(reasMap).sort(function(a,b){return b[1].total-a[1].total;}).slice(0,30);
+    const rData = Object.entries(reasMap).sort(function(a,b){return b[1].total-a[1].total;}).slice(0,10);
     const reasRows = rData.map(function(entry){
       return {driver:entry[0], total:entry[1].total, resolved:entry[1].resolved, escalated:entry[1].escalated, open:entry[1].open};
     });
@@ -1746,40 +1809,7 @@ function renderAI(wp) {
 
   // Open/In Progress tickets shown in Action Required dropdowns below
 
-  // No sub reason — use ticketGroups
-  const noSubEl = document.getElementById('ai-nosub-table');
-  if (noSubEl) {
-    const noSubTickets = [];
-    Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
-      const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
-      if (!aiRow) return;
-      if (String(aiRow['Sub Reason']||'').trim()) return;
-      noSubTickets.push({
-        tkt    : tkt,
-        reason : String(aiRow['Reason']||'—'),
-        status : String(aiRow['Status']||''),
-        date   : String(aiRow['Interaction created date']||''),
-        lot    : String(aiRow['Lot Name']||''),
-      });
-    });
-    if (!noSubTickets.length) {
-      noSubEl.innerHTML='<div class="empty" style="color:var(--green)">All AI tickets have sub reasons ✓</div>';
-    } else {
-      noSubEl.innerHTML='<table><thead><tr>'+
-        '<th>Ticket ID</th><th>Reason</th><th>Lot</th><th>Status</th><th>Date</th>'+
-        '</tr></thead><tbody>'+
-        noSubTickets.map(function(r){
-          return '<tr>'+
-            '<td>'+r.tkt+'</td>'+
-            '<td>'+r.reason+'</td>'+
-            '<td style="font-size:11px">'+r.lot+'</td>'+
-            '<td>'+r.status+'</td>'+
-            '<td>'+r.date+'</td>'+
-          '</tr>';
-        }).join('')+
-        '</tbody></table>';
-    }
-  }
+  // No sub reason — shown in Action Required dropdown + download
 
   // ── ACTION REQUIRED SECTION ──────────────────────────────────────
   const actEl = document.getElementById('ai-action-required');
@@ -1986,11 +2016,11 @@ function renderQueue(cc, ag) {
       '<th data-sort="offered" class="num">Offered</th>'+
       '<th data-sort="answered" class="num">Answered</th>'+
       '<th data-sort="abandoned" class="num">Abandoned</th>'+
-      '<th class="num">Abn%</th>'+
-      '<th class="num">ARR%</th>'+
-      '<th class="num">AHT</th>'+
-      '<th class="num">Avg Wait</th>'+
-      '<th class="num">% Share</th>'+
+      '<th data-sort="abnPct" class="num">Abn%</th>'+
+      '<th data-sort="arrPct" class="num">ARR%</th>'+
+      '<th data-sort="aht" class="num">AHT</th>'+
+      '<th data-sort="avgWait" class="num">Avg Wait</th>'+
+      '<th data-sort="share" class="num">% Share</th>'+
       '</tr></thead><tbody id="q-perf-body"></tbody>'+
       '<tfoot><tr class="total-row"><td colspan="3">Total</td>'+
       '<td class="num">'+total_offered.toLocaleString()+'</td>'+
@@ -1999,74 +2029,219 @@ function renderQueue(cc, ag) {
       '<td class="num">'+pct(qData.reduce((s,r)=>s+r.abandoned,0),total_offered)+'%</td>'+
       '<td colspan="4"></td></tr></tfoot></table>';
 
+    // Pre-compute sortable fields
+    const qDataSortable = qData.map(function(r) {
+      const ahtS  = r.ansCount ? Math.round(r.talkSum/r.ansCount) : 0;
+      const waitS = r.ansCount ? Math.round(r.waitSum/r.ansCount) : 0;
+      const abnPct = r.offered ? pct(r.abandoned,r.offered) : 0;
+      const arrRows = cc.filter(function(x){return String(x['Call Center Name']||'').trim()===r.q && String(x['Call Result']||'')==='Abandoned' && (x._wait||0)>=30;});
+      const arrP   = r.offered ? pct(arrRows.length,r.offered) : 0;
+      const share  = total_offered ? pct(r.offered,total_offered) : 0;
+      return Object.assign({}, r, {aht:ahtS, avgWait:waitS, abnPct:abnPct, arrPct:arrP, share:share});
+    });
+
     function renderQRows(data) {
       const tbody = document.getElementById('q-perf-body');
       if (!tbody) return;
-      tbody.innerHTML = data.map(r=>{
-        const ahtS = r.ansCount ? Math.round(r.talkSum/r.ansCount) : 0;
-        const waitS= r.ansCount ? Math.round(r.waitSum/r.ansCount) : 0;
-        const abnPct= r.offered ? pct(r.abandoned,r.offered) : 0;
-        const arrRows = cc.filter(x=>String(x['Call Center Name']||'').trim()===r.q && String(x['Call Result']||'')==='Abandoned' && (x._wait||0)>=30);
-        const arrP = r.offered ? pct(arrRows.length,r.offered) : 0;
+      tbody.innerHTML = data.map(function(r) {
         return '<tr>'+
           '<td>'+r.q+'</td><td>'+r.lang+'</td><td>'+r.vert+'</td>'+
           '<td class="num">'+r.offered.toLocaleString()+'</td>'+
           '<td class="num">'+r.answered.toLocaleString()+'</td>'+
           '<td class="num">'+r.abandoned.toLocaleString()+'</td>'+
-          '<td class="num"><span class="bx '+(abnPct>10?'br':abnPct>5?'ba':'bg')+'">'+abnPct+'%</span></td>'+
-          '<td class="num"><span class="bx '+(arrP>5?'br':arrP>2?'ba':'bg')+'">'+arrP+'%</span></td>'+
-          '<td class="num">'+ahtBadge(ahtS)+'</td>'+
-          '<td class="num">'+secToMmss(waitS)+'</td>'+
-          '<td class="num">'+(total_offered?pct(r.offered,total_offered):0)+'%</td>'+
+          '<td class="num"><span class="bx '+(r.abnPct>10?'br':r.abnPct>5?'ba':'bg')+'">'+r.abnPct+'%</span></td>'+
+          '<td class="num"><span class="bx '+(r.arrPct>5?'br':r.arrPct>2?'ba':'bg')+'">'+r.arrPct+'%</span></td>'+
+          '<td class="num">'+ahtBadge(r.aht)+'</td>'+
+          '<td class="num">'+secToMmss(r.avgWait)+'</td>'+
+          '<td class="num">'+r.share+'%</td>'+
         '</tr>';
       }).join('');
     }
-    renderQRows(qData);
-    sortableTable('q-perf-tbl', qData, renderQRows);
+    renderQRows(qDataSortable);
+    sortableTable('q-perf-tbl', qDataSortable, renderQRows);
   }
 
-  // Abandon buckets
-  const buckets = [{label:'0–30s',min:0,max:30},{label:'31–60s',min:30,max:60},{label:'61–120s',min:60,max:120},{label:'121–300s',min:120,max:300},{label:'>300s',min:300,max:Infinity}];
-  const bData = buckets.map(b=>({...b,count:abandoned.filter(r=>(r._wait||0)>=b.min&&(r._wait||0)<b.max).length}));
+  // Abandon buckets — clickable to expand individual calls
+  const buckets = [
+    {label:'0–30s',  min:0,   max:30},
+    {label:'31–60s', min:30,  max:60},
+    {label:'61–120s',min:60,  max:120},
+    {label:'121–300s',min:120,max:300},
+    {label:'>300s',       min:300, max:Infinity}
+  ];
+
   const bEl = document.getElementById('q-buckets');
   if (bEl) {
-    bEl.innerHTML = '<table><thead><tr><th>Wait Time</th><th class="num">Count</th><th class="num">% of Abandoned</th></tr></thead><tbody>'+
-      bData.map(b=>'<tr><td>'+b.label+'</td><td class="num">'+b.count+'</td><td class="num">'+pct(b.count,abandoned.length)+'%</td></tr>').join('')+
-      '</tbody></table>';
+    let bHtml = '<table><thead><tr>'+
+      '<th>Wait Time</th><th class="num">Count</th><th class="num">% of Abandoned</th><th></th>'+
+      '</tr></thead><tbody>';
+
+    buckets.forEach(function(b, bi) {
+      const rows = abandoned.filter(function(r){ return (r._wait||0)>=b.min && (r._wait||0)<b.max; });
+      const cnt  = rows.length;
+      const pctV = pct(cnt, abandoned.length);
+      const ddId = 'q-bkt-dd-'+bi;
+
+      bHtml += '<tr style="cursor:pointer" data-ddtarget="'+ddId+'" class="q-bkt-row">'+
+        '<td>'+b.label+'</td>'+
+        '<td class="num" style="font-weight:600">'+cnt+'</td>'+
+        '<td class="num">'+pctV+'%</td>'+
+        '<td style="color:var(--muted);font-size:11px">'+(cnt>0?'▼ expand':'')+'</td>'+
+      '</tr>';
+
+      if (cnt > 0) {
+        const detailRows = rows.map(function(r){
+          return '<tr style="background:#faf9f7">'+
+            '<td style="padding-left:24px;font-size:11px;color:var(--muted)">'+String(r['Call Center Name']||'')+'</td>'+
+            '<td class="num" style="font-size:11px">'+secToMmss(r._wait||0)+'</td>'+
+            '<td class="num" style="font-size:11px">'+String(r['Call Start Time']||'')+'</td>'+
+            '<td style="font-size:11px;color:var(--muted)">'+String(r['Callers Number']||'')+'</td>'+
+          '</tr>';
+        }).join('');
+        bHtml += '<tr id="'+ddId+'" style="display:none">'+
+          '<td colspan="4" style="padding:0">'+
+            '<table style="width:100%;border-top:1px solid var(--border)">'+
+            '<thead><tr>'+
+            '<th style="padding-left:24px">Queue</th>'+
+            '<th class="num">Wait</th>'+
+            '<th class="num">Time</th>'+
+            '<th>Caller</th>'+
+            '</tr></thead><tbody>'+detailRows+'</tbody></table>'+
+          '</td>'+
+        '</tr>';
+      }
+    });
+
+    bHtml += '</tbody></table>';
+    bEl.innerHTML = bHtml;
+
+    // Attach click handlers
+    bEl.querySelectorAll('.q-bkt-row').forEach(function(row) {
+      row.addEventListener('click', function() {
+        const ddId = row.getAttribute('data-ddtarget');
+        const dd = document.getElementById(ddId);
+        if (dd) {
+          const open = dd.style.display !== 'none';
+          dd.style.display = open ? 'none' : 'table-row';
+          row.querySelector('td:last-child').textContent = open ? '▼ expand' : '▲ collapse';
+        }
+      });
+    });
   }
 
-  // Abandon distribution chart
-  mkBar('q-abn-chart', bData.map(b=>b.label), [{data:bData.map(b=>b.count),backgroundColor:['#4ade80','#fbbf24','#f97316','#f87171','#dc2626'],borderRadius:4}], {});
+  // Abandon distribution chart — rebuild counts from abandoned rows
+  const bDataChart = [
+    {label:'0–30s',   count: abandoned.filter(function(r){return (r._wait||0)<30;}).length},
+    {label:'31–60s',  count: abandoned.filter(function(r){return (r._wait||0)>=30&&(r._wait||0)<60;}).length},
+    {label:'61–120s', count: abandoned.filter(function(r){return (r._wait||0)>=60&&(r._wait||0)<120;}).length},
+    {label:'121–300s',count: abandoned.filter(function(r){return (r._wait||0)>=120&&(r._wait||0)<300;}).length},
+    {label:'>300s',        count: abandoned.filter(function(r){return (r._wait||0)>=300;}).length},
+  ];
+  mkBar('q-abn-chart',
+    bDataChart.map(function(b){return b.label;}),
+    [{data:bDataChart.map(function(b){return b.count;}),
+      backgroundColor:['#4ade80','#fbbf24','#f97316','#f87171','#dc2626'],borderRadius:4}], {});
 
   // Peak abandonment hours
   const hourAbn = {};
-  abandoned.forEach(r=>{ if(r._hour!==null){hourAbn[r._hour]=(hourAbn[r._hour]||0)+1;} });
+  abandoned.forEach(function(r){ if(r._hour!==null) hourAbn[r._hour]=(hourAbn[r._hour]||0)+1; });
   const peakEl = document.getElementById('q-peak-hours');
   if (peakEl) {
-    if (!Object.keys(hourAbn).length) { peakEl.innerHTML='<div class="empty">No abandoned calls in this period</div>'; }
-    else {
-      const sorted = Object.entries(hourAbn).sort((a,b)=>b[1]-a[1]).slice(0,5);
-      peakEl.innerHTML='<div class="kpi-row">'+sorted.map(([h,c])=>mkKPI(h.toString().padStart(2,'0')+':00',c,'abandoned calls','red')).join('')+'</div>';
+    if (!Object.keys(hourAbn).length) {
+      peakEl.innerHTML='<div class="empty">No abandoned calls in this period</div>';
+    } else {
+      const peakSorted = Object.entries(hourAbn).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+      peakEl.innerHTML='<div class="kpi-row">'+
+        peakSorted.map(function(e){
+          return mkKPI(String(e[0]).padStart(2,'0')+':00', e[1], 'abandoned calls', 'red');
+        }).join('')+'</div>';
     }
   }
 
-  // Bounced calls
-  const bounced = cc.filter(r=>(parseInt(r['Number of Bounces']||0))>0);
+  // Bounced calls — clickable count to show queue + timestamps
+  const bounced = cc.filter(function(r){ return parseInt(r['Number of Bounces']||0) > 0; });
   const bncEl = document.getElementById('q-bounced-table');
   if (bncEl) {
-    if (!bounced.length) { bncEl.innerHTML='<div class="empty">No bounced calls</div>'; }
-    else {
+    if (!bounced.length) {
+      bncEl.innerHTML = '<div class="empty">No bounced calls</div>';
+    } else {
       const agBnc = {};
-      bounced.forEach(r=>{
-        const a=String(r['Agent Name']||'Unknown');
-        if(!agBnc[a])agBnc[a]={agent:a,count:0,maxBounce:0};
+      bounced.forEach(function(r) {
+        const a = String(r['Agent Name']||'Unknown');
+        if (!agBnc[a]) agBnc[a] = {agent:a, count:0, maxBounce:0, calls:[]};
         agBnc[a].count++;
-        agBnc[a].maxBounce=Math.max(agBnc[a].maxBounce,parseInt(r['Number of Bounces']||0));
+        agBnc[a].maxBounce = Math.max(agBnc[a].maxBounce, parseInt(r['Number of Bounces']||0));
+        agBnc[a].calls.push({
+          queue  : String(r['Call Center Name']||''),
+          time   : String(r['Call Start Time']||''),
+          bounces: parseInt(r['Number of Bounces']||0),
+          wait   : secToMmss(r._wait||0),
+        });
       });
-      const bData2=Object.values(agBnc).sort((a,b)=>b.count-a.count);
-      bncEl.innerHTML='<table><thead><tr><th>Agent</th><th class="num">Bounced Calls</th><th class="num">Max Bounces</th><th>Action</th></tr></thead><tbody>'+
-        bData2.map(r=>'<tr><td>'+r.agent+'</td><td class="num"><span class="bx br">'+r.count+'</span></td><td class="num">'+r.maxBounce+'</td><td><span style="font-size:11px;color:var(--amber)">⚠ Needs explanation</span></td></tr>').join('')+
-        '</tbody></table>';
+
+      const bData2 = Object.values(agBnc).sort(function(a,b){ return b.count-a.count; });
+      let bHtml = '<table id="q-bnc-tbl"><thead><tr>'+
+        '<th data-sort="agent">Agent</th>'+
+        '<th data-sort="count" class="num">Bounced Calls</th>'+
+        '<th data-sort="maxBounce" class="num">Max Bounces</th>'+
+        '<th>Action</th>'+
+        '</tr></thead><tbody>';
+
+      bData2.forEach(function(r, ri) {
+        const ddId = 'q-bnc-dd-' + ri;
+        bHtml += '<tr data-ddtarget="'+ddId+'" class="q-bnc-row" style="cursor:pointer">'+
+          '<td>'+r.agent+'</td>'+
+          '<td class="num"><span class="bx br" style="cursor:pointer">'+r.count+'</span></td>'+
+          '<td class="num">'+r.maxBounce+'</td>'+
+          '<td><span style="font-size:11px;color:var(--amber)">⚠ Needs explanation ▼</span></td>'+
+        '</tr>';
+
+        // Detail rows
+        const detailRows = r.calls.map(function(c){
+          return '<tr style="background:#faf9f7">'+
+            '<td style="padding-left:24px;font-size:11px;color:var(--muted)">'+c.queue+'</td>'+
+            '<td class="num" style="font-size:11px">'+c.time+'</td>'+
+            '<td class="num" style="font-size:11px"><span class="bx br">'+c.bounces+'x</span></td>'+
+            '<td style="font-size:11px;color:var(--muted)">Wait: '+c.wait+'</td>'+
+          '</tr>';
+        }).join('');
+
+        bHtml += '<tr id="'+ddId+'" style="display:none">'+
+          '<td colspan="4" style="padding:0">'+
+            '<table style="width:100%;border-top:1px solid var(--border)">'+
+            '<thead><tr>'+
+            '<th style="padding-left:24px">Queue</th>'+
+            '<th class="num">Timestamp</th>'+
+            '<th class="num">Bounces</th>'+
+            '<th>Wait Time</th>'+
+            '</tr></thead><tbody>'+detailRows+'</tbody></table>'+
+          '</td>'+
+        '</tr>';
+      });
+
+      bHtml += '</tbody></table>';
+      bncEl.innerHTML = bHtml;
+
+      // Click handlers
+      bncEl.querySelectorAll('.q-bnc-row').forEach(function(row) {
+        row.addEventListener('click', function() {
+          const dd = document.getElementById(row.getAttribute('data-ddtarget'));
+          if (dd) {
+            const open = dd.style.display !== 'none';
+            dd.style.display = open ? 'none' : 'table-row';
+            const act = row.querySelector('td:last-child span');
+            if (act) act.textContent = open ? '⚠ Needs explanation ▼' : '⚠ Needs explanation ▲';
+          }
+        });
+      });
+
+      sortableTable('q-bnc-tbl', bData2, function(data) {
+        // Re-render without detail rows when sorting
+        const tbody = bncEl.querySelector('tbody');
+        if (!tbody) return;
+        // Just re-sort visual order — rebuild
+        renderQueue(cc, ag);
+      });
     }
   }
 }
@@ -2076,58 +2251,98 @@ function renderDrivers(wp) {
   const vFilter = (document.getElementById('dr-vertical')||{}).value||'';
   const cFilter = (document.getElementById('dr-channel')||{}).value||'';
 
+  const EXCLUDE_DRIVERS = new Set(['Spam Email','Other Email','Acknowledgment Email','Invalid/Expired Promocode Email Received']);
   let rows = wp.filter(r=>['Call','Email','Chat'].includes(String(r['Interaction']||'')));
   if (vFilter) rows = rows.filter(r=>r._vertical===vFilter);
   if (cFilter) rows = rows.filter(r=>String(r['Interaction']||'')===cFilter);
+  rows = rows.filter(r=>!EXCLUDE_DRIVERS.has(String(r['Reason']||'').trim()));
 
   const title = (vFilter||'All Verticals')+' · '+(cFilter||'All Channels')+' — Top Drivers';
   const tEl=document.getElementById('dr-title'); if(tEl)tEl.textContent=title;
   const cEl=document.getElementById('dr-chart-title'); if(cEl)cEl.textContent=title;
 
-  const dMap={};
-  rows.forEach(r=>{
-    const d=String(r['Reason']||'').trim(); if(!d)return;
-    if(!dMap[d])dMap[d]={count:0,lots:{}};
+  const SUBSCRIPTION_REASONS = new Set(['Subscription Cancellation','Subscription Enquiry','Subscription Issue','Way+ Cancellation','Subscription Renewal']);
+  const dMap = {};
+  rows.forEach(function(r) {
+    const d = String(r['Reason']||'').trim(); if (!d) return;
+    if (!dMap[d]) dMap[d] = {count:0, lots:{}, plans:{}};
     dMap[d].count++;
-    const lot=String(r['Lot Name']||'').trim();
-    if(lot)dMap[d].lots[lot]=(dMap[d].lots[lot]||0)+1;
+    const lot = String(r['Lot Name']||'').trim();
+    if (lot) dMap[d].lots[lot] = (dMap[d].lots[lot]||0)+1;
+    // Only collect SubVertical plan names for subscription-type reasons
+    if (SUBSCRIPTION_REASONS.has(d)) {
+      var sv = String(r['SubVertical']||'').trim()
+        .replace(/Way[+]\s*/gi,'').replace(/Way\s+[+]\s*/gi,'').trim();
+      if (sv && sv !== 'General') dMap[d].plans[sv] = (dMap[d].plans[sv]||0)+1;
+    }
   });
-  const drivers=Object.entries(dMap).sort((a,b)=>b[1].count-a[1].count).slice(0,10)
-    .map(([name,d])=>({name,count:d.count,lots:Object.entries(d.lots).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([n,c])=>({name:n,count:c}))}));
+  const drivers = Object.entries(dMap).sort(function(a,b){return b[1].count-a[1].count;}).slice(0,10)
+    .map(function(entry) {
+      var name=entry[0], d=entry[1];
+      var lots = Object.entries(d.lots).sort(function(a,b){return b[1]-a[1];}).slice(0,5).map(function(e){return {name:e[0],count:e[1]};});
+      var plans = Object.entries(d.plans||{}).sort(function(a,b){return b[1]-a[1];}).map(function(e){return {name:e[0],count:e[1]};});
+      return {name:name, count:d.count, lots:lots, plans:plans};
+    });
+  buildDriverAccordionWithPlans('dr-list', drivers, COLORS);
 
-  buildDriverAccordion('dr-list', drivers, COLORS);
 
   // Bar chart
   const top5=drivers.slice(0,5);
   mkBar('dr-bar-chart',top5.map(d=>d.name),[{data:top5.map(d=>d.count),backgroundColor:COLORS.slice(0,5),borderRadius:4}],{h:true,yt:{font:{size:10}}});
 
   // Lot issue summary by vertical
-  const verticals=['Airport Parking','City Parking','WAY+','Car Wash','Insurance','R&M','General'];
-  const lotSumEl=document.getElementById('dr-lot-summary');
-  if(lotSumEl){
-    let html2='';
-    verticals.forEach(v=>{
-      const vRows=wp.filter(r=>r._vertical===v&&r['Lot Name']);
-      if(!vRows.length)return;
-      const lotMap={};
-      vRows.forEach(r=>{
-        const lot=String(r['Lot Name']||'').trim(); if(!lot)return;
-        if(!lotMap[lot])lotMap[lot]={count:0,reasons:{}};
-        lotMap[lot].count++;
-        const rea=String(r['Reason']||''); if(rea)lotMap[lot].reasons[rea]=(lotMap[lot].reasons[rea]||0)+1;
+  // Lot/Plan Summary by vertical
+  const subVerticals = ['Airport Parking','City Parking','WAY+','Car Wash','R&M'];
+  const lotSumEl = document.getElementById('dr-lot-summary');
+  if (lotSumEl) {
+    let html2 = '';
+    subVerticals.forEach(function(v) {
+      const vRows = wp.filter(function(r){ return r._vertical===v && (r['Lot Name']||r['SubVertical']); });
+      if (!vRows.length) return;
+
+      // For WAY+ / subscriptions — group by SubVertical (plan name)
+      const isSubBased = (v === 'WAY+');
+      const groupMap = {};
+
+      vRows.forEach(function(r) {
+        let key;
+        if (isSubBased) {
+          // Use SubVertical plan name, strip "Way+" prefix
+          key = String(r['SubVertical']||'').trim().replace(/Way\+\s*/gi,'').replace(/Way\s+\+\s*/gi,'').trim() || 'Unknown';
+        } else {
+          key = String(r['Lot Name']||'').trim();
+        }
+        if (!key) return;
+        if (!groupMap[key]) groupMap[key] = {count:0, reasons:{}};
+        groupMap[key].count++;
+        const rea = String(r['Reason']||'');
+        if (rea) groupMap[key].reasons[rea] = (groupMap[key].reasons[rea]||0)+1;
       });
-      const sorted=Object.entries(lotMap).sort((a,b)=>b[1].count-a[1].count).slice(0,5);
-      if(!sorted.length)return;
-      const max=sorted[0][1].count;
-      html2+='<div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">'+v+' — Lot Issue Summary</span></div>'+
-        '<table><thead><tr><th>#</th><th>Lot Name</th><th class="num">Contacts</th><th>Top Issue</th></tr></thead><tbody>'+
-        sorted.map(([lot,d],i)=>{
-          const topIssue=Object.entries(d.reasons).sort((a,b)=>b[1]-a[1])[0];
-          return '<tr><td>'+(i+1)+'</td><td>'+lot+'</td><td class="num">'+d.count+'</td><td style="font-size:11px;color:var(--muted)">'+(topIssue?topIssue[0]:'—')+'</td></tr>';
-        }).join('')+
+
+      const sorted = Object.entries(groupMap).sort(function(a,b){return b[1].count-a[1].count;}).slice(0,5);
+      if (!sorted.length) return;
+
+      const colLabel = isSubBased ? 'Plan / Subscription' : 'Lot Name';
+      const sectionTitle = isSubBased ? v + ' — Subscription Summary' : v === 'R&M' ? 'R&M Shops Summary' : v + ' — Summary';
+
+      html2 += '<div class="tbl-wrap mb16">' +
+        '<div class="tbl-hdr"><span class="tbl-title">' + sectionTitle + '</span></div>' +
+        '<table><thead><tr>' +
+        '<th>#</th><th>' + colLabel + '</th><th class="num">Contacts</th><th>Top Issue</th>' +
+        '</tr></thead><tbody>' +
+        sorted.map(function(entry, i) {
+          const key=entry[0], d=entry[1];
+          const topIssue = Object.entries(d.reasons).sort(function(a,b){return b[1]-a[1];})[0];
+          return '<tr>' +
+            '<td>'+(i+1)+'</td>' +
+            '<td>'+key+'</td>' +
+            '<td class="num">'+d.count+'</td>' +
+            '<td style="font-size:11px;color:var(--muted)">'+(topIssue?topIssue[0]:'—')+'</td>' +
+          '</tr>';
+        }).join('') +
         '</tbody></table></div>';
     });
-    lotSumEl.innerHTML=html2||'<div class="empty">No lot data</div>';
+    lotSumEl.innerHTML = html2 || '<div class="empty">No data</div>';
   }
 }
 
@@ -2182,27 +2397,46 @@ function renderDisputes(wp) {
       '</tbody></table>';
   }
 
-  // By lot per vertical
-  const verticals=['Airport Parking','City Parking','Car Wash','WAY+','Insurance','R&M'];
-  let lotHtml='';
-  verticals.forEach(v=>{
-    const vDis=dis.filter(r=>r._vertical===v&&r['Lot Name']);
-    if(!vDis.length)return;
-    const lotMap={};
-    vDis.forEach(r=>{
-      const lot=String(r['Lot Name']||'').trim(); if(!lot)return;
-      if(!lotMap[lot])lotMap[lot]={count:0,amount:0};
-      lotMap[lot].count++;lotMap[lot].amount+=parseFloat(r['Amount']||0);
+  // Top 10 contributors — Airport Parking, City Parking, Car Wash only
+  const disVerticals = ['Airport Parking','City Parking','Car Wash'];
+  let lotHtml = '';
+  disVerticals.forEach(function(v) {
+    const vDis = dis.filter(function(r){ return r._vertical===v && r['Lot Name']; });
+    if (!vDis.length) return;
+    const lotMap = {};
+    vDis.forEach(function(r) {
+      const lot = String(r['Lot Name']||'').trim(); if (!lot) return;
+      if (!lotMap[lot]) lotMap[lot] = {count:0, amount:0};
+      lotMap[lot].count++;
+      lotMap[lot].amount += parseFloat(r['Amount']||0);
     });
-    const sorted=Object.entries(lotMap).sort((a,b)=>b[1].count-a[1].count);
-    const max=sorted[0]?sorted[0][1].count:1;
-    lotHtml+='<div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">'+v+' — Disputes by Lot</span></div>'+
-      '<table><thead><tr><th>Lot Name</th><th class="num">Count</th><th class="num">Amount</th></tr></thead><tbody>'+
-      sorted.map(([lot,d])=>'<tr><td>'+lot+'</td><td class="num">'+d.count+'</td><td class="num">'+fmt$(d.amount)+'</td></tr>').join('')+
+    const sorted = Object.entries(lotMap).sort(function(a,b){return b[1].count-a[1].count;}).slice(0,10);
+    if (!sorted.length) return;
+    const colLabel = v === 'Car Wash' ? 'Car Wash Centre' : v === 'WAY+' ? 'Plan / Subscription' : 'Lot Name';
+    const total = vDis.length;
+    lotHtml += '<div class="tbl-wrap mb16">' +
+      '<div class="tbl-hdr"><span class="tbl-title">'+v+' — Top 10 Dispute Contributors</span></div>' +
+      '<table><thead><tr>' +
+        '<th>#</th><th>'+colLabel+'</th>' +
+        '<th class="num">Disputes</th>' +
+        '<th class="num">Amount</th>' +
+        '<th class="num">% Share</th>' +
+      '</tr></thead><tbody>' +
+      sorted.map(function(entry, i) {
+        var lot=entry[0], d=entry[1];
+        var pctV = total ? Math.round(d.count/total*100) : 0;
+        return '<tr>' +
+          '<td style="color:var(--muted);font-size:11px">'+(i+1)+'</td>' +
+          '<td>'+lot+'</td>' +
+          '<td class="num" style="font-weight:600">'+d.count+'</td>' +
+          '<td class="num">'+fmt$(d.amount)+'</td>' +
+          '<td class="num"><span class="bx '+(pctV>30?'br':pctV>15?'ba':'bg')+'">'+pctV+'%</span></td>' +
+        '</tr>';
+      }).join('') +
       '</tbody></table></div>';
   });
-  const lotEl=document.getElementById('dis-by-lot');
-  if(lotEl)lotEl.innerHTML=lotHtml||'<div class="empty">No lot data</div>';
+  const lotEl = document.getElementById('dis-by-lot');
+  if (lotEl) lotEl.innerHTML = lotHtml || '<div class="empty">No lot data</div>';
 }
 
 // ── TAB 6: REFUNDS ────────────────────────────────────────────────
@@ -2315,10 +2549,45 @@ function openRefDrill(type) {
 
 // ── TAB 7: L2 ESCALATIONS ─────────────────────────────────────────
 function renderEscalations(wp) {
-  const escTypes=['Escalation Handled by TL','Escalation handled by Escalation Team','Escalation handled by Ops Team','Escalation handled by Manager'];
-  const l2Agents=new Set([...TEAM.L2,...TEAM.TEAM_LEADS]);
-  const escs=wp.filter(r=>escTypes.includes(String(r['Interaction']||''))||l2Agents.has(String(r['Agent Name']||'')));
-  const frontlineTotal=wp.filter(r=>['Call','Email','Chat'].includes(String(r['Interaction']||''))&&TEAM.FRONTLINE.includes(String(r['Agent Name']||''))).length;
+  // L2 = tickets where TKT_IssueReason='Escalated' OR escalation interaction type
+  //       AND Jithin S or Shiju Salam has an interaction on the same ticket
+  const L2_AGENTS    = new Set(['Jithin S','Shiju Salam']);
+  const ESC_INT_TYPES = new Set(['Escalation handled by Escalation Team','Escalation handled by Ops Team']);
+
+  // Build ticket groups via fill-down
+  const escTicketGroups = {};
+  let escCurTkt = null;
+  wp.forEach(function(r) {
+    const tkt = String(r['Ticket ID']||'').trim();
+    if (tkt) escCurTkt = tkt;
+    if (escCurTkt) {
+      if (!escTicketGroups[escCurTkt]) escTicketGroups[escCurTkt] = [];
+      escTicketGroups[escCurTkt].push(r);
+    }
+  });
+
+  // Find true L2 tickets
+  const l2TicketIds = new Set();
+  Object.entries(escTicketGroups).forEach(function([tkt, intrs]) {
+    const hasEsc = intrs.some(function(r){
+      return String(r['TKT_IssueReason']||'').trim() === 'Escalated' ||
+             ESC_INT_TYPES.has(String(r['Interaction']||'').trim());
+    });
+    const hasL2 = intrs.some(function(r){ return L2_AGENTS.has(String(r['Agent Name']||'').trim()); });
+    if (hasEsc && hasL2) l2TicketIds.add(tkt);
+  });
+
+  // Get all rows for L2 tickets (use the first/main row per ticket)
+  const escs = [];
+  l2TicketIds.forEach(function(tkt) {
+    const intrs = escTicketGroups[tkt];
+    if (!intrs) return;
+    // Use the row with the L2 agent interaction as the representative
+    const l2Row = intrs.find(function(r){ return L2_AGENTS.has(String(r['Agent Name']||'').trim()); });
+    if (l2Row) escs.push(l2Row);
+  });
+
+  const frontlineTotal = wp.filter(function(r){ return ['Call','Email','Chat'].includes(String(r['Interaction']||'')); }).length;
   const escRate=frontlineTotal?Math.round(escs.length/frontlineTotal*100*10)/10:0;
   const closed=escs.filter(r=>String(r['Status']||'')==='Closed').length;
   const open=escs.length-closed;
@@ -2623,25 +2892,24 @@ function renderTimePatterns(wp, cc, ag) {
     const gapData=[];
     hours.forEach(h=>{
       const callsThisHour=cc.filter(r=>r._hour===h&&String(r['Call Result']||'')==='Answered').length;
-      const emailsThisHour=wp.filter(r=>r._hour===h&&r['Interaction']==='Email').length;
       const chatsThisHour=wp.filter(r=>r._hour===h&&r['Interaction']==='Chat').length;
-      const totalHandle=callsThisHour*SLA.CALL_HANDLE_SEC+emailsThisHour*SLA.EMAIL_HANDLE_SEC+chatsThisHour*SLA.CHAT_HANDLE_SEC;
+      const totalHandle=callsThisHour*SLA.CALL_HANDLE_SEC+chatsThisHour*SLA.CHAT_HANDLE_SEC;
       const agentsNeeded=Math.ceil(totalHandle/(3600*SLA.OCCUPANCY_TARGET));
       const agentsActive=agActive[h]||0;
       const gap=agentsNeeded-agentsActive;
-      if(gap>0)gapData.push({hour:hLabels[h],calls:callsThisHour,emails:emailsThisHour,chats:chatsThisHour,needed:agentsNeeded,active:agentsActive,gap});
+      if(gap>0)gapData.push({hour:hLabels[h],calls:callsThisHour,chats:chatsThisHour,needed:agentsNeeded,active:agentsActive,gap});
     });
     if(!gapData.length){gapEl.innerHTML='<div class="empty" style="color:var(--green)">✓ No staffing gaps detected</div>';}
     else{
-      gapEl.innerHTML='<table><thead><tr><th>Hour</th><th class="num">Calls</th><th class="num">Emails</th><th class="num">Chats</th><th class="num">Agents Needed</th><th class="num">Agents Active</th><th class="num">Gap</th></tr></thead><tbody>'+
-        gapData.map(r=>'<tr><td>'+r.hour+'</td><td class="num">'+r.calls+'</td><td class="num">'+r.emails+'</td><td class="num">'+r.chats+'</td><td class="num">'+r.needed+'</td><td class="num">'+r.active+'</td><td class="num"><span class="bx br">+'+r.gap+' needed</span></td></tr>').join('')+
+      gapEl.innerHTML='<table><thead><tr><th>Hour</th><th class="num">Calls</th><th class="num">Chats</th><th class="num">Agents Needed</th><th class="num">Agents Active</th><th class="num">Gap</th></tr></thead><tbody>'+
+        gapData.map(function(r){return '<tr><td>'+r.hour+'</td><td class="num">'+r.calls+'</td><td class="num">'+r.chats+'</td><td class="num">'+r.needed+'</td><td class="num">'+r.active+'</td><td class="num"><span class="bx br">+'+r.gap+' needed</span></td></tr>';}).join('')+
         '</tbody></table>';
     }
   }
 }
 
 // ── TAB 11: TL ACTIVITY ───────────────────────────────────────────
-function renderTLActivity(wp, cc) {
+function renderTLActivity(wp, cc, ag) {
   // Manager Queue
   const mgr=cc.filter(r=>String(r['Call Center Name']||'').trim()==='CS Manager Queue');
   const mgrAns=mgr.filter(r=>String(r['Call Result']||'')==='Answered');
@@ -2649,22 +2917,50 @@ function renderTLActivity(wp, cc) {
 
   const mgEl=document.getElementById('tl-mgr-queue');
   if(mgEl){
+    const mgrTransferred = mgr.filter(function(r){ return String(r['Call Result']||'')==='Transferred'; });
+
+    // Match transferred calls to agents via caller number + closest Internal call in AG
+    const agMap = {};
+    mgrTransferred.forEach(function(ccRow) {
+      const callerNum = String(ccRow['Callers Number']||'').replace(/\D/g,'');
+      const ccTime    = ccRow._dt ? ccRow._dt.getTime() : 0;
+      if (!callerNum) return;
+      // Find Internal call in AG with same caller number within 5 minutes
+      let bestMatch = null, bestDiff = Infinity;
+      ag.forEach(function(agRow) {
+        const agNum = String(agRow['Callers/Called Number']||'').replace(/\D/g,'');
+        if (!agNum || !agNum.includes(callerNum.slice(-7))) return;
+        const agTime = agRow._dt ? agRow._dt.getTime() : 0;
+        const diff   = Math.abs(agTime - ccTime);
+        if (diff < 300000 && diff < bestDiff) { // within 5 mins
+          bestDiff  = diff;
+          bestMatch = String(agRow['Agent Name']||'').trim();
+        }
+      });
+      if (bestMatch) {
+        const displayName = AG_NAME_MAP[bestMatch] || bestMatch;
+        agMap[displayName] = (agMap[displayName]||0)+1;
+      }
+    });
+
+    const totalAnswered = Object.values(agMap).reduce(function(s,v){return s+v;},0);
+    const sorted = Object.entries(agMap).sort(function(a,b){return b[1]-a[1];});
+
     mgEl.innerHTML='<div class="kpi-row">'+
-      mkKPI('Offered',mgr.length,'')+
-      mkKPI('Answered',mgrAns.length,'','green')+
-      mkKPI('Abandoned',mgrAbn.length,'',mgrAbn.length>0?'red':'green')+
+      mkKPI('Offered', mgr.length, '')+
+      mkKPI('Transferred', mgrTransferred.length, 'to TL/Manager', mgrTransferred.length>0?'amber':'green')+
+      mkKPI('Answered (mapped)', totalAnswered, 'via caller number match', totalAnswered>0?'green':'amber')+
+      mkKPI('Abandoned', mgrAbn.length, '', mgrAbn.length>0?'red':'green')+
     '</div>'+
-    (mgrAbn.length?'<div style="padding:8px 0;color:var(--red);font-size:12px;font-weight:600">⚠ '+mgrAbn.length+' calls abandoned in Manager Queue — needs investigation</div>':'')+
-    '<div class="card-title" style="margin-top:12px">Who answered Manager Queue calls</div>'+
-    (()=>{
-      const agMap={};
-      mgrAns.forEach(r=>{const a=String(r['Agent Name']||'Unknown');agMap[a]=(agMap[a]||0)+1;});
-      const sorted=Object.entries(agMap).sort((a,b)=>b[1]-a[1]);
-      if(!sorted.length) return '<div class="empty">No answered calls</div>';
-      return '<table><thead><tr><th>Agent</th><th>Role</th><th class="num">Calls Answered</th></tr></thead><tbody>'+
-        sorted.map(([a,c])=>'<tr><td>'+a+'</td><td style="font-size:11px;color:var(--muted)">'+(AGENT_ROLE[a]||'—')+'</td><td class="num fw600">'+c+'</td></tr>').join('')+
-        '</tbody></table>';
-    })();
+    (mgrAbn.length?'<div style="padding:8px 0;color:var(--red);font-size:12px;font-weight:600">⚠ '+mgrAbn.length+' calls abandoned in Manager Queue</div>':'')+
+    '<div class="card-title" style="margin-top:12px">Who answered Manager Queue calls (mapped from AG report)</div>'+
+    (sorted.length ?
+      '<table><thead><tr><th>Agent</th><th>Role</th><th class="num">Calls Handled</th></tr></thead><tbody>'+
+      sorted.map(function(e){
+        var a=e[0],c=e[1];
+        return '<tr><td>'+a+'</td><td style="font-size:11px;color:var(--muted)">'+(AGENT_ROLE[a]||'—')+'</td><td class="num fw600">'+c+'</td></tr>';
+      }).join('')+'</tbody></table>'
+      : '<div class="empty">No agent mapping found</div>');
   }
 
   // TL content — team sections
@@ -2919,7 +3215,7 @@ function buildProdTeam(elId,title,agents,ag,wp,agFCR,agEsc,agTickets,agIntsAll,s
     '<th data-sort="escPct" class="num">Esc%</th>'+
     '<th data-sort="fcr" class="num">FCR%</th>'+
     (showComplexity?'<th data-sort="complexity" class="num">Ints/Ticket</th>':'')+
-    '<th class="num">AHT</th>'+
+    '<th data-sort="aht" class="num">AHT ↕</th>'+
     '</tr></thead><tbody id="prod-'+elId+'-body"></tbody>'+
     '<tfoot><tr class="total-row"><td colspan="2">Total — '+agents.length+' agents</td>'+
     '<td class="num">'+rows.reduce((s,r)=>s+r.total,0).toLocaleString()+'</td>'+
@@ -3121,14 +3417,14 @@ function renderOverview(wp, cc, ag) {
 
     vtEl.innerHTML =
       '<table id="ov-vt"><thead><tr>' +
-      '<th data-sort="v">Vertical</th>' +
-      '<th data-sort="tickets" class="num">Tickets</th>' +
-      '<th data-sort="interactions" class="num">Interactions</th>' +
-      '<th data-sort="calls" class="num">Calls</th>' +
-      '<th data-sort="emails" class="num">Emails</th>' +
-      '<th data-sort="chats" class="num">Chats</th>' +
-      '<th data-sort="fcr" class="num">FCR</th>' +
-      '<th data-sort="escr" class="num">Esc%</th>' +
+      '<th data-sort="v" style="cursor:pointer">Vertical ↕</th>' +
+      '<th data-sort="tickets" class="num" style="cursor:pointer">Tickets ↕</th>' +
+      '<th data-sort="interactions" class="num" style="cursor:pointer">Interactions ↕</th>' +
+      '<th data-sort="calls" class="num" style="cursor:pointer">Calls ↕</th>' +
+      '<th data-sort="emails" class="num" style="cursor:pointer">Emails ↕</th>' +
+      '<th data-sort="chats" class="num" style="cursor:pointer">Chats ↕</th>' +
+      '<th data-sort="fcr" class="num" style="cursor:pointer">FCR ↕</th>' +
+      '<th data-sort="escr" class="num" style="cursor:pointer">Esc% ↕</th>' +
       '</tr></thead><tbody id="ov-vt-body"></tbody>' +
       '<tfoot><tr class="total-row">' +
       '<td>Total</td><td class="num">' + tot.tickets.toLocaleString() + '</td>' +
