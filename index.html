@@ -381,6 +381,7 @@ select.filter-dd {
 
     <div class="sec" id="t2">
       <div class="kpi-row" id="ai-kpi"></div>
+      <div class="kpi-row" id="ai-kpi2" style="flex-wrap:wrap;"></div>
       <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">AI Call Drivers</span></div><div id="ai-drivers"></div></div>
       <div class="chart-row two mb16">
         <div class="card"><div class="card-title" style="color:var(--green)">✓ Top Lots — AI Resolved</div><div id="ai-lots-resolved"></div></div>
@@ -390,6 +391,7 @@ select.filter-dd {
       <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">AI Interactions by Reason &amp; Sub Reason</span></div><div id="ai-reasons-table"></div></div>
       <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title" style="color:var(--amber)">⚠ Open / In Progress AI Tickets</span></div><div id="ai-open-table"></div></div>
       <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title" style="color:var(--red)">⚠ AI Tickets — No Sub Reason</span></div><div id="ai-nosub-table"></div></div>
+      <div class="card mb16" id="ai-action-required" style="border-left:4px solid var(--red)"></div>
     </div>
 
     <div class="sec" id="t3">
@@ -1502,54 +1504,113 @@ function buildDriverAccordion(containerId, drivers, colorArr) {
 
 // ── TAB 2: DECAGON AI ─────────────────────────────────────────────
 function renderAI(wp) {
-  const aiRows = wp.filter(r => r['Interaction'] === 'AI-Agent Call' || String(r['Agent Name']||'').includes('ai-decagon'));
-
-  // Find tickets where AI was first then agent followed = escalated
-  const aiTickets = {};
-  wp.filter(r => r['Ticket ID']).forEach(r => {
-    const tid = String(r['Ticket ID']);
-    if (!aiTickets[tid]) aiTickets[tid] = [];
-    aiTickets[tid].push(r);
+  // ── Fill down Ticket ID (blank rows belong to previous ticket) ──
+  // Group all WP rows by ticket using fill-down logic
+  const ticketGroups = {};
+  let curTkt = null;
+  wp.forEach(function(r) {
+    const tkt = String(r['Ticket ID']||'').trim();
+    if (tkt) curTkt = tkt;
+    if (curTkt) {
+      if (!ticketGroups[curTkt]) ticketGroups[curTkt] = [];
+      ticketGroups[curTkt].push(r);
+    }
   });
 
-  let aiTotal=0, aiAnswered=0, aiResolved=0, aiEscalated=0;
+  // Find AI tickets and classify them
   const escalatedTickets = new Set();
   const agentsReceived = {};
 
-  Object.entries(aiTickets).forEach(([tid, rows]) => {
-    const hasAI = rows.some(r => r['Interaction']==='AI-Agent Call');
+  let aiTotal=0, aiResolved=0, aiEscalated=0;
+  Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
+    const hasAI = intrs.some(function(r){ return r['Interaction']==='AI-Agent Call'; });
     if (!hasAI) return;
     aiTotal++;
-    const hasAgent = rows.some(r => ['Call','Email','Chat'].includes(r['Interaction']) && !String(r['Agent Name']||'').includes('ai-decagon'));
-    if (hasAgent) {
+    const humanIntrs = intrs.filter(function(r){
+      return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+             String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+    });
+    if (humanIntrs.length > 0) {
       aiEscalated++;
-      escalatedTickets.add(tid);
-      rows.filter(r => ['Call','Email','Chat'].includes(r['Interaction']) && !String(r['Agent Name']||'').includes('ai-decagon'))
-          .forEach(r => {
-            const a = String(r['Agent Name']||'');
-            if (!agentsReceived[a]) agentsReceived[a] = {count:0, channels:new Set()};
-            agentsReceived[a].count++;
-            agentsReceived[a].channels.add(r['Interaction']);
-          });
+      escalatedTickets.add(tkt);
+      humanIntrs.forEach(function(r) {
+        const a = String(r['Agent Name']||'');
+        if (!agentsReceived[a]) agentsReceived[a] = {count:0, channels:new Set()};
+        agentsReceived[a].count++;
+        agentsReceived[a].channels.add(String(r['Interaction']||''));
+      });
     } else {
       aiResolved++;
     }
-    aiAnswered = aiTotal; // all AI calls are answered
   });
+
+  const aiRows = wp.filter(function(r){ return r['Interaction']==='AI-Agent Call'; });
+  let aiAnswered = aiTotal;
 
   const resPct = aiTotal ? Math.round(aiResolved/aiTotal*100) : 0;
   const escPct = aiTotal ? Math.round(aiEscalated/aiTotal*100) : 0;
 
-  // KPIs
+  // Resolved breakdown — open / in progress / closed / no sub reason
+  let resOpen=0, resInProg=0, resClosed=0, resNoSub=0;
+  let escOpen=0, escInProg=0, escClosed=0;
+  let allNoSub=0;
+
+  Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
+    const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
+    if (!aiRow) return;
+    const hasHuman = intrs.some(function(r){
+      return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+             String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+    });
+    const status = String(aiRow['Status']||'').trim();
+    const sub    = String(aiRow['Sub Reason']||'').trim();
+    if (!sub) allNoSub++;
+    if (!hasHuman) {
+      // Resolved
+      if (status === 'Open') resOpen++;
+      else if (status.includes('Progress')) resInProg++;
+      else resClosed++;
+      if (!sub) resNoSub++;
+    } else {
+      // Escalated
+      if (status === 'Open') escOpen++;
+      else if (status.includes('Progress')) escInProg++;
+      else escClosed++;
+    }
+  });
+
+  // Calculate truly handled = Closed + has Sub Reason
+  let aiOpen=0, aiInProg=0, aiNoSub=0, aiHandled=0;
+  Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
+    const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
+    if (!aiRow) return;
+    const status = String(aiRow['Status']||'').trim();
+    const sub    = String(aiRow['Sub Reason']||'').trim();
+    if (status === 'Open') aiOpen++;
+    if (status.includes('Progress')) aiInProg++;
+    if (!sub) aiNoSub++;
+    if (status === 'Closed' && sub) aiHandled++;
+  });
+  const handledRate = aiTotal ? Math.round(aiHandled/aiTotal*100) : 0;
+
+  // KPI Row 1
   const kpi = document.getElementById('ai-kpi');
   if (kpi) kpi.innerHTML = [
     mkKPI('Total AI Calls', aiTotal, 'Decagon AI'),
-    mkKPI('AI Answered', aiAnswered, ''),
-    mkKPI('AI Resolved', aiResolved, 'no agent needed', 'green'),
+    mkKPI('AI Truly Handled', aiHandled, 'Closed + sub reason', handledRate>=70?'green':'amber'),
+    mkKPI('Open Tickets', aiOpen, 'not resolved yet', aiOpen>0?'red':'green'),
+    mkKPI('In Progress', aiInProg, '', aiInProg>0?'amber':'green'),
+    mkKPI('No Sub Reason', aiNoSub, 'data quality issue', aiNoSub>0?'amber':'green'),
     mkKPI('Escalated to Human', aiEscalated, '', 'red'),
-    mkKPI('Resolution Rate', resPct+'%', '', resPct>=70?'green':'amber'),
-    mkKPI('Escalation Rate', escPct+'%', '', escPct>30?'red':'amber'),
+    mkKPI('Handled Rate', handledRate+'%', 'Closed + sub reason', handledRate>=70?'green':'amber'),
   ].join('');
+
+  // KPI Row 2
+  const kpi2 = document.getElementById('ai-kpi2');
+  if (kpi2) kpi2.innerHTML =
+    mkKPI('Escalation Rate', escPct+'%', 'of total AI calls', escPct>30?'red':'amber') +
+    mkKPI('AI Resolved (no agent)', aiResolved, '', 'green') +
+    mkKPI('Resolution Rate', resPct+'%', '', resPct>=70?'green':'amber');
 
   // Call drivers
   const driverMap = {};
@@ -1564,15 +1625,18 @@ function renderAI(wp) {
     .map(([name,d]) => ({name, count:d.count, lots:Object.entries(d.lots).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([n,c])=>({name:n,count:c}))}));
   buildDriverAccordion('ai-drivers', drivers, COLORS);
 
-  // Top lots resolved vs escalated
+  // Top lots resolved vs escalated — use ticketGroups logic
   const lotRes={}, lotEsc={};
-  Object.entries(aiTickets).forEach(([tid,rows]) => {
-    const hasAI = rows.some(r=>r['Interaction']==='AI-Agent Call');
-    if (!hasAI) return;
-    const lot = String((rows.find(r=>r['Lot Name'])||{})['Lot Name']||'').trim();
-    if (!lot) return;
-    const esc = rows.some(r=>['Call','Email','Chat'].includes(r['Interaction'])&&!String(r['Agent Name']||'').includes('ai-decagon'));
-    if (esc) lotEsc[lot]=(lotEsc[lot]||0)+1; else lotRes[lot]=(lotRes[lot]||0)+1;
+  Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
+    const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
+    if (!aiRow) return;
+    const lot = String(aiRow['Lot Name']||'').trim(); if(!lot) return;
+    const hasHuman = intrs.some(function(r){
+      return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+             String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+    });
+    if (hasHuman) lotEsc[lot]=(lotEsc[lot]||0)+1;
+    else lotRes[lot]=(lotRes[lot]||0)+1;
   });
 
   function topLotList(obj, color) {
@@ -1606,14 +1670,15 @@ function renderAI(wp) {
   if (reasEl) {
     const reasMap = {};
     aiRows.forEach(r => {
-      const key = (String(r['Reason']||'')+' › '+String(r['Sub Reason']||'')).trim().replace(/^›\s*/,'').replace(/\s*›\s*$/,'');
+      const key = (String(r['Reason']||'')+' > '+String(r['Sub Reason']||'')).trim().replace(/^> /,'').replace(/ >$/,'');
       if (!key) return;
-      const tid = String(r['Ticket ID']||r['Interaction ID']||'');
-      const isEsc = tid && escalatedTickets.has(tid);
-      const isOpen = ['Open','In Progress'].includes(String(r['Status']||''));
+      const iss = String(r['TKT_IssueReason']||'').trim();
+      const isEsc = iss === 'Escalated';
+      const isRes = ['Not Escalated','Non Escalated'].includes(iss);
+      const isOpen = !iss || ['Open','In Progress'].includes(String(r['Status']||''));
       if (!reasMap[key]) reasMap[key] = {total:0,resolved:0,escalated:0,open:0};
       reasMap[key].total++;
-      if (isEsc) reasMap[key].escalated++; else if (isOpen) reasMap[key].open++; else reasMap[key].resolved++;
+      if (isEsc) reasMap[key].escalated++; else if (isRes) reasMap[key].resolved++; else reasMap[key].open++;
     });
     const rData = Object.entries(reasMap).sort((a,b)=>b[1].total-a[1].total).slice(0,20);
     reasEl.innerHTML='<table><thead><tr><th>Driver</th><th class="num">Total</th><th class="num" style="color:var(--green)">✓ Resolved</th><th class="num" style="color:var(--red)">✗ Escalated</th><th class="num">Open</th></tr></thead><tbody>'+
@@ -1621,24 +1686,168 @@ function renderAI(wp) {
       '</tbody></table>';
   }
 
-  // Open/In Progress
+  // Open/In Progress — show resolved-open and escalated-open separately
   const openEl = document.getElementById('ai-open-table');
   if (openEl) {
-    const openRows = aiRows.filter(r=>['Open','In Progress'].includes(String(r['Status']||'')));
-    if (!openRows.length) openEl.innerHTML='<div class="empty">No open AI tickets</div>';
-    else openEl.innerHTML='<table><thead><tr><th>Ticket ID</th><th>Agent</th><th>Reason</th><th>Status</th><th>Date</th></tr></thead><tbody>'+
-      openRows.slice(0,50).map(r=>'<tr><td>'+String(r['Ticket ID']||'—')+'</td><td>'+String(r['Agent Name']||'')+'</td><td>'+String(r['Reason']||'')+'</td><td><span class="bx ba">'+String(r['Status']||'')+'</span></td><td>'+String(r['Interaction created date']||'')+'</td></tr>').join('')+
-      '</tbody></table>';
+    const openTickets = [];
+    Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
+      const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
+      if (!aiRow) return;
+      const status = String(aiRow['Status']||'').trim();
+      if (!['Open','In Progress','Waiting for OPs'].includes(status)) return;
+      const hasHuman = intrs.some(function(r){
+        return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+               String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+      });
+      openTickets.push({
+        tkt    : tkt,
+        agent  : String(aiRow['Agent Name']||''),
+        reason : String(aiRow['Reason']||''),
+        sub    : String(aiRow['Sub Reason']||''),
+        status : status,
+        date   : String(aiRow['Interaction created date']||''),
+        lot    : String(aiRow['Lot Name']||''),
+        type   : hasHuman ? 'Escalated' : 'Resolved',
+      });
+    });
+    if (!openTickets.length) {
+      openEl.innerHTML='<div class="empty" style="color:var(--green)">No open AI tickets ✓</div>';
+    } else {
+      openEl.innerHTML='<table><thead><tr>'+
+        '<th>Ticket ID</th><th>Type</th><th>Reason</th><th>Sub Reason</th><th>Lot</th><th>Status</th><th>Date</th>'+
+        '</tr></thead><tbody>'+
+        openTickets.map(function(r){
+          return '<tr>'+
+            '<td>'+r.tkt+'</td>'+
+            '<td><span class="bx '+(r.type==='Escalated'?'br':'ba')+'">'+r.type+'</span></td>'+
+            '<td>'+r.reason+'</td>'+
+            '<td style="font-size:11px;color:var(--muted)">'+r.sub+'</td>'+
+            '<td style="font-size:11px">'+r.lot+'</td>'+
+            '<td><span class="bx ba">'+r.status+'</span></td>'+
+            '<td>'+r.date+'</td>'+
+          '</tr>';
+        }).join('')+
+        '</tbody></table>';
+    }
   }
 
-  // No sub reason
+  // No sub reason — use ticketGroups
   const noSubEl = document.getElementById('ai-nosub-table');
   if (noSubEl) {
-    const noSub = aiRows.filter(r=>!String(r['Sub Reason']||'').trim());
-    if (!noSub.length) noSubEl.innerHTML='<div class="empty">All AI tickets have sub reasons ✓</div>';
-    else noSubEl.innerHTML='<table><thead><tr><th>Ticket ID</th><th>Agent</th><th>Reason</th><th>Status</th><th>Date</th></tr></thead><tbody>'+
-      noSub.slice(0,50).map(r=>'<tr><td>'+String(r['Ticket ID']||'—')+'</td><td>'+String(r['Agent Name']||'')+'</td><td>'+String(r['Reason']||'—')+'</td><td>'+String(r['Status']||'')+'</td><td>'+String(r['Interaction created date']||'')+'</td></tr>').join('')+
-      '</tbody></table>';
+    const noSubTickets = [];
+    Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
+      const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
+      if (!aiRow) return;
+      if (String(aiRow['Sub Reason']||'').trim()) return;
+      noSubTickets.push({
+        tkt    : tkt,
+        reason : String(aiRow['Reason']||'—'),
+        status : String(aiRow['Status']||''),
+        date   : String(aiRow['Interaction created date']||''),
+        lot    : String(aiRow['Lot Name']||''),
+      });
+    });
+    if (!noSubTickets.length) {
+      noSubEl.innerHTML='<div class="empty" style="color:var(--green)">All AI tickets have sub reasons ✓</div>';
+    } else {
+      noSubEl.innerHTML='<table><thead><tr>'+
+        '<th>Ticket ID</th><th>Reason</th><th>Lot</th><th>Status</th><th>Date</th>'+
+        '</tr></thead><tbody>'+
+        noSubTickets.map(function(r){
+          return '<tr>'+
+            '<td>'+r.tkt+'</td>'+
+            '<td>'+r.reason+'</td>'+
+            '<td style="font-size:11px">'+r.lot+'</td>'+
+            '<td>'+r.status+'</td>'+
+            '<td>'+r.date+'</td>'+
+          '</tr>';
+        }).join('')+
+        '</tbody></table>';
+    }
+  }
+
+  // ── ACTION REQUIRED SECTION ──────────────────────────────────────
+  const actEl = document.getElementById('ai-action-required');
+  if (actEl) {
+    // Categorise open tickets
+    const openEscTickets = [];
+    const openAIOnlyTickets = [];
+    const inProgTickets = [];
+    const noSubTickets2 = [];
+
+    Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
+      const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
+      if (!aiRow) return;
+      const status = String(aiRow['Status']||'').trim();
+      const sub    = String(aiRow['Sub Reason']||'').trim();
+      const reason = String(aiRow['Reason']||'').trim();
+      const lot    = String(aiRow['Lot Name']||'').trim();
+      const date   = String(aiRow['Interaction created date']||'').trim();
+      const hasHuman = intrs.some(function(r){
+        return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+               String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+      });
+      const agentName = hasHuman ? String(intrs.find(function(r){
+        return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+               String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+      })['Agent Name']||'') : '';
+
+      if (status === 'Open' && hasHuman)
+        openEscTickets.push({tkt, agent:agentName, reason, lot, date});
+      if (status === 'Open' && !hasHuman)
+        openAIOnlyTickets.push({tkt, reason, lot, date});
+      if (status.includes('Progress'))
+        inProgTickets.push({tkt, agent:agentName||'AI', reason, lot, date, hasHuman});
+      if (!sub)
+        noSubTickets2.push({tkt, reason, status, lot, date, hasHuman});
+    });
+
+    function actionTable(rows, cols, title, color, note) {
+      if (!rows.length) return '';
+      const colKeys = Object.keys(cols);
+      return '<div style="margin-bottom:16px">'+
+        '<div style="font-size:11px;font-weight:700;color:'+color+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">'+
+          '⚠ '+title+' ('+rows.length+')'+
+          (note ? ' <span style="font-size:10px;font-weight:400;color:var(--muted)">— '+note+'</span>' : '')+
+        '</div>'+
+        '<table><thead><tr>'+colKeys.map(function(k){return '<th>'+cols[k]+'</th>';}).join('')+'</tr></thead>'+
+        '<tbody>'+rows.slice(0,20).map(function(r){
+          return '<tr>'+colKeys.map(function(k){
+            if(k==='tkt') return '<td style="font-weight:600">'+r[k]+'</td>';
+            if(k==='status') return '<td><span class="bx ba">'+r[k]+'</span></td>';
+            return '<td style="font-size:11px">'+r[k]+'</td>';
+          }).join('')+'</tr>';
+        }).join('')+
+        (rows.length>20?'<tr><td colspan="'+colKeys.length+'" style="text-align:center;color:var(--muted);font-size:11px">...and '+(rows.length-20)+' more</td></tr>':'')+
+        '</tbody></table></div>';
+    }
+
+    actEl.innerHTML =
+      '<div style="font-size:13px;font-weight:700;margin-bottom:16px;color:var(--red)">🚨 Action Required</div>' +
+
+      actionTable(openAIOnlyTickets,
+        {tkt:'Ticket ID', reason:'Reason', lot:'Lot', date:'Date'},
+        'AI handled but ticket still Open ('+openAIOnlyTickets.length+')',
+        'var(--red)',
+        'Tech/AI team — AI not closing tickets after interaction') +
+
+      actionTable(openEscTickets,
+        {tkt:'Ticket ID', agent:'Agent', reason:'Reason', lot:'Lot', date:'Date'},
+        'Escalated & handled by agent but still Open',
+        'var(--amber)',
+        'Agent compliance — close ticket after handling') +
+
+      actionTable(inProgTickets,
+        {tkt:'Ticket ID', agent:'Agent', reason:'Reason', status:'Status', date:'Date'},
+        'Tickets stuck In Progress',
+        'var(--amber)',
+        'Needs follow-up to close') +
+
+      actionTable(noSubTickets2,
+        {tkt:'Ticket ID', reason:'Reason', status:'Status', lot:'Lot', date:'Date'},
+        'Missing Sub Reason',
+        'var(--accent2)',
+        'Data quality — sub reason must be tagged');
   }
 }
 
