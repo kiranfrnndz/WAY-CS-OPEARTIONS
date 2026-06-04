@@ -1603,7 +1603,7 @@ function renderAI(wp) {
     if (hasHuman) csHandled++;
     // Fault KPIs
     if (status === 'Open') faultOpen++;
-    if (status === 'Open' && !sub) faultOpenNoSub++;
+    if (!sub) faultOpenNoSub++;  // all statuses
     if (status.includes('Progress')) faultInProg++;
     if (hasHuman && status === 'Open') faultEscOpen++;
   });
@@ -1621,7 +1621,7 @@ function renderAI(wp) {
   if (kpi2) kpi2.innerHTML =
     '<div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;width:100%;padding:2px 0 6px;">Action Required</div>' +
     mkKPI('Open Tickets', faultOpen, 'all AI open tickets', faultOpen>0?'red':'green') +
-    mkKPI('Open + No Sub Reason', faultOpenNoSub, 'open & missing sub reason', faultOpenNoSub>0?'red':'green') +
+    mkKPI('No Sub Reason', faultOpenNoSub, 'missing sub reason (all statuses)', faultOpenNoSub>0?'amber':'green') +
     mkKPI('In Progress', faultInProg, '', faultInProg>0?'amber':'green') +
     mkKPI('Escalated Still Open', faultEscOpen, 'agent handled but not closed', faultEscOpen>0?'amber':'green');
 
@@ -1717,24 +1717,31 @@ function renderAI(wp) {
       else reasMap[key].open++;
     });
     const rData = Object.entries(reasMap).sort(function(a,b){return b[1].total-a[1].total;}).slice(0,30);
-    reasEl.innerHTML = '<table><thead><tr>'+
-      '<th style="text-align:left">Driver</th>'+
-      '<th style="text-align:right;min-width:60px">Total</th>'+
-      '<th style="text-align:right;min-width:80px;color:var(--green)">✓ Resolved</th>'+
-      '<th style="text-align:right;min-width:80px;color:var(--red)">✗ Escalated</th>'+
-      '<th style="text-align:right;min-width:60px">Open</th>'+
-      '</tr></thead><tbody>'+
-      rData.map(function(entry){
-        var k=entry[0], d=entry[1];
+    const reasRows = rData.map(function(entry){
+      return {driver:entry[0], total:entry[1].total, resolved:entry[1].resolved, escalated:entry[1].escalated, open:entry[1].open};
+    });
+    reasEl.innerHTML = '<table id="ai-reas-tbl"><thead><tr>'+
+      '<th data-sort="driver" style="cursor:pointer">Driver ↕</th>'+
+      '<th data-sort="total" class="num" style="cursor:pointer">Total ↕</th>'+
+      '<th data-sort="resolved" class="num" style="cursor:pointer;color:var(--green)">✓ Resolved ↕</th>'+
+      '<th data-sort="escalated" class="num" style="cursor:pointer;color:var(--red)">✗ Escalated ↕</th>'+
+      '<th data-sort="open" class="num" style="cursor:pointer">Open ↕</th>'+
+      '</tr></thead><tbody id="ai-reas-body"></tbody></table>';
+    function renderReasRows(data) {
+      const tbody = document.getElementById('ai-reas-body');
+      if (!tbody) return;
+      tbody.innerHTML = data.map(function(r){
         return '<tr>'+
-          '<td>'+k+'</td>'+
-          '<td style="text-align:right;font-weight:600">'+d.total+'</td>'+
-          '<td style="text-align:right;color:var(--green);font-weight:600">'+d.resolved+'</td>'+
-          '<td style="text-align:right;color:var(--red);font-weight:600">'+d.escalated+'</td>'+
-          '<td style="text-align:right">'+d.open+'</td>'+
+          '<td>'+r.driver+'</td>'+
+          '<td class="num" style="font-weight:600">'+r.total+'</td>'+
+          '<td class="num" style="color:var(--green);font-weight:600">'+r.resolved+'</td>'+
+          '<td class="num" style="color:var(--red);font-weight:600">'+r.escalated+'</td>'+
+          '<td class="num">'+r.open+'</td>'+
         '</tr>';
-      }).join('')+
-      '</tbody></table>';
+      }).join('');
+    }
+    renderReasRows(reasRows);
+    sortableTable('ai-reas-tbl', reasRows, renderReasRows);
   }
 
   // Open/In Progress tickets shown in Action Required dropdowns below
@@ -1862,6 +1869,55 @@ function renderAI(wp) {
         'var(--accent2)',
         'Data quality: sub reason must be tagged',
         'tkt');
+
+    // ── Two extra investigation buckets ──────────────────────────
+    // 1. AI flagged Escalated but NO agent row on ticket
+    const escNoAgent = [];
+    // 2. AI flagged Not Escalated but agent row EXISTS on ticket
+    const notEscButAgent = [];
+
+    Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
+      const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
+      if (!aiRow) return;
+      const issue  = String(aiRow['TKT_IssueReason']||'').trim();
+      const status = String(aiRow['Status']||'').trim();
+      const reason = String(aiRow['Reason']||'').trim();
+      const sub    = String(aiRow['Sub Reason']||'').trim();
+      const lot    = String(aiRow['Lot Name']||'').trim();
+      const date   = String(aiRow['Interaction created date']||'').trim();
+      const hasHuman = intrs.some(function(r){
+        return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+               String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+      });
+      const agentName = hasHuman ? String((intrs.find(function(r){
+        return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+               String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+      })||{})['Agent Name']||'') : '';
+
+      if (issue === 'Escalated' && !hasHuman) {
+        escNoAgent.push({tkt, reason, sub, lot, status, date});
+      }
+      if (['Not Escalated','Non Escalated'].includes(issue) && hasHuman) {
+        notEscButAgent.push({tkt, reason, sub, lot, status, date, agent: agentName});
+      }
+    });
+
+    // Add to action required section
+    actEl.innerHTML += actionDropdown(escNoAgent,
+      'Escalated — No Agent Record',
+      '#7c3aed',
+      'AI flagged escalated but no agent interaction on ticket',
+      'tkt');
+
+    actEl.innerHTML += actionDropdown(notEscButAgent,
+      'Not Escalated — But Agent Handled',
+      '#0d9488',
+      'AI said not escalated but agent interaction exists on ticket',
+      'tkt');
+
+    // Store for download
+    window._aiEscNoAgent    = escNoAgent;
+    window._aiNotEscButAgent = notEscButAgent;
 
     // Attach click handlers via delegation
     actEl.querySelectorAll('.ai-act-hdr').forEach(function(hdr) {
@@ -3201,6 +3257,26 @@ function downloadAITickets() {
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
   wsSummary['!cols'] = [{wch:25},{wch:10}];
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+  // Add the two investigation sheets if available
+  if (window._aiEscNoAgent && window._aiEscNoAgent.length) {
+    const cols2 = ['Ticket ID','Reason','Sub Reason','Lot','Status','Date'];
+    const wsData = [cols2].concat(window._aiEscNoAgent.map(function(r){
+      return [r.tkt, r.reason, r.sub, r.lot, r.status, r.date];
+    }));
+    const ws2 = XLSX.utils.aoa_to_sheet(wsData);
+    ws2['!cols'] = [12,25,30,35,12,12].map(function(w){ return {wch:w}; });
+    XLSX.utils.book_append_sheet(wb, ws2, 'Esc-No Agent Record');
+  }
+  if (window._aiNotEscButAgent && window._aiNotEscButAgent.length) {
+    const cols3 = ['Ticket ID','Reason','Sub Reason','Lot','Status','Agent','Date'];
+    const wsData3 = [cols3].concat(window._aiNotEscButAgent.map(function(r){
+      return [r.tkt, r.reason, r.sub, r.lot, r.status, r.agent, r.date];
+    }));
+    const ws3 = XLSX.utils.aoa_to_sheet(wsData3);
+    ws3['!cols'] = [12,25,30,35,12,20,12].map(function(w){ return {wch:w}; });
+    XLSX.utils.book_append_sheet(wb, ws3, 'NotEsc-Agent Handled');
+  }
 
   const date = new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, 'AI-Ticket-Lists-' + date + '.xlsx');
