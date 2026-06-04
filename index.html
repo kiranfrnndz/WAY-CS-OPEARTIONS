@@ -4,24 +4,293 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WAY CS Operations Dashboard</title>
-<link rel="stylesheet" href="css/styles.css">
-<!-- External Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   WAY Operations Dashboard — styles.css
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── RESET & BASE ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg       : #f5f4f0;
+  --card     : #ffffff;
+  --border   : #e8e6e1;
+  --text     : #2c2a27;
+  --muted    : #9e9a94;
+  --accent   : #c8562b;
+  --accent2  : #2563eb;
+  --green    : #16a34a;
+  --amber    : #d97706;
+  --red      : #dc2626;
+  --radius   : 8px;
+  --shadow   : 0 1px 3px rgba(0,0,0,.08);
+  --nav-w    : 200px;
+  --hdr-h    : 52px;
+  --font     : 'Inter', system-ui, -apple-system, sans-serif;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.5; }
+a { color: var(--accent2); text-decoration: none; }
+button { cursor: pointer; font-family: var(--font); }
+
+/* ── UPLOAD SCREEN ────────────────────────────────────────────── */
+#upScreen {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 40px 20px; background: var(--bg);
+}
+.up-logo { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+.up-sub  { color: var(--muted); margin-bottom: 40px; font-size: 13px; }
+.up-grid { display: grid; grid-template-columns: repeat(3, 280px); gap: 20px; margin-bottom: 32px; }
+.up-z {
+  background: var(--card); border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 28px 20px; text-align: center; transition: border-color .2s;
+}
+.up-z.done       { border-color: var(--green); border-style: solid; }
+.up-z:hover      { border-color: var(--accent2); }
+.up-z-icon       { font-size: 28px; margin-bottom: 10px; }
+.up-z-title      { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.up-z-desc       { color: var(--muted); font-size: 11px; margin-bottom: 14px; }
+.up-z-tag        { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-bottom: 12px; }
+.req-tag         { background: #fff3cd; color: #856404; }
+.done-tag        { background: #d1fae5; color: var(--green); }
+.up-z input[type=file] { display: none; }
+.up-z label      { display: block; padding: 8px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; cursor: pointer; transition: background .15s; }
+.up-z label:hover{ background: #ece9e3; }
+.up-z .fn        { font-size: 11px; color: var(--green); margin-top: 8px; min-height: 16px; word-break: break-all; }
+#upGo            { display: none; padding: 12px 40px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; transition: background .2s; }
+#upGo.visible    { display: block; }
+#upGo:hover      { background: #a8421c; }
+#upProg          { display: none; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; margin-top: 20px; }
+.spinner         { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin  { to { transform: rotate(360deg); } }
+#upErr           { display: none; color: var(--red); font-size: 12px; margin-top: 12px; max-width: 500px; text-align: center; }
+
+/* ── DASHBOARD LAYOUT ─────────────────────────────────────────── */
+#db              { display: none; height: 100vh; overflow: hidden; }
+.layout          { display: grid; grid-template-rows: var(--hdr-h) 1fr; grid-template-columns: var(--nav-w) 1fr; height: 100vh; }
+
+/* ── HEADER ───────────────────────────────────────────────────── */
+.hdr {
+  grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; background: var(--card); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+.hdr-left   { display: flex; align-items: center; gap: 16px; }
+.hdr-logo   { font-weight: 700; color: var(--accent); font-size: 16px; }
+.hdr-chips  { display: flex; gap: 6px; }
+.chip       { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+#date-range-label { font-size: 11px; color: var(--muted); }
+.hdr-right  { display: flex; align-items: center; gap: 10px; }
+#pdf-btn, .reset-btn {
+  padding: 6px 14px; border-radius: 6px; font-size: 12px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); transition: background .15s;
+}
+#pdf-btn:hover, .reset-btn:hover { background: #ece9e3; }
+
+/* ── SIDEBAR NAV ──────────────────────────────────────────────── */
+.nav {
+  background: var(--card); border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 12px 0;
+}
+.t-btn {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 16px;
+  background: none; border: none; font-size: 12px; color: var(--muted); text-align: left;
+  transition: background .15s, color .15s; white-space: nowrap; overflow: hidden;
+}
+.t-btn:hover   { background: var(--bg); color: var(--text); }
+.t-btn.active  { background: #fef0eb; color: var(--accent); font-weight: 600; border-right: 3px solid var(--accent); }
+.t-btn .t-icon { font-size: 14px; flex-shrink: 0; }
+.t-num         { font-size: 10px; color: var(--muted); margin-left: auto; }
+
+/* ── CONTENT AREA ─────────────────────────────────────────────── */
+.content    { overflow-y: auto; padding: 20px; background: var(--bg); }
+
+/* ── PERIOD SELECTOR ──────────────────────────────────────────── */
+/* ── PERIOD SELECTOR ──────────────────────────────────────────── */
+#period-selector { margin-bottom:16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.period-mode-btns { display:flex; gap:4px; background:var(--card); border:1px solid var(--border); border-radius:6px; padding:3px; box-shadow:var(--shadow); }
+.period-mode-btn { padding:5px 14px; border:none; background:transparent; border-radius:4px; font-size:12px; font-weight:500; color:var(--muted); cursor:pointer; transition:all .15s; white-space:nowrap; }
+.period-mode-btn:hover { color:var(--text); background:var(--bg); }
+.period-mode-btn.active { background:var(--accent); color:#fff; font-weight:600; }
+.period-dropdown-wrap { position:relative; display:none; }
+.period-dropdown-wrap.visible { display:block; }
+.period-dropdown { appearance:none; padding:6px 28px 6px 12px; border:1px solid var(--border); border-radius:6px; background:var(--card); font-size:12px; color:var(--text); cursor:pointer; box-shadow:var(--shadow); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239e9a94' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; min-width:160px; }
+.period-dropdown:focus { outline:none; border-color:var(--accent); }
+.period-active-label { font-size:11px; color:var(--muted); }
+
+/* ── TAB SECTIONS ─────────────────────────────────────────────── */
+.sec { display: none; }
+.sec.active { display: block; }
+
+/* ── CARDS & KPIs ─────────────────────────────────────────────── */
+.card        { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+.card-title  { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 14px; }
+.kpi-row     { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.kpi         { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; min-width: 120px; flex: 1; box-shadow: var(--shadow); }
+.kpi-l       { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
+.kpi-v       { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1; }
+.kpi-v.green { color: var(--green); }
+.kpi-v.amber { color: var(--amber); }
+.kpi-v.red   { color: var(--red); }
+.kpi-v.blue  { color: var(--accent2); }
+.kpi-s       { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+/* ── CHARTS ───────────────────────────────────────────────────── */
+.chart-row   { display: grid; gap: 16px; margin-bottom: 16px; }
+.chart-row.two  { grid-template-columns: 1fr 1fr; }
+.chart-row.three{ grid-template-columns: 1fr 1fr 1fr; }
+.chart-wrap  { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+.chart-wrap canvas { max-height: 240px; }
+.chart-legend{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.leg-item    { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.leg-dot     { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── TABLES ───────────────────────────────────────────────────── */
+.tbl-wrap    { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 16px; }
+.tbl-hdr     { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 8px; }
+.tbl-title   { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.tbl-hint    { font-size: 10px; color: var(--muted); }
+table        { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th     { padding: 8px 12px; text-align: left; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; white-space: nowrap; }
+thead th.sort-asc::after  { content: ' ↑'; }
+thead th.sort-desc::after { content: ' ↓'; }
+thead th[data-sort]:hover { color: var(--text); cursor: pointer; }
+tbody tr     { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #faf9f7; }
+tbody tr.total-row { background: var(--bg); font-weight: 600; }
+tbody td     { padding: 8px 12px; vertical-align: middle; }
+tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody td.center { text-align: center; }
+
+/* ── BADGES ───────────────────────────────────────────────────── */
+.badge          { font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
+.badge-active   { background: #d1fae5; color: var(--green); }
+.badge-inactive { background: #f3f4f6; color: var(--muted); }
+.bx             { font-size: 11px; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+.bg             { background: #d1fae5; color: var(--green); }
+.ba             { background: #fef3c7; color: var(--amber); }
+.br             { background: #fee2e2; color: var(--red); }
+.bb             { background: #dbeafe; color: var(--accent2); }
+
+/* ── DRIVER BARS ──────────────────────────────────────────────── */
+.driver-list   { }
+.driver-item   { border-bottom: 1px solid var(--border); }
+.driver-item:last-child { border-bottom: none; }
+.driver-row    { display: flex; align-items: center; gap: 12px; padding: 10px 16px; cursor: pointer; transition: background .1s; }
+.driver-row:hover { background: #faf9f7; }
+.driver-bar-bg { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.driver-bar-fg { height: 100%; border-radius: 3px; }
+.driver-count  { font-size: 12px; font-weight: 600; min-width: 32px; text-align: right; }
+.driver-expand { color: var(--muted); font-size: 10px; transition: transform .2s; }
+.driver-item.open .driver-expand { transform: rotate(180deg); }
+.driver-lots   { display: none; padding: 6px 16px 12px 44px; background: #faf9f7; }
+.driver-item.open .driver-lots { display: block; }
+.lot-row       { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 11px; }
+.lot-name      { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lot-bar-bg    { width: 100px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.lot-bar-fg    { height: 100%; background: var(--muted); border-radius: 2px; }
+.lot-count     { font-size: 11px; font-weight: 600; min-width: 24px; text-align: right; }
+.top-badge     { font-size: 9px; padding: 1px 5px; background: #dbeafe; color: var(--accent2); border-radius: 3px; font-weight: 600; }
+
+/* ── SECTION HEADERS ──────────────────────────────────────────── */
+.sec-hdr       { font-size: 12px; font-weight: 700; padding: 10px 16px; display: flex; align-items: center; gap: 8px; color: #fff; border-radius: var(--radius) var(--radius) 0 0; }
+.sec-hdr.orange{ background: #c8562b; }
+.sec-hdr.blue  { background: #2563eb; }
+.sec-hdr.green { background: #16a34a; }
+.sec-hdr.purple{ background: #7c3aed; }
+.sec-hdr.teal  { background: #0d9488; }
+.sec-hdr.amber { background: #d97706; }
+.sec-hdr.red   { background: #dc2626; }
+.sec-hdr.gray  { background: #6b7280; }
+.sec-hdr.pink  { background: #db2777; }
+
+/* ── SUB TABS (Productivity) ──────────────────────────────────── */
+.sub-tab-bar   { display: flex; gap: 4px; background: var(--card); padding: 12px 16px 0; border-bottom: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; margin-bottom: 0; flex-wrap: wrap; }
+.sub-tab-btn   { padding: 7px 14px; border: none; background: none; font-size: 12px; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; transition: all .15s; }
+.sub-tab-btn:hover  { color: var(--text); }
+.sub-tab-btn.active { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); }
+.sub-tab-content    { display: none; }
+.sub-tab-content.active { display: block; }
+
+/* ── EMPTY STATE ──────────────────────────────────────────────── */
+.empty         { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+
+/* ── DROPDOWNS ────────────────────────────────────────────────── */
+select.filter-dd {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--card); font-size: 12px; color: var(--text); cursor: pointer;
+  appearance: auto;
+}
+
+/* ── HEATMAP ──────────────────────────────────────────────────── */
+.heatmap-grid  { display: grid; grid-template-columns: 60px repeat(24, 1fr); gap: 2px; font-size: 9px; }
+.hm-cell       { height: 24px; border-radius: 2px; display: flex; align-items: center; justify-content: center; }
+.hm-label      { color: var(--muted); font-weight: 600; }
+
+/* ── DRILL DOWN PANEL ─────────────────────────────────────────── */
+.drill-panel   {
+  position: fixed; top: 0; right: -500px; width: 480px; height: 100vh;
+  background: var(--card); border-left: 1px solid var(--border);
+  box-shadow: -4px 0 20px rgba(0,0,0,.1); z-index: 200;
+  transition: right .3s ease; overflow-y: auto; padding: 20px;
+}
+.drill-panel.open { right: 0; }
+.drill-close   { float: right; background: none; border: none; font-size: 18px; color: var(--muted); cursor: pointer; }
+.drill-title   { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.drill-sub     { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+
+/* ── SEARCH INPUT ─────────────────────────────────────────────── */
+.search-box    { width: 220px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: var(--bg); color: var(--text); }
+.search-box::placeholder { color: var(--muted); }
+
+/* ── RESPONSIVE ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root { --nav-w: 0px; }
+  .nav  { display: none; }
+  .layout { grid-template-columns: 1fr; }
+  .chart-row.two, .chart-row.three { grid-template-columns: 1fr; }
+  .up-grid { grid-template-columns: 1fr; }
+  .kpi { min-width: 90px; }
+}
+
+/* ── SCROLLBAR ────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── UTILITY ──────────────────────────────────────────────────── */
+.mb16  { margin-bottom: 16px; }
+.mb8   { margin-bottom: 8px; }
+.mt16  { margin-top: 16px; }
+.flex  { display: flex; }
+.flex-gap { gap: 12px; }
+.flex-ac { align-items: center; }
+.flex-jb { justify-content: space-between; }
+.text-right { text-align: right; }
+.text-muted { color: var(--muted); }
+.fw600 { font-weight: 600; }
+.fs11  { font-size: 11px; }
+.fs10  { font-size: 10px; }
+.red   { color: var(--red); }
+.green { color: var(--green); }
+.amber { color: var(--amber); }
+.aht-green { color: var(--green); font-weight: 600; }
+.aht-amber { color: var(--amber); font-weight: 600; }
+.aht-red   { color: var(--red);   font-weight: 600; }
+
+</style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════
-     UPLOAD SCREEN
-═══════════════════════════════════════════════════════════ -->
 <div id="upScreen">
   <div class="up-logo">WAY CS Operations Dashboard</div>
   <div class="up-sub">Upload your 3 data files to build the dashboard</div>
-
   <div class="up-grid">
-    <!-- WP / CRM -->
     <div class="up-z" id="zone-wp">
       <div class="up-z-icon">📋</div>
       <div class="up-z-title">WP / CRM Report</div>
@@ -31,7 +300,6 @@
       <label for="file-wp">Choose File</label>
       <div class="fn" id="fn-wp"></div>
     </div>
-    <!-- CC -->
     <div class="up-z" id="zone-cc">
       <div class="up-z-icon">📞</div>
       <div class="up-z-title">CC Call Detail Report</div>
@@ -41,7 +309,6 @@
       <label for="file-cc">Choose File</label>
       <div class="fn" id="fn-cc"></div>
     </div>
-    <!-- AG -->
     <div class="up-z" id="zone-ag">
       <div class="up-z-icon">🎧</div>
       <div class="up-z-title">Agent Call Detail Report</div>
@@ -52,19 +319,13 @@
       <div class="fn" id="fn-ag"></div>
     </div>
   </div>
-
   <button id="upGo" onclick="buildDashboard()">Build Dashboard →</button>
   <div id="upProg"><div class="spinner"></div><span>Processing...</span></div>
   <div id="upErr"></div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     DASHBOARD
-═══════════════════════════════════════════════════════════ -->
 <div id="db">
 <div class="layout">
-
-  <!-- HEADER -->
   <header class="hdr">
     <div class="hdr-left">
       <span class="hdr-logo">WAY Ops</span>
@@ -81,197 +342,100 @@
     </div>
   </header>
 
-  <!-- SIDEBAR NAV -->
   <nav class="nav">
-    <button class="t-btn active" data-tab="t1"  onclick="showTab('t1')">  <span class="t-icon">📊</span> Overview        <span class="t-num">1</span></button>
-    <button class="t-btn"        data-tab="t2"  onclick="showTab('t2')">  <span class="t-icon">🤖</span> Decagon AI      <span class="t-num">2</span></button>
-    <button class="t-btn"        data-tab="t3"  onclick="showTab('t3')">  <span class="t-icon">📞</span> Queue &amp; Abandoned <span class="t-num">3</span></button>
-    <button class="t-btn"        data-tab="t4"  onclick="showTab('t4')">  <span class="t-icon">📋</span> Call Drivers    <span class="t-num">4</span></button>
-    <button class="t-btn"        data-tab="t5"  onclick="showTab('t5')">  <span class="t-icon">⚖️</span>  Disputes        <span class="t-num">5</span></button>
-    <button class="t-btn"        data-tab="t6"  onclick="showTab('t6')">  <span class="t-icon">💰</span> Refunds         <span class="t-num">6</span></button>
-    <button class="t-btn"        data-tab="t7"  onclick="showTab('t7')">  <span class="t-icon">🔺</span> L2 Escalations  <span class="t-num">7</span></button>
-    <button class="t-btn"        data-tab="t8"  onclick="showTab('t8')">  <span class="t-icon">⭐</span> Review Handling <span class="t-num">8</span></button>
-    <button class="t-btn"        data-tab="t9"  onclick="showTab('t9')">  <span class="t-icon">🌐</span> Domain Contributors <span class="t-num">9</span></button>
-    <button class="t-btn"        data-tab="t10" onclick="showTab('t10')"> <span class="t-icon">🕐</span> Time &amp; Heatmap   <span class="t-num">10</span></button>
-    <button class="t-btn"        data-tab="t11" onclick="showTab('t11')"> <span class="t-icon">👥</span> TL Activity     <span class="t-num">11</span></button>
-    <button class="t-btn"        data-tab="t12" onclick="showTab('t12')"> <span class="t-icon">⚡</span> Productivity    <span class="t-num">12</span></button>
+    <button class="t-btn active" data-tab="t1"  onclick="showTab('t1')">  <span class="t-icon">📊</span> Overview             <span class="t-num">1</span></button>
+    <button class="t-btn"        data-tab="t2"  onclick="showTab('t2')">  <span class="t-icon">🤖</span> Decagon AI            <span class="t-num">2</span></button>
+    <button class="t-btn"        data-tab="t3"  onclick="showTab('t3')">  <span class="t-icon">📞</span> Queue &amp; Abandoned  <span class="t-num">3</span></button>
+    <button class="t-btn"        data-tab="t4"  onclick="showTab('t4')">  <span class="t-icon">📋</span> Call Drivers          <span class="t-num">4</span></button>
+    <button class="t-btn"        data-tab="t5"  onclick="showTab('t5')">  <span class="t-icon">⚖️</span>  Disputes              <span class="t-num">5</span></button>
+    <button class="t-btn"        data-tab="t6"  onclick="showTab('t6')">  <span class="t-icon">💰</span> Refunds               <span class="t-num">6</span></button>
+    <button class="t-btn"        data-tab="t7"  onclick="showTab('t7')">  <span class="t-icon">🔺</span> L2 Escalations        <span class="t-num">7</span></button>
+    <button class="t-btn"        data-tab="t8"  onclick="showTab('t8')">  <span class="t-icon">⭐</span> Review Handling       <span class="t-num">8</span></button>
+    <button class="t-btn"        data-tab="t9"  onclick="showTab('t9')">  <span class="t-icon">🌐</span> Domain Contributors   <span class="t-num">9</span></button>
+    <button class="t-btn"        data-tab="t10" onclick="showTab('t10')"> <span class="t-icon">🕐</span> Time &amp; Heatmap    <span class="t-num">10</span></button>
+    <button class="t-btn"        data-tab="t11" onclick="showTab('t11')"> <span class="t-icon">👥</span> TL Activity           <span class="t-num">11</span></button>
+    <button class="t-btn"        data-tab="t12" onclick="showTab('t12')"> <span class="t-icon">⚡</span> Productivity          <span class="t-num">12</span></button>
   </nav>
 
-  <!-- MAIN CONTENT -->
   <main class="content">
-
-    <!-- Period Selector -->
     <div id="period-selector"></div>
 
-    <!-- ── TAB 1: OVERVIEW ─────────────────────────────────── -->
     <div class="sec active" id="t1">
-      <!-- KPI Row 1 -->
       <div class="kpi-row" id="ov-kpi1"></div>
-      <!-- KPI Row 2 -->
       <div class="kpi-row" id="ov-kpi2"></div>
-      <!-- Charts Row -->
       <div class="chart-row two mb16">
-        <div class="chart-wrap">
-          <div class="card-title">Channel Mix</div>
-          <canvas id="ov-channel-chart" height="200"></canvas>
-          <div class="chart-legend" id="ov-channel-legend"></div>
-        </div>
-        <div class="chart-wrap">
-          <div class="card-title">Vertical Distribution</div>
-          <canvas id="ov-vertical-chart" height="200"></canvas>
-          <div class="chart-legend" id="ov-vertical-legend"></div>
-        </div>
+        <div class="chart-wrap"><div class="card-title">Channel Mix</div><canvas id="ov-channel-chart" height="200"></canvas><div class="chart-legend" id="ov-channel-legend"></div></div>
+        <div class="chart-wrap"><div class="card-title">Vertical Distribution</div><canvas id="ov-vertical-chart" height="200"></canvas><div class="chart-legend" id="ov-vertical-legend"></div></div>
       </div>
-      <!-- All Interaction Types -->
-      <div class="chart-wrap mb16">
-        <div class="card-title">All Interaction Types</div>
-        <canvas id="ov-int-chart" height="160"></canvas>
-      </div>
-      <!-- FCR Charts -->
+      <div class="chart-wrap mb16"><div class="card-title">All Interaction Types</div><canvas id="ov-int-chart" height="160"></canvas></div>
       <div class="chart-row two mb16">
-        <div class="chart-wrap">
-          <div class="card-title">FCR by Channel vs 80% Target</div>
-          <canvas id="ov-fcr-channel-chart" height="200"></canvas>
-        </div>
-        <div class="chart-wrap">
-          <div class="card-title">FCR by Vertical vs 80% Target</div>
-          <canvas id="ov-fcr-vertical-chart" height="200"></canvas>
-        </div>
+        <div class="chart-wrap"><div class="card-title">FCR by Channel vs 80% Target</div><canvas id="ov-fcr-channel-chart" height="200"></canvas></div>
+        <div class="chart-wrap"><div class="card-title">FCR by Vertical vs 80% Target</div><canvas id="ov-fcr-vertical-chart" height="200"></canvas></div>
       </div>
-      <!-- Vertical Summary Table -->
       <div class="tbl-wrap mb16">
-        <div class="tbl-hdr">
-          <span class="tbl-title">Vertical Summary</span>
-          <span class="tbl-hint">↕ Click headers to sort</span>
-        </div>
+        <div class="tbl-hdr"><span class="tbl-title">Vertical Summary</span><span class="tbl-hint">↕ Click headers to sort</span></div>
         <div id="ov-vertical-table"></div>
       </div>
-      <!-- Repeat OGI -->
       <div class="card" id="ov-repeat"></div>
     </div>
 
-    <!-- ── TAB 2: DECAGON AI ────────────────────────────────── -->
     <div class="sec" id="t2">
       <div class="kpi-row" id="ai-kpi"></div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title">AI Call Drivers — Click to expand lot breakdown</span></div>
-        <div id="ai-drivers"></div>
-      </div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">AI Call Drivers</span></div><div id="ai-drivers"></div></div>
       <div class="chart-row two mb16">
-        <div class="card"><div class="card-title" style="color:var(--green)">✓ Top Lots — AI Resolved (Successful)</div><div id="ai-lots-resolved"></div></div>
-        <div class="card"><div class="card-title" style="color:var(--red)">✗ Top Lots — Escalated to Human (Not Resolved)</div><div id="ai-lots-escalated"></div></div>
+        <div class="card"><div class="card-title" style="color:var(--green)">✓ Top Lots — AI Resolved</div><div id="ai-lots-resolved"></div></div>
+        <div class="card"><div class="card-title" style="color:var(--red)">✗ Top Lots — Escalated to Human</div><div id="ai-lots-escalated"></div></div>
       </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title">Live Agents who received AI-escalated calls</span><span class="tbl-hint">↕ Click headers to sort</span></div>
-        <div id="ai-agents-table"></div>
-      </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title">AI Interactions — Grouped by Reason &amp; Sub Reason</span><span class="tbl-hint">↕ Click headers to sort</span></div>
-        <div id="ai-reasons-table"></div>
-      </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title" style="color:var(--amber)">⚠ AI Tickets — Open / In Progress</span></div>
-        <div id="ai-open-table"></div>
-      </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title" style="color:var(--red)">⚠ AI Tickets — No Sub Reason Tagged</span></div>
-        <div id="ai-nosub-table"></div>
-      </div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">Agents who received AI-escalated calls</span></div><div id="ai-agents-table"></div></div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">AI Interactions by Reason &amp; Sub Reason</span></div><div id="ai-reasons-table"></div></div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title" style="color:var(--amber)">⚠ Open / In Progress AI Tickets</span></div><div id="ai-open-table"></div></div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title" style="color:var(--red)">⚠ AI Tickets — No Sub Reason</span></div><div id="ai-nosub-table"></div></div>
     </div>
 
-    <!-- ── TAB 3: QUEUE & ABANDONED ────────────────────────── -->
     <div class="sec" id="t3">
       <div class="kpi-row" id="q-kpi"></div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title">Queue Performance</span><span class="tbl-hint">↕ Click headers to sort</span></div>
-        <div id="q-perf-table"></div>
-      </div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">Queue Performance</span><span class="tbl-hint">↕ Sort</span></div><div id="q-perf-table"></div></div>
       <div class="chart-row two mb16">
-        <div class="card">
-          <div class="card-title">Abandon Wait-Time Buckets (click count to expand)</div>
-          <div id="q-buckets"></div>
-        </div>
-        <div class="chart-wrap">
-          <div class="card-title">Abandon Distribution</div>
-          <canvas id="q-abn-chart" height="220"></canvas>
-        </div>
+        <div class="card"><div class="card-title">Abandon Wait-Time Buckets</div><div id="q-buckets"></div></div>
+        <div class="chart-wrap"><div class="card-title">Abandon Distribution</div><canvas id="q-abn-chart" height="220"></canvas></div>
       </div>
-      <div class="card mb16">
-        <div class="card-title">Peak Abandonment Hours</div>
-        <div id="q-peak-hours"></div>
-      </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title">Bounced Calls — Agent Detail</span><span class="tbl-hint">Needs explanation from agent</span></div>
-        <div id="q-bounced-table"></div>
-      </div>
+      <div class="card mb16"><div class="card-title">Peak Abandonment Hours</div><div id="q-peak-hours"></div></div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">Bounced Calls</span></div><div id="q-bounced-table"></div></div>
     </div>
 
-    <!-- ── TAB 4: CALL DRIVERS ──────────────────────────────── -->
     <div class="sec" id="t4">
       <div class="flex flex-gap flex-ac mb16">
         <select class="filter-dd" id="dr-vertical" onchange="buildDrivers()">
           <option value="">All Verticals</option>
-          <option>Airport Parking</option><option>City Parking</option>
-          <option>WAY+</option><option>Car Wash</option>
-          <option>Insurance</option><option>R&M</option><option>General</option>
+          <option>Airport Parking</option><option>City Parking</option><option>WAY+</option>
+          <option>Car Wash</option><option>Insurance</option><option>R&amp;M</option><option>General</option>
         </select>
         <select class="filter-dd" id="dr-channel" onchange="buildDrivers()">
-          <option value="">All Channels</option>
-          <option>Call</option><option>Email</option><option>Chat</option>
+          <option value="">All Channels</option><option>Call</option><option>Email</option><option>Chat</option>
         </select>
-        <span class="text-muted fs10">Click a reason to expand lot breakdown</span>
       </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title" id="dr-title">Top Call Drivers</span></div>
-        <div id="dr-list"></div>
-      </div>
-      <div class="chart-wrap mb16">
-        <div class="card-title" id="dr-chart-title">Top Drivers — Bar Chart</div>
-        <canvas id="dr-bar-chart" height="200"></canvas>
-      </div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title" id="dr-title">Top Drivers</span></div><div id="dr-list"></div></div>
+      <div class="chart-wrap mb16"><div class="card-title" id="dr-chart-title">Top Drivers — Bar Chart</div><canvas id="dr-bar-chart" height="200"></canvas></div>
       <div id="dr-lot-summary"></div>
     </div>
 
-    <!-- ── TAB 5: DISPUTES ──────────────────────────────────── -->
     <div class="sec" id="t5">
       <div class="kpi-row" id="dis-kpi"></div>
       <div class="chart-row two mb16">
-        <div class="chart-wrap">
-          <div class="card-title">By Vertical</div>
-          <canvas id="dis-vert-chart" height="220"></canvas>
-          <div class="chart-legend" id="dis-vert-legend"></div>
-        </div>
-        <div class="chart-wrap">
-          <div class="card-title">Dispute Outcomes</div>
-          <canvas id="dis-out-chart" height="220"></canvas>
-        </div>
+        <div class="chart-wrap"><div class="card-title">By Vertical</div><canvas id="dis-vert-chart" height="220"></canvas><div class="chart-legend" id="dis-vert-legend"></div></div>
+        <div class="chart-wrap"><div class="card-title">Dispute Outcomes</div><canvas id="dis-out-chart" height="220"></canvas></div>
       </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title">Dispute Team Utilisation</span><span class="tbl-hint">↕ Click headers to sort</span></div>
-        <div id="dis-team-table"></div>
-      </div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">Dispute Team Utilisation</span></div><div id="dis-team-table"></div></div>
       <div id="dis-by-lot"></div>
     </div>
 
-    <!-- ── TAB 6: REFUNDS ───────────────────────────────────── -->
     <div class="sec" id="t6">
       <div class="kpi-row" id="ref-kpi"></div>
       <div class="chart-row two mb16">
-        <div class="chart-wrap">
-          <div class="card-title">Refund Type Count</div>
-          <canvas id="ref-type-chart" height="220"></canvas>
-          <div class="chart-legend" id="ref-type-legend"></div>
-        </div>
-        <div class="chart-wrap">
-          <div class="card-title">Dollar Value by Type</div>
-          <canvas id="ref-val-chart" height="220"></canvas>
-        </div>
+        <div class="chart-wrap"><div class="card-title">Refund Type Count</div><canvas id="ref-type-chart" height="220"></canvas><div class="chart-legend" id="ref-type-legend"></div></div>
+        <div class="chart-wrap"><div class="card-title">Dollar Value by Type</div><canvas id="ref-val-chart" height="220"></canvas></div>
       </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title">Refunds by Vertical</span><span class="tbl-hint">↕ Click headers to sort</span></div>
-        <div id="ref-vert-table"></div>
-      </div>
-      <!-- Drill down panel -->
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">Refunds by Vertical</span></div><div id="ref-vert-table"></div></div>
       <div class="drill-panel" id="ref-drill">
         <button class="drill-close" onclick="document.getElementById('ref-drill').classList.remove('open')">✕</button>
         <div class="drill-title" id="ref-drill-title"></div>
@@ -280,123 +444,56 @@
       </div>
     </div>
 
-    <!-- ── TAB 7: L2 ESCALATIONS ────────────────────────────── -->
     <div class="sec" id="t7">
       <div class="kpi-row" id="esc-kpi"></div>
       <div class="chart-row two mb16">
-        <div class="chart-wrap">
-          <div class="card-title">By Vertical</div>
-          <canvas id="esc-vert-chart" height="220"></canvas>
-          <div class="chart-legend" id="esc-vert-legend"></div>
-        </div>
-        <div class="chart-wrap">
-          <div class="card-title">By Channel</div>
-          <canvas id="esc-chan-chart" height="220"></canvas>
-          <div class="chart-legend" id="esc-chan-legend"></div>
-        </div>
+        <div class="chart-wrap"><div class="card-title">By Vertical</div><canvas id="esc-vert-chart" height="220"></canvas><div class="chart-legend" id="esc-vert-legend"></div></div>
+        <div class="chart-wrap"><div class="card-title">By Channel</div><canvas id="esc-chan-chart" height="220"></canvas><div class="chart-legend" id="esc-chan-legend"></div></div>
       </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title">Top Escalation Reasons — Click to expand contributors</span></div>
-        <div id="esc-reasons"></div>
-      </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title">Status Breakdown</span><span class="tbl-hint">↕ Click headers to sort</span></div>
-        <div id="esc-status-table"></div>
-      </div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">Top Escalation Reasons</span></div><div id="esc-reasons"></div></div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">Status Breakdown</span></div><div id="esc-status-table"></div></div>
     </div>
 
-    <!-- ── TAB 8: REVIEW HANDLING ────────────────────────────── -->
     <div class="sec" id="t8">
       <div class="kpi-row" id="rev-kpi"></div>
       <div class="chart-row two mb16">
-        <div class="chart-wrap">
-          <div class="card-title">Rating Distribution</div>
-          <canvas id="rev-rating-chart" height="220"></canvas>
-          <div class="chart-legend" id="rev-rating-legend"></div>
-        </div>
-        <div class="chart-wrap">
-          <div class="card-title">Reviews by Vertical</div>
-          <canvas id="rev-vert-chart" height="220"></canvas>
-        </div>
+        <div class="chart-wrap"><div class="card-title">Rating Distribution</div><canvas id="rev-rating-chart" height="220"></canvas><div class="chart-legend" id="rev-rating-legend"></div></div>
+        <div class="chart-wrap"><div class="card-title">Reviews by Vertical</div><canvas id="rev-vert-chart" height="220"></canvas></div>
       </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title">Reviews by Handler — 5★ vs 1★ Breakdown</span><span class="tbl-hint">↕ Click headers to sort</span></div>
-        <div id="rev-handler-table"></div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">Reviews by Handler</span></div><div id="rev-handler-table"></div></div>
+      <div class="chart-row two mb16">
+        <div class="card"><div class="card-title" style="color:var(--green)">▲ Top 5 Lots — 4 &amp; 5 Star</div><div id="rev-top-pos"></div></div>
+        <div class="card"><div class="card-title" style="color:var(--red)">▼ Top 5 Lots — 1, 2 &amp; 3 Star</div><div id="rev-top-neg"></div></div>
       </div>
       <div class="chart-row two mb16">
-        <div class="card">
-          <div class="card-title" style="color:var(--green)">▲ Top 5 Lots — 4 &amp; 5 Star Reviews</div>
-          <div id="rev-top-pos"></div>
-        </div>
-        <div class="card">
-          <div class="card-title" style="color:var(--red)">▼ Top 5 Lots — 1, 2 &amp; 3 Star Reviews</div>
-          <div id="rev-top-neg"></div>
-        </div>
-      </div>
-      <div class="chart-row two mb16">
-        <div class="card">
-          <div class="card-title" style="color:var(--green)">▲ Top Reasons Driving Positive Reviews (4★ &amp; 5★)</div>
-          <div id="rev-reasons-pos"></div>
-        </div>
-        <div class="card">
-          <div class="card-title" style="color:var(--red)">▼ Top Reasons Driving Negative Reviews (1★, 2★ &amp; 3★)</div>
-          <div id="rev-reasons-neg"></div>
-        </div>
+        <div class="card"><div class="card-title" style="color:var(--green)">▲ Positive Review Reasons</div><div id="rev-reasons-pos"></div></div>
+        <div class="card"><div class="card-title" style="color:var(--red)">▼ Negative Review Reasons</div><div id="rev-reasons-neg"></div></div>
       </div>
     </div>
 
-    <!-- ── TAB 9: DOMAIN CONTRIBUTORS ──────────────────────── -->
     <div class="sec" id="t9">
       <div class="kpi-row" id="dom-kpi"></div>
-      <div class="chart-wrap mb16">
-        <div class="card-title">Tickets by Booking Platform</div>
-        <canvas id="dom-bar-chart" height="200"></canvas>
-      </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title">Platform by Vertical</span><span class="tbl-hint">↕ Click headers to sort</span></div>
-        <div id="dom-table"></div>
-      </div>
+      <div class="chart-wrap mb16"><div class="card-title">Tickets by Booking Platform</div><canvas id="dom-bar-chart" height="200"></canvas></div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">Platform by Vertical</span></div><div id="dom-table"></div></div>
     </div>
 
-    <!-- ── TAB 10: TIME PATTERNS & HEATMAP ──────────────────── -->
     <div class="sec" id="t10">
       <div class="kpi-row" id="tp-kpi"></div>
-      <div class="chart-wrap mb16">
-        <div class="card-title">Hourly Volume vs Active Agents — Staffing Coverage</div>
-        <canvas id="tp-coverage-chart" height="220"></canvas>
-      </div>
-      <div class="chart-wrap mb16">
-        <div class="card-title" id="tp-cc-title">Hourly Call Volume (CC Report)</div>
-        <canvas id="tp-cc-chart" height="180"></canvas>
-      </div>
-      <div class="card mb16">
-        <div class="card-title">Call Volume Heatmap — Hour × Day</div>
-        <div id="tp-heatmap"></div>
-      </div>
-      <div class="tbl-wrap mb16">
-        <div class="tbl-hdr"><span class="tbl-title" style="color:var(--red)">⚠ Agent Gap Analysis — Hours needing more agents</span></div>
-        <div id="tp-gap-table"></div>
-      </div>
+      <div class="chart-wrap mb16"><div class="card-title">Hourly Volume vs Active Agents</div><canvas id="tp-coverage-chart" height="220"></canvas></div>
+      <div class="chart-wrap mb16"><div class="card-title">Hourly Call Volume (CC Report)</div><canvas id="tp-cc-chart" height="180"></canvas></div>
+      <div class="card mb16"><div class="card-title">Heatmap — Hour × Day</div><div id="tp-heatmap"></div></div>
+      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title" style="color:var(--red)">⚠ Agent Gap Analysis</span></div><div id="tp-gap-table"></div></div>
     </div>
 
-    <!-- ── TAB 11: TL ACTIVITY ──────────────────────────────── -->
     <div class="sec" id="t11">
-      <!-- Manager Queue section -->
-      <div class="card mb16">
-        <div class="card-title">CS Manager Queue</div>
-        <div id="tl-mgr-queue"></div>
-      </div>
-      <!-- TL performance -->
+      <div class="card mb16"><div class="card-title">CS Manager Queue</div><div id="tl-mgr-queue"></div></div>
       <div id="tl-content"></div>
     </div>
 
-    <!-- ── TAB 12: PRODUCTIVITY ─────────────────────────────── -->
     <div class="sec" id="t12">
-      <!-- KPI Rows -->
       <div class="kpi-row" id="prod-kpi1"></div>
       <div class="kpi-row" id="prod-kpi2"></div>
-      <!-- Sub-tabs -->
-      <div class="sub-tab-bar" id="prod-sub-tabs">
+      <div class="sub-tab-bar">
         <button class="sub-tab-btn active" data-sub="p-overview"  onclick="showSubTab('p-overview')">Overview</button>
         <button class="sub-tab-btn"        data-sub="p-frontline" onclick="showSubTab('p-frontline')">Frontline</button>
         <button class="sub-tab-btn"        data-sub="p-ind-spa"   onclick="showSubTab('p-ind-spa')">Indian Spanish</button>
@@ -412,39 +509,2394 @@
       <div id="p-support"   class="sub-tab-content"></div>
     </div>
 
-  </main><!-- /content -->
-</div><!-- /layout -->
-</div><!-- /db -->
-
-<!-- ── SCRIPTS ──────────────────────────────────────────────── -->
-<script src="js/config.js"></script>
-<script src="js/parser.js"></script>
-<script src="js/filters.js"></script>
-<script src="js/main.js"></script>
-<script src="js/tabs/overview.js"></script>
-<script src="js/tabs/ai.js"></script>
-<script src="js/tabs/queue.js"></script>
-<script src="js/tabs/drivers.js"></script>
-<script src="js/tabs/disputes.js"></script>
-<script src="js/tabs/refunds.js"></script>
-<script src="js/tabs/escalations.js"></script>
-<script src="js/tabs/reviews.js"></script>
-<script src="js/tabs/domains.js"></script>
-<script src="js/tabs/timepatterns.js"></script>
-<script src="js/tabs/tlactivity.js"></script>
-<script src="js/tabs/productivity.js"></script>
+  </main>
+</div>
+</div>
 
 <script>
-// Sub-tab handler for Productivity
+// ═══════════════════════════════════════════════════════════════
+// WAY Operations Dashboard — config.js
+// Team structure, constants, name mappings, queue mappings
+// ═══════════════════════════════════════════════════════════════
+
+// ── TEAM STRUCTURE ──────────────────────────────────────────────
+const TEAM = {
+  MANAGER          : ['Joyson Fernandez'],
+  ASST_MANAGER     : ['Anju Mareeta Lean'],
+  TEAM_LEADS       : ['Shiju Salam','Vishnu V','Bijoy Kiran','Rashmika','Vishnu B S','Surya Suresh','Ansu Varghese','Jaison Nelson'],
+  SME              : ['Vidya Vijayan','Lalita Lama','Althaf Z'],
+  L2               : ['Jithin S'],
+  QC               : ['Henna Najim','Reshma Sunil','Rijisha S Kumar'],
+  DISPUTES         : ['Gowri S','Greeshma R S','Sreela R','Subin M S'],
+  DATA_REPORTING   : ['Vishnu MS'],
+  REVIEWS          : ['Tharun Sunil Kumar','Jijo Papachan','Muvithra M','Blessy Hillary','Abhilash Augustin'],
+  INDIAN_SPANISH   : ['Pawan Kumar','Naushad Ahmad','Javed Khan','Sattar Alam','Mohamed Jowhar','Ansar Alli','Uppara Likhith','MD Ali','Siddarth Raj'],
+  COLUMBIA_SPANISH : ['Alexandra Morales','Mauricio Leon','Angeles Soledad','Gabriella Lacayo','Daniel Montoya','Sarah Gonzales','Liliana Soledad'],
+  WAYPLUS_US       : ['Amanda Wagoner','Selina Benavides','Karen Hopkins','Karolyne Perez','Junie Cerna','Andrea Ruiz','Brianna Lundy','Nicholas Marques','Oscar Perez','Valentina Torres'],
+  FRONTLINE        : ['Abhiraj Erenzath','Abhishek Kumar S','Abin Eappen','Dravya SP Naga','Devika S','Ajesh Varghese','Gokul Sarath','Meenakshy RS','Rufus H Johny','Abhilash Lean','Sumith B I','Nikhil Pradeep','Arya J S','Najna Nizar','Amal Krishna A','Akshaya G S','Azhar Abdul Kalam','Irfana S Ibrahim','John Chacko','Ajeet A','Jishnu Praveen','Akshay Vinod Nair','Bibin Selvan','Hizana Noushad','Pooja Jose','Shinu Varghese','Swathy Peethambaran','Abhija Zakkir','Abin Ferry','Jonathan Anil','Abhinav S B','Catherine Benjamin','Ajesh Mathew Varghese','Ananthu J R'],
+};
+
+const ALL_KNOWN_AGENTS = new Set(Object.values(TEAM).flat());
+
+const FLOOR_SUPPORT_ROLES = new Set([
+  ...TEAM.MANAGER, ...TEAM.ASST_MANAGER, ...TEAM.TEAM_LEADS,
+  ...TEAM.SME, ...TEAM.L2, ...TEAM.QC, ...TEAM.DISPUTES,
+  ...TEAM.DATA_REPORTING, ...TEAM.REVIEWS
+]);
+
+const AGENT_ROLE = {};
+Object.entries(TEAM).forEach(([role, agents]) => agents.forEach(a => AGENT_ROLE[a] = role));
+
+// ── AG FILE NAME MAP (Last, First → Display Name) ────────────────
+const AG_NAME_MAP = {
+  'Fernandez, Joyson':'Joyson Fernandez','Mareeta Lean, Anju':'Anju Mareeta Lean',
+  'Salam, Shiju':'Shiju Salam','V, Vishnu':'Vishnu V','Kiran, Bijoy':'Bijoy Kiran',
+  'Santhosh, Rashmika':'Rashmika','BS, Vishnu':'Vishnu B S','Suresh, Surya':'Surya Suresh',
+  'Varghese, Ansu':'Ansu Varghese','Nelson, Jaison':'Jaison Nelson',
+  'Vijayan, Vidya':'Vidya Vijayan','Lama, Lalita':'Lalita Lama','Z, Althaf':'Althaf Z',
+  'S, Jithin':'Jithin S','S, Henna Najim':'Henna Najim','Sunil, Reshma':'Reshma Sunil',
+  'Kumar, Rijisha S':'Rijisha S Kumar','S, Gowri':'Gowri S','RS, Greeshma':'Greeshma R S',
+  'R, Sreela':'Sreela R','MS, Subin':'Subin M S','MS, Vishnu':'Vishnu MS',
+  'Sunil Kumar, Tharun':'Tharun Sunil Kumar','Papachan, Jijo':'Jijo Papachan',
+  'M, Muvithra':'Muvithra M','Hillary, Blessy':'Blessy Hillary','Augustin, Abhilash':'Abhilash Augustin',
+  'Kumar, Pawan':'Pawan Kumar','Ahmad, Naushad':'Naushad Ahmad','Khan, Javed Humayun':'Javed Khan',
+  'Alam, MD Sattar':'Sattar Alam','Alli, Ansar':'Ansar Alli','Likhith, Uppara':'Uppara Likhith',
+  'Ali, Mohammad':'MD Ali','Raj, Siddarth':'Siddarth Raj','Morales, Alexandra':'Alexandra Morales',
+  'Leon, Mauricio':'Mauricio Leon','Soledad, Angeles':'Angeles Soledad','Lacayo, Gabriella':'Gabriella Lacayo',
+  'Montoya, Daniel':'Daniel Montoya','Gonzalez, Sarah':'Sarah Gonzales','Soledad, Liliana':'Liliana Soledad',
+  'Wagoner, Amanda':'Amanda Wagoner','Benavides, Selina':'Selina Benavides','Hopkins, Karen':'Karen Hopkins',
+  'Perez, Karolyne':'Karolyne Perez','Cerna, Junie':'Junie Cerna','Ruiz, Andrea':'Andrea Ruiz',
+  'Lundy, Brianna':'Brianna Lundy','Marquez, Nicholas':'Nicholas Marques','Perez, Oscar':'Oscar Perez',
+  'Torres, Valentina':'Valentina Torres','Erenzath, Abhiraj':'Abhiraj Erenzath',
+  'Kumar S, Abhishek':'Abhishek Kumar S','Eappen, Abin':'Abin Eappen','SP Naga, Dravya':'Dravya SP Naga',
+  'S, Devika':'Devika S','Varghese, Ajesh':'Ajesh Varghese','Sarath, Gokul':'Gokul Sarath',
+  'RS, Meenakshy':'Meenakshy RS','Johny, Rufus H':'Rufus H Johny','Lean, Abhilash':'Abhilash Lean',
+  'B I, Sumith':'Sumith B I','Pradeep, Nikhil':'Nikhil Pradeep','JS, Arya':'Arya J S',
+  'Nizar, Najna':'Najna Nizar','Krishna, Amal':'Amal Krishna A','G S, Akshaya':'Akshaya G S',
+  'Abdul Kalam, Azhar':'Azhar Abdul Kalam','Ibrahim, Irfana':'Irfana S Ibrahim','Chacko, John':'John Chacko',
+  'A, Ajeet':'Ajeet A','Praveen, Jishnu':'Jishnu Praveen','Vinod Nair, Akshay':'Akshay Vinod Nair',
+  'Selvan, Bibin':'Bibin Selvan','Noushad, Hizana':'Hizana Noushad','Jose, Pooja':'Pooja Jose',
+  'Varghese, Shinu':'Shinu Varghese','Peethambaran, Swathy':'Swathy Peethambaran',
+  'Zakkir, Abhija':'Abhija Zakkir','Ferry, Abin':'Abin Ferry','Anil, Jonathan':'Jonathan Anil',
+  'S B, Abhinav':'Abhinav S B','Benjamin, Catherine':'Catherine Benjamin',
+  'Varghese, Ajesh Mathew':'Ajesh Mathew Varghese','J R, Ananthu':'Ananthu J R',
+};
+
+// ── QUEUE → VERTICAL MAPPING ─────────────────────────────────────
+const QUEUE_MAP = {
+  // ENGLISH — Airport Parking
+  'Airport':{lang:'English',vertical:'Airport Parking'},'Confirmation Line':{lang:'English',vertical:'Airport Parking'},
+  'Global Main':{lang:'English',vertical:'Airport Parking'},'All CS Team India':{lang:'English',vertical:'Airport Parking'},
+  'ESA':{lang:'English',vertical:'Airport Parking'},'Cruise Parking':{lang:'English',vertical:'Airport Parking'},
+  // ENGLISH — City Parking
+  'City':{lang:'English',vertical:'City Parking'},'Monthly_English':{lang:'English',vertical:'City Parking'},
+  // ENGLISH — WAY+
+  'WayPlus':{lang:'English',vertical:'WAY+'},'CommonWealth Way Plus':{lang:'English',vertical:'WAY+'},
+  'Magnum English':{lang:'English',vertical:'WAY+'},'PROPARK':{lang:'English',vertical:'WAY+'},
+  'Bridger':{lang:'English',vertical:'WAY+'},'Avibra Line':{lang:'English',vertical:'WAY+'},
+  'Amazon Urgently Way Pro':{lang:'English',vertical:'WAY+'},'AMAC_English':{lang:'English',vertical:'WAY+'},
+  'Harbor':{lang:'English',vertical:'WAY+'},'Snoopdrive':{lang:'English',vertical:'WAY+'},
+  'Gas EV CC':{lang:'English',vertical:'WAY+'},'Batline':{lang:'English',vertical:'WAY+'},
+  'WayplusCambridge_English':{lang:'English',vertical:'WAY+'},'AIS_English':{lang:'English',vertical:'WAY+'},
+  'Corestream English':{lang:'English',vertical:'WAY+'},'Onward CC':{lang:'English',vertical:'WAY+'},
+  'Wrench CC':{lang:'English',vertical:'WAY+'},
+  // ENGLISH — Car Wash
+  'CarWash':{lang:'English',vertical:'Car Wash'},
+  // ENGLISH — Insurance
+  '3002 Ins Service Team Queue':{lang:'English',vertical:'Insurance'},'CS Insurance Team India':{lang:'English',vertical:'Insurance'},
+  '3043 WayWeb Insurance Ported':{lang:'English',vertical:'Insurance'},'Insurance Transfers':{lang:'English',vertical:'Insurance'},
+  'Insurance Service Team US':{lang:'English',vertical:'Insurance'},'Agency Customer':{lang:'English',vertical:'Insurance'},
+  'CS Auto Refinance':{lang:'English',vertical:'Insurance'},'3025 Ins Agency Sales Transfer':{lang:'English',vertical:'Insurance'},
+  '3037 Ins Retention Ported':{lang:'English',vertical:'Insurance'},'3041 Insurance All Ported':{lang:'English',vertical:'Insurance'},
+  'Agency Line':{lang:'English',vertical:'Insurance'},'Travelers_Hurricane':{lang:'English',vertical:'Insurance'},
+  'ASNA':{lang:'English',vertical:'Insurance'},
+  // ENGLISH — R&M
+  'Way Repair':{lang:'English',vertical:'R&M'},'Repair_Orders':{lang:'English',vertical:'R&M'},
+  // SPECIAL
+  'Cross Sell':{lang:'English',vertical:'_crosssell'},'CS Manager Queue':{lang:'English',vertical:'_manager'},
+  // SPANISH — Airport Parking
+  'Airport Spanish':{lang:'Spanish',vertical:'Airport Parking'},'Spanish':{lang:'Spanish',vertical:'Airport Parking'},
+  'Global Spanish':{lang:'Spanish',vertical:'Airport Parking'},'Spanish_New':{lang:'Spanish',vertical:'Airport Parking'},
+  'Cruise Parking Spanish':{lang:'Spanish',vertical:'Airport Parking'},
+  // SPANISH — City Parking
+  'City Spanish':{lang:'Spanish',vertical:'City Parking'},'Monthly_Spanish':{lang:'Spanish',vertical:'City Parking'},
+  // SPANISH — WAY+
+  'Common Wealth Spanish':{lang:'Spanish',vertical:'WAY+'},'Magnum Spanish':{lang:'Spanish',vertical:'WAY+'},
+  'Way Plus Spanish':{lang:'Spanish',vertical:'WAY+'},'Bridger Spanish':{lang:'Spanish',vertical:'WAY+'},
+  'PROPARK_Spanish':{lang:'Spanish',vertical:'WAY+'},'Avibra Spanish':{lang:'Spanish',vertical:'WAY+'},
+  'Onward Spanish':{lang:'Spanish',vertical:'WAY+'},'Wrench_Spanish':{lang:'Spanish',vertical:'WAY+'},
+  'Gas Spanish':{lang:'Spanish',vertical:'WAY+'},
+  // SPANISH — Car Wash
+  'CarWash Spanish':{lang:'Spanish',vertical:'Car Wash'},
+  // SPANISH — Insurance
+  'Insurance Spanish':{lang:'Spanish',vertical:'Insurance'},
+  // SPANISH — R&M
+  'RMSpanish':{lang:'Spanish',vertical:'R&M'},
+};
+
+// ── SLA & TARGETS ────────────────────────────────────────────────
+const SLA = {
+  AHT_TARGET_SEC   : 330,
+  OCCUPANCY_TARGET : 0.80,
+  FCR_TARGET       : 80,
+  CALL_HANDLE_SEC  : 330,
+  EMAIL_HANDLE_SEC : 480,
+  CHAT_HANDLE_SEC  : 300,
+  LONG_CALL_SEC    : 600,
+  HIGH_HOLD_SEC    : 300,
+  CALLS_PER_HOUR   : 8.7,
+};
+
+// ── REFUND ACTION LOOKUP ─────────────────────────────────────────
+const REFUND_ACTIONS = {
+  BCI_CARD:['BCI -Card refund','Before check-in, Card Refund','BCI - Refunded','Before Check-In -Refunded','Before Check-In - Way bucks offered customer denied Refunded back to card','Confirmed With Lot -Before Check-In -Way bucks offered customer denied Refunded back to card','Before check in - Refunded back to card','Before check in - Cancelled','BCI \u2013 Card Refund Issued','Card Refund issued','Card refund issued','Cancelled - Before check-In','Cancelled - Before Check-In','Before Check-In Cancelled','Before check in - cancelled','Before  check in - cancelled','Not Confirmed - Before Check-In - Way bucks offered customer denied Refunded back to card','LM Offered \u2013 Not Interested \u2013 Card refund','Confirmed with lot - LM Offered \u2013 Not Interested \u2013 Card refund','Confirmed with lot - LM Offered \u2013 Parked Elsewhere \u2013 Card refund'],
+  BCI_WB:['BCI -Way bucks issued','Before check-in, Wallet refunded','BCI \u2013 Waybucks issued','Confirmed With Lot -Before Check-In - Way bucks offered customer accepted','Way bucks issued'],
+  ACI_FULL:['ACI - Refunded','After check-in, Card Refund','Cancelled After Check-in - Back To Card','ACI \u2013 Card Refund Issued','Cancelled After Check-in \u2013 Back To Card','Way bucks offered customer denied Refunded back to card - After Check-In','Not Confirmed With Lot -After Check-In-Way bucks offered customer denied Refunded back to card','After check in - Refunded back to card','After check in - cancelled'],
+  ACI_PARTIAL:['Partial card refund issued for the unused days','ACI \u2013 Partial Card Refund Issued','Partial Card Refund issued','Partial refund Processed - Way bucks offered customer denied Refunded back to card'],
+  ACI_WB:['ACI -Way bucks issued','Way bucks offered customer accepted - After Check-In','ACI \u2013 Waybucks issued','ACI \u2013 Partial Waybucks Refund Issued','Partial refund Processed - Way bucks offered customer accepted'],
+  ACI_DENIED:['After check-in, denied','Denied - After Check-In','Refund Denied','ACI - Refund Denied','ACI \u2013 Refund Denied','After check in - Refund Denied'],
+  SUB_REFUND:['Subscription Cancelled- Refund Issued','Subscription Cancelled -Waybucks Issued','Cancelled - Refund Issued','subscription cancelled'],
+  SUB_NO_REFUND:['Subscription Cancelled - No Refund'],
+};
+const ACTION_TO_REFUND = {};
+Object.entries(REFUND_ACTIONS).forEach(([type,actions]) => actions.forEach(a => ACTION_TO_REFUND[a] = type));
+
+// ── INTERACTION TYPES ────────────────────────────────────────────
+const INT = {
+  CALL:'Call', EMAIL:'Email', CHAT:'Chat', AI:'AI-Agent Call',
+  TL_REVIEW:'TL Review', USER_REVIEW:'User Reviews', DISPUTE:'Dispute',
+  ESC_TL:'Escalation Handled by TL', ESC_OPS:'Escalation handled by Ops Team',
+  ESC_TEAM:'Escalation handled by Escalation Team', ESC_MGR:'Escalation handled by Manager',
+  QC_AUDIT:'QC Audit', MGR_REVIEW:'Manager Review',
+};
+const FCR_EXCLUDE = new Set([INT.DISPUTE,INT.TL_REVIEW,INT.AI,INT.ESC_TL,INT.ESC_OPS,INT.ESC_TEAM,INT.ESC_MGR,INT.USER_REVIEW,INT.QC_AUDIT,INT.MGR_REVIEW]);
+
+// ── SHIFTS ───────────────────────────────────────────────────────
+const SHIFTS = [
+  {name:'Shift 1',start:18.5,end:3.5, color:'rgba(74,111,165,0.6)'},
+  {name:'Shift 2',start:2,   end:11,  color:'rgba(74,140,92,0.6)' },
+  {name:'Shift 3',start:10,  end:19,  color:'rgba(140,106,42,0.6)'},
+];
+
+// ── COLORS ───────────────────────────────────────────────────────
+const COLORS = ['#60a5fa','#4ade80','#f97316','#a78bfa','#f87171','#2dd4bf','#fbbf24','#fb923c','#818cf8','#34d399','#e879f9','#38bdf8'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ═══════════════════════════════════════════════════════════════
+// WAY Operations Dashboard — parser.js
+// File reading, date parsing, data tagging, timestamp resolution
+// ═══════════════════════════════════════════════════════════════
+
+// ── DATE HELPERS ─────────────────────────────────────────────────
+function parseDate(val) {
+  if (!val || val === '') return null;
+  // Excel numeric serial
+  if (typeof val === 'number') {
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+    if (!isNaN(d)) return d;
+  }
+  const s = String(val).trim();
+  if (!s) return null;
+  // M/D/YYYY or MM/DD/YYYY with optional time
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) {
+    const mo = parseInt(m[1]) - 1, dy = parseInt(m[2]), yr = parseInt(m[3]);
+    // AM/PM time
+    const tm = s.match(/(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
+    if (tm) {
+      let h = parseInt(tm[1]);
+      const mn = parseInt(tm[2]), sc = parseInt(tm[3]);
+      if (tm[4].toUpperCase() === 'PM' && h < 12) h += 12;
+      if (tm[4].toUpperCase() === 'AM' && h === 12) h = 0;
+      return new Date(yr, mo, dy, h, mn, sc);
+    }
+    // 24h after comma or space
+    const tm24 = s.match(/[,\s]+(\d{1,2}):(\d{2}):(\d{2})/);
+    if (tm24) return new Date(yr, mo, dy, parseInt(tm24[1]), parseInt(tm24[2]), parseInt(tm24[3]));
+    return new Date(yr, mo, dy);
+  }
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+function timeToDuration(val) {
+  if (!val || val === 0) return 0;
+  // Excel time fraction (e.g. 0.00122 = 106 seconds)
+  if (typeof val === 'object' && val instanceof Date)
+    return val.getHours() * 3600 + val.getMinutes() * 60 + val.getSeconds();
+  if (typeof val === 'number') return Math.round(val * 86400);
+  const s = String(val).trim();
+  const m = s.match(/^(\d+):(\d{2}):(\d{2})$/);
+  if (m) return parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseInt(m[3]);
+  const f = parseFloat(s);
+  if (!isNaN(f)) return Math.round(f * 86400);
+  return 0;
+}
+
+function dateKey(d)  { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function weekKey(d)  { var j=new Date(d.getFullYear(),0,1); var w=Math.ceil(((d-j)/86400000+j.getDay()+1)/7); return d.getFullYear()+'-W'+String(w).padStart(2,'0'); }
+function monthKey(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function fmtDate(d)  { return MONTHS[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear(); }
+function fmtDateShort(d) { return MONTHS[d.getMonth()]+' '+d.getDate(); }
+function fmtMonth(mk){ var parts=mk.split('-'); return MONTHS[parseInt(parts[1])-1]+' '+parts[0]; }
+function secToMmss(s){ if(!s||s===0)return'0:00'; return Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0'); }
+
+// ── FILE READING ─────────────────────────────────────────────────
+function readXlsx(file, hdrRow = 0) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: false });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        res(XLSX.utils.sheet_to_json(ws, { defval: '', range: hdrRow }));
+      } catch (err) { rej(err); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function findHdrRow(file, knownCol) {
+  // Scan up to 15 rows to find header
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: false });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        for (let row = 0; row < 15; row++) {
+          const test = XLSX.utils.sheet_to_json(ws, { defval: '', range: row, header: 1 });
+          if (test.length > 0 && test[0].includes(knownCol)) { res(row); return; }
+        }
+        res(0);
+      } catch (err) { rej(err); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ── AGENT NAME NORMALISATION ─────────────────────────────────────
+function normalizeAgentName(n) {
+  const s = String(n || '').trim();
+  return AG_NAME_MAP[s] || s;
+}
+
+// ── WP DATA TAGGING ──────────────────────────────────────────────
+function mapVertical(row) {
+  const v  = String(row['Vertical']    || '').trim();
+  const sv = String(row['SubVertical'] || '').trim();
+  if (v === 'Parking' && (sv.includes('Airport') || sv.includes('Cruise'))) return 'Airport Parking';
+  if (v === 'Parking' && (sv.includes('City') || sv.includes('Monthly')))   return 'City Parking';
+  if (v === 'Parking')    return 'Airport Parking';
+  if (v === 'Carwash')    return 'Car Wash';
+  if (v === 'Wayplus')    return 'WAY+';
+  if (v === 'Auto Repair')return 'R&M';
+  if (v === 'Insurance')  return 'Insurance';
+  if (v === 'Gas')        return 'Gas';
+  if (v === 'General')    return 'General';
+  return 'Other';
+}
+
+function tagRefund(action) {
+  const a = String(action || '').trim();
+  return ACTION_TO_REFUND[a] || null;
+}
+
+function normalizeDriver(reason, subReason) {
+  const r = String(reason || '').trim();
+  const s = String(subReason || '').trim();
+  const rl = r.toLowerCase();
+  if (rl === 'shuttle enquiry' || rl.startsWith('shuttle enquiry')) return 'Shuttle Enquiry';
+  if (rl === 'shuttle issue'   || rl.startsWith('shuttle issue'))   return 'Shuttle Issue';
+  if (rl === 'lot issue') {
+    if (/charged at lot/i.test(s))    return 'Charged at Lot';
+    if (/lot full/i.test(s))          return 'Lot Full';
+    if (/lot closed/i.test(s))        return 'Lot Closed';
+    if (/rude behav/i.test(s))        return 'Lot Staff Rude';
+    if (/no attendant/i.test(s))      return 'No Attendant at Lot';
+    if (/oversized|truck|suv/i.test(s)) return 'Oversized / Truck Issue';
+    if (/under construction/i.test(s)) return 'Lot Under Construction';
+    if (/extension|didn.t honor|didn.t accept/i.test(s)) return 'Lot Refused Booking';
+    if (/self park|collected key/i.test(s)) return 'Lot Self-Park Issue';
+    return 'Lot Issue — Other';
+  }
+  if (rl === 'edit/extend reservation')               return 'Edit/Extend Reservation';
+  if (rl === 'general enquiry')                       return 'General Enquiry';
+  if (rl === 'booking assistance')                    return 'Booking Assistance';
+  if (rl === 'pre-booking queries')                   return 'Pre-Booking Queries';
+  if (rl === 'reservation confirmation / verification') return 'Reservation Confirmation';
+  if (rl === 'outbound vendor call')                  return 'Outbound Vendor Call';
+  if (s) return r+' > '+s;
+  return r;
+}
+
+// ── TIMESTAMP RESOLUTION FOR EMAILS ─────────────────────────────
+// Resolution priority:
+// 1. Child ID → parent ticket timestamp
+// 2. UserID + same date → another ticket same day
+// 3. UserID closest date → nearest ticket from same customer
+function resolveEmailTimestamps(rows) {
+  const childMap  = {};  // Child Id → timestamp
+  const userDateMap = {}; // userid_date -> timestamp
+  const userAllMap  = {}; // userid → [{dt, ts}]
+
+  // Build maps from rows that have timestamps
+  rows.forEach(r => {
+    const tdt = r['Ticket_created_date'];
+    if (!tdt) return;
+    const ts = String(tdt).trim();
+    if (!/\d+:\d+:\d+/.test(ts)) return;
+    const dt = parseDate(ts);
+    if (!dt) return;
+
+    const child  = String(r['Child Id'] || '').trim();
+    const userid = String(r['UserID']   || '').trim();
+    const idate  = String(r['Interaction created date'] || '').trim();
+
+    if (child)  childMap[child] = ts;
+    if (userid && idate) userDateMap[userid+'_'+idate] = ts;
+    if (userid) {
+      if (!userAllMap[userid]) userAllMap[userid] = [];
+      userAllMap[userid].push({ dt, ts });
+    }
+  });
+
+  // Resolve missing timestamps
+  rows.forEach(r => {
+    if (r['Interaction'] !== 'Email') return;
+    if (r['Ticket_created_date']) return; // already has timestamp
+
+    const child  = String(r['Child Id'] || '').trim();
+    const userid = String(r['UserID']   || '').trim();
+    const idate  = String(r['Interaction created date'] || '').trim();
+
+    let resolved = null;
+
+    if (child && childMap[child]) {
+      resolved = childMap[child];
+      r._ts_method = 'child_id';
+    } else if (userid && userDateMap[userid+'_'+idate]) {
+      resolved = userDateMap[userid+'_'+idate];
+      r._ts_method = 'userid_same_date';
+    } else if (userid && userAllMap[userid]) {
+      // Find closest date
+      const target = parseDate(idate + ' 12:00:00');
+      if (target) {
+        const closest = userAllMap[userid].reduce((best, cur) =>
+          Math.abs(cur.dt - target) < Math.abs(best.dt - target) ? cur : best
+        );
+        resolved = closest.ts;
+        r._ts_method = 'userid_closest';
+      }
+    }
+
+    if (resolved) {
+      r['Ticket_created_date'] = resolved;
+      r._ts_resolved = true;
+    } else {
+      r._ts_unresolvable = true;
+    }
+  });
+
+  return rows;
+}
+
+// ── TAG WP ROW ───────────────────────────────────────────────────
+function tagWPRow(r) {
+  const agent = normalizeAgentName(r['Agent Name']);
+  r['Agent Name'] = agent;
+
+  const tdt = parseDate(r['Ticket_created_date']);
+  const idt = parseDate(r['Interaction created date']);
+  const d   = tdt || idt;
+
+  return {
+    ...r,
+    _dt        : tdt,
+    _idt       : idt,
+    _d         : d,
+    _dateKey   : d ? dateKey(d)  : '',
+    _weekKey   : d ? weekKey(d)  : '',
+    _monthKey  : d ? monthKey(d) : '',
+    _hour      : tdt ? tdt.getHours() : (idt ? null : null),
+    _vertical  : mapVertical(r),
+    _refund    : tagRefund(r['Action']),
+    _driver    : normalizeDriver(r['Reason'], r['Sub Reason']),
+    _isTicket  : !!r['Ticket ID'],
+    _isEscalated: String(r['TKT_IssueReason'] || '') === 'Escalated',
+    _isAI      : String(r['Interaction'] || '') === 'AI-Agent Call' || String(r['Agent Name'] || '') === 'ai-decagon ai-decagon',
+    _role      : AGENT_ROLE[agent] || (ALL_KNOWN_AGENTS.has(agent) ? 'KNOWN' : 'UNKNOWN'),
+  };
+}
+
+// ── TAG CC ROW ───────────────────────────────────────────────────
+function tagCCRow(r) {
+  const dt = parseDate(r['Call Start Time']);
+  const q  = String(r['Call Center Name'] || '').trim();
+  const qm = QUEUE_MAP[q] || null;
+  return {
+    ...r,
+    _dt       : dt,
+    _dateKey  : dt ? dateKey(dt)  : '',
+    _weekKey  : dt ? weekKey(dt)  : '',
+    _monthKey : dt ? monthKey(dt) : '',
+    _hour     : dt ? dt.getHours() : null,
+    _talk     : timeToDuration(r['Talk Time']),
+    _hold     : timeToDuration(r['Hold Time']),
+    _wrap     : timeToDuration(r['Wrap Up Time']),
+    _wait     : timeToDuration(r['Wait Time']),
+    _lang     : qm ? qm.lang     : null,
+    _vertical : qm ? qm.vertical : null,
+    _isManager: qm ? qm.vertical === '_manager'   : false,
+    _isCrossell:qm ? qm.vertical === '_crosssell' : false,
+  };
+}
+
+// ── TAG AG ROW ───────────────────────────────────────────────────
+function tagAGRow(r) {
+  const agent = normalizeAgentName(r['Agent Name']);
+  r['Agent Name'] = agent;
+  const dt   = parseDate(r['Call Start Time']);
+  const ct   = String(r['Call Type'] || '');
+  const talk = timeToDuration(r['Talk Time']);
+  return {
+    ...r,
+    _dt        : dt,
+    _dateKey   : dt ? dateKey(dt)  : '',
+    _weekKey   : dt ? weekKey(dt)  : '',
+    _monthKey  : dt ? monthKey(dt) : '',
+    _hour      : dt ? dt.getHours() : null,
+    _talk      : talk,
+    _hold      : timeToDuration(r['Hold Time']),
+    _wrap      : timeToDuration(r['Wrap Up Time']),
+    _isInbound : ['Inbound ACD','Inbound','Internal'].includes(ct),
+    _isACD     : ct === 'Inbound ACD',
+    _isInboundOnly: ct === 'Inbound',
+    _isInternal: ct === 'Internal',
+    _isOutbound: ct === 'Outbound',
+    _isLongCall: talk > SLA.LONG_CALL_SEC,
+    _isHighHold: timeToDuration(r['Hold Time']) > SLA.HIGH_HOLD_SEC,
+    _role      : AGENT_ROLE[agent] || (ALL_KNOWN_AGENTS.has(agent) ? 'KNOWN' : 'UNKNOWN'),
+  };
+}
+
+// ── MAIN PARSE FUNCTION ──────────────────────────────────────────
+async function parseAllFiles(wpFile, ccFile, agFile, onProgress) {
+  onProgress('Reading WP report...');
+  const wpRaw = await readXlsx(wpFile, 0);
+
+  let ccHdr = 0, agHdr = 0;
+  if (ccFile) { onProgress('Detecting CC format...'); ccHdr = await findHdrRow(ccFile, 'Call Result'); }
+  if (agFile) { onProgress('Detecting AG format...'); agHdr = await findHdrRow(agFile, 'Call Type'); }
+  if (ccFile) { onProgress('Reading CC report...'); }
+  if (agFile) { onProgress('Reading AG report...'); }
+
+  const [ccRaw, agRaw] = await Promise.all([
+    ccFile ? readXlsx(ccFile, ccHdr) : Promise.resolve([]),
+    agFile ? readXlsx(agFile, agHdr) : Promise.resolve([]),
+  ]);
+
+  onProgress('Resolving timestamps...');
+  const wpResolved = resolveEmailTimestamps(wpRaw);
+
+  onProgress('Tagging data...');
+  const wpData = wpResolved.map(tagWPRow).filter(r => r._d && r._d.getFullYear() >= 2020);
+  const ccData = ccRaw.map(tagCCRow).filter(r => r._dt && r._dt.getFullYear() >= 2020);
+  const agData = agRaw.map(tagAGRow).filter(r => r._dt && r._dt.getFullYear() >= 2020);
+
+  // Build followup OGI set (rows without ticket ID = follow-ups)
+  const followupOGIs = new Set(
+    wpData.filter(r => !r._isTicket && r['OGI'])
+          .map(r => String(r['OGI']))
+  );
+
+  // Tag FCR on ticket rows
+  wpData.forEach(r => {
+    if (!r._isTicket) return;
+    if (FCR_EXCLUDE.has(String(r['Interaction'] || ''))) return;
+    r._fcrEligible = true;
+    r._isFCR = r['OGI'] ? !followupOGIs.has(String(r['OGI'])) : true;
+  });
+
+  onProgress('Building dashboard...');
+  return { wpData, ccData, agData, followupOGIs };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WAY Operations Dashboard — filters.js
+// Date filtering and period selector logic
+// ═══════════════════════════════════════════════════════════════
+
+// Global filter state
+const FILTER = {
+  activeKey  : null,   // null = all data, else 'YYYY-MM-DD' or 'YYYY-Wxx' or 'YYYY-MM'
+  activeType : null,   // 'day' | 'week' | 'month' | null
+};
+
+// ── GET DATE KEYS FROM DATA ───────────────────────────────────────
+function getDateKeys(data) {
+  return [...new Set(data.filter(r => r._dateKey).map(r => r._dateKey))].sort();
+}
+function getWeekKeys(data) {
+  return [...new Set(data.filter(r => r._weekKey).map(r => r._weekKey))].sort();
+}
+function getMonthKeys(data) {
+  return [...new Set(data.filter(r => r._monthKey).map(r => r._monthKey))].sort();
+}
+
+// ── FILTER ROWS BY ACTIVE PERIOD ─────────────────────────────────
+function filterByPeriod(rows, key, type) {
+  if (!key || !type) return rows;
+  return rows.filter(r => {
+    if (type === 'day')   return r._dateKey  === key;
+    if (type === 'week')  return r._weekKey  === key;
+    if (type === 'month') return r._monthKey === key;
+    return true;
+  });
+}
+
+// Main filter function — uses global FILTER state
+function getFiltered(data) {
+  return filterByPeriod(data, FILTER.activeKey, FILTER.activeType);
+}
+
+// ── BUILD PERIOD SELECTOR ─────────────────────────────────────────
+function buildPeriodSelector(wpData, ccData, agData, onSelect) {
+  const container = document.getElementById('period-selector');
+  if (!container) return;
+
+  const allDates = new Set([...getDateKeys(wpData),...getDateKeys(ccData),...getDateKeys(agData)]);
+  const sortedDates = [...allDates].sort();
+  if (sortedDates.length === 0) { container.innerHTML = ''; return; }
+
+  const allWeeks  = [...new Set(sortedDates.map(d => weekKey(new Date(d+'T12:00:00'))))].sort();
+  const allMonths = [...new Set(sortedDates.map(d => monthKey(new Date(d+'T12:00:00'))))].sort();
+
+  // Build mode buttons — use data-mode, click handled via delegation
+  let modeBtns = '<button class="period-mode-btn active" data-mode="all">All</button>';
+  modeBtns += '<button class="period-mode-btn" data-mode="daily">Daily</button>';
+  if (allWeeks.length > 1) modeBtns += '<button class="period-mode-btn" data-mode="weekly">Weekly</button>';
+  if (allMonths.length > 1) modeBtns += '<button class="period-mode-btn" data-mode="monthly">Monthly</button>';
+
+  // Build day options
+  const dayOpts = sortedDates.map(dk => {
+    const d = new Date(dk+'T12:00:00');
+    return '<option value="'+dk+'">'+fmtDate(d)+'</option>';
+  }).join('');
+
+  // Build week options
+  const wkOpts = allWeeks.map(wk => {
+    const days = sortedDates.filter(d => weekKey(new Date(d+'T12:00:00')) === wk);
+    const lbl = days.length ? fmtDateShort(new Date(days[0]+'T12:00:00'))+' – '+fmtDateShort(new Date(days[days.length-1]+'T12:00:00')) : wk;
+    return '<option value="'+wk+'">'+lbl+'</option>';
+  }).join('');
+
+  // Build month options
+  const moOpts = allMonths.map(mk => '<option value="'+mk+'">'+fmtMonth(mk)+'</option>').join('');
+
+  container.innerHTML =
+    '<div class="period-mode-btns">'+modeBtns+'</div>' +
+    '<div class="period-dropdown-wrap" id="pd-wrap">' +
+      '<select class="period-dropdown" id="pd-select" onchange="applyPeriodSelect()">' +
+        '<option value="">-- Select --</option>' +
+      '</select>' +
+    '</div>' +
+    '<span class="period-active-label" id="pd-label"></span>';
+
+  // Attach click handlers via delegation (avoids quote conflicts)
+  setTimeout(() => {
+    document.querySelectorAll('.period-mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => setPeriodMode(btn.dataset.mode));
+    });
+  }, 0);
+
+  // Store options for each mode
+  container._dayOpts = dayOpts;
+  container._wkOpts  = wkOpts;
+  container._moOpts  = moOpts;
+  container._onSelect = onSelect;
+
+  // Update header date range
+  const first = new Date(sortedDates[0]+'T12:00:00');
+  const last  = new Date(sortedDates[sortedDates.length-1]+'T12:00:00');
+  const rangeEl = document.getElementById('date-range-label');
+  if (rangeEl) rangeEl.textContent = sortedDates.length === 1 ? fmtDate(first) : fmtDate(first)+' – '+fmtDate(last);
+}
+
+function setPeriodMode(mode) {
+  const container = document.getElementById('period-selector');
+  if (!container) return;
+
+  // Update active button
+  document.querySelectorAll('.period-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+
+  const wrap   = document.getElementById('pd-wrap');
+  const select = document.getElementById('pd-select');
+  const label  = document.getElementById('pd-label');
+
+  if (mode === 'all') {
+    wrap.classList.remove('visible');
+    FILTER.activeKey = null; FILTER.activeType = null;
+    if (label) label.textContent = 'Showing all data';
+    if (container._onSelect) container._onSelect();
+    return;
+  }
+
+  // Show dropdown with appropriate options
+  wrap.classList.add('visible');
+  if (mode === 'daily') {
+    select.innerHTML = '<option value="">Select a date...</option>' + container._dayOpts;
+    select.dataset.type = 'day';
+  } else if (mode === 'weekly') {
+    select.innerHTML = '<option value="">Select a week...</option>' + container._wkOpts;
+    select.dataset.type = 'week';
+  } else if (mode === 'monthly') {
+    select.innerHTML = '<option value="">Select a month...</option>' + container._moOpts;
+    select.dataset.type = 'month';
+  }
+
+  // Reset filter until user picks from dropdown
+  FILTER.activeKey = null; FILTER.activeType = null;
+  if (label) label.textContent = '';
+  if (container._onSelect) container._onSelect();
+}
+
+function applyPeriodSelect() {
+  const select = document.getElementById('pd-select');
+  const label  = document.getElementById('pd-label');
+  if (!select) return;
+
+  const key  = select.value;
+  const type = select.dataset.type;
+  const container = document.getElementById('period-selector');
+
+  if (!key) {
+    FILTER.activeKey = null; FILTER.activeType = null;
+    if (label) label.textContent = '';
+  } else {
+    FILTER.activeKey  = key;
+    FILTER.activeType = type;
+    if (label) label.textContent = '✓ Filtered: ' + select.options[select.selectedIndex].text;
+  }
+  if (container && container._onSelect) container._onSelect();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WAY Operations Dashboard — main.js
+// App entry point, upload handling, tab routing
+// ═══════════════════════════════════════════════════════════════
+
+// ── APP STATE ─────────────────────────────────────────────────────
+const APP = {
+  wpData       : [],
+  ccData       : [],
+  agData       : [],
+  followupOGIs : new Set(),
+  charts       : {},         // Chart.js instances — destroyed before re-render
+  rawFiles     : { wp: null, cc: null, ag: null },
+  activeTab    : 't1',
+};
+
+// ── CHART HELPERS ─────────────────────────────────────────────────
+function destroyChart(id) {
+  if (APP.charts[id]) { try { APP.charts[id].destroy(); } catch(e){} delete APP.charts[id]; }
+}
+function mkChart(id, config) {
+  destroyChart(id);
+  const el = document.getElementById(id);
+  if (!el) return null;
+  APP.charts[id] = new Chart(el, config);
+  return APP.charts[id];
+}
+
+const GC = 'rgba(0,0,0,0.07)';
+const TC = '#9e9a94';
+
+function mkDonut(id, labels, data, colors) {
+  return mkChart(id, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors || COLORS.slice(0, data.length), borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+  });
+}
+
+function mkBar(id, labels, datasets, opts = {}) {
+  return mkChart(id, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: opts.legend || false } },
+      indexAxis: opts.h ? 'y' : 'x',
+      scales: {
+        x: { grid: { display: !opts.h, color: GC }, ticks: { color: TC, font: { size: 10 }, ...(opts.xt || {}) }, stacked: opts.stk },
+        y: { grid: { color: opts.h ? 'rgba(0,0,0,0)' : GC }, ticks: { color: TC, ...(opts.yt || {}) }, min: opts.ymin, stacked: opts.stk },
+      },
+    },
+  });
+}
+
+function mkLine(id, labels, datasets, opts = {}) {
+  return mkChart(id, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: opts.legend || false } },
+      scales: {
+        x: { grid: { color: GC }, ticks: { color: TC, font: { size: 10 } } },
+        y: { grid: { color: GC }, ticks: { color: TC }, min: 0 },
+      },
+    },
+  });
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────
+function mkKPI(label, value, sub = '', colorClass = '') {
+  return '<div class="kpi"><div class="kpi-l">'+label+'</div><div class="kpi-v '+colorClass+'">'+value+'</div>'+(sub ? '<div class="kpi-s">'+sub+'</div>' : '')+'</div>';
+}
+
+function pct(n, d) { return d ? Math.round(n / d * 1000) / 10 : 0; }
+function fmt$(n)   { return '$' + Math.round(n).toLocaleString(); }
+
+function sortableTable(tableId, data, renderFn) {
+  // Make table headers clickable for sorting
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  table.querySelectorAll('th[data-sort]').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      const asc = th.dataset.asc === 'true' ? false : true;
+      table.querySelectorAll('th').forEach(t => { delete t.dataset.asc; t.classList.remove('asc','desc'); });
+      th.dataset.asc = asc;
+      th.classList.add(asc ? 'asc' : 'desc');
+      const sorted = [...data].sort((a, b) => {
+        if (col === 'name' || typeof a[col] === 'string')
+          return asc ? String(a[col]).localeCompare(String(b[col])) : String(b[col]).localeCompare(String(a[col]));
+        return asc ? (a[col] || 0) - (b[col] || 0) : (b[col] || 0) - (a[col] || 0);
+      });
+      renderFn(sorted);
+    });
+  });
+}
+
+function activeInactiveBadge(isActive) {
+  return isActive
+    ? '<span class="badge badge-active">Active</span>'
+    : '<span class="badge badge-inactive">Inactive</span>';
+}
+
+function fcrBadge(p) {
+  if (p === null || p === undefined) return '—';
+  const cls = p >= SLA.FCR_TARGET ? 'bg' : p >= 70 ? 'ba' : 'br';
+  return '<span class="bx '+cls+'">'+p+'%</span>';
+}
+
+function ahtBadge(sec) {
+  if (!sec) return '—';
+  const cls = sec <= 300 ? 'bg' : sec <= SLA.AHT_TARGET_SEC ? 'ba' : 'br';
+  return '<span class="bx '+cls+'">'+secToMmss(sec)+'</span>';
+}
+
+function escBadge(r) {
+  const cls = r > 5 ? 'br' : r > 2 ? 'ba' : 'bg';
+  return '<span class="bx '+cls+'">'+r+'%</span>';
+}
+
+// ── UPLOAD HANDLING ───────────────────────────────────────────────
+function fileChosen(key, input) {
+  if (!input.files[0]) return;
+  APP.rawFiles[key] = input.files[0];
+  document.getElementById('zone-'+key).classList.add('done');
+  document.getElementById('fn-'+key).textContent = '✓ ' + input.files[0].name.slice(0, 30);
+  const tag = document.getElementById('tag-'+key);
+  if (tag) { tag.className = 'up-z-tag done-tag'; tag.textContent = 'Ready'; }
+  checkReady();
+}
+
+function checkReady() {
+  const go = document.getElementById('upGo');
+  if (go) go.classList.toggle('visible', !!(APP.rawFiles.wp && APP.rawFiles.cc && APP.rawFiles.ag));
+}
+
+function showProgress(msg) {
+  const el = document.getElementById('upProg');
+  if (el) { el.style.display = 'flex'; el.querySelector('span').textContent = msg; }
+}
+
+function showError(msg) {
+  const el = document.getElementById('upErr');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+  document.getElementById('upProg').style.display = 'none';
+}
+
+async function buildDashboard() {
+  document.getElementById('upErr').style.display = 'none';
+  try {
+    const result = await parseAllFiles(
+      APP.rawFiles.wp,
+      APP.rawFiles.cc,
+      APP.rawFiles.ag,
+      showProgress
+    );
+    APP.wpData       = result.wpData;
+    APP.ccData       = result.ccData;
+    APP.agData       = result.agData;
+    APP.followupOGIs = result.followupOGIs;
+
+    // Update file chips
+    document.getElementById('chip-wp').textContent = 'WP ✓';
+    document.getElementById('chip-cc').textContent = APP.ccData.length ? 'CC ✓' : 'CC —';
+    document.getElementById('chip-ag').textContent = APP.agData.length ? 'AG ✓' : 'AG —';
+
+    // Build period selector
+    buildPeriodSelector(APP.wpData, APP.ccData, APP.agData, () => showTab(APP.activeTab));
+
+    // Switch to dashboard
+    document.getElementById('upScreen').style.display = 'none';
+    document.getElementById('db').style.display = 'block';
+    document.getElementById('upProg').style.display = 'none';
+
+    // Show first tab
+    showTab('t1');
+  } catch (err) {
+    showError('Error processing files: ' + err.message);
+    console.error(err);
+  }
+}
+
+function resetDashboard() {
+  document.getElementById('upScreen').style.display = 'flex';
+  document.getElementById('db').style.display = 'none';
+  APP.rawFiles = { wp: null, cc: null, ag: null };
+  APP.wpData = []; APP.ccData = []; APP.agData = [];
+  Object.values(APP.charts).forEach(c => { try { c.destroy(); } catch(e){} });
+  APP.charts = {};
+  FILTER.activeKey = null; FILTER.activeType = null;
+  ['wp','cc','ag'].forEach(k => {
+    const fi = document.getElementById('file-'+k);
+    if (fi) fi.value = '';
+    const fn = document.getElementById('fn-'+k);
+    if (fn) fn.textContent = '';
+    const z = document.getElementById('zone-'+k);
+    if (z) z.classList.remove('done');
+    const tag = document.getElementById('tag-'+k);
+    if (tag) { tag.className = 'up-z-tag req-tag'; tag.textContent = 'Required'; }
+  });
+  document.getElementById('upGo').classList.remove('visible');
+  document.getElementById('upProg').style.display = 'none';
+}
+
+// ── TAB ROUTING ───────────────────────────────────────────────────
+const TAB_BUILDERS = {
+  t1  : () => buildOverview(),
+  t2  : () => buildAI(),
+  t3  : () => buildQueue(),
+  t4  : () => buildDrivers(),
+  t5  : () => buildDisputes(),
+  t6  : () => buildRefunds(),
+  t7  : () => buildEscalations(),
+  t8  : () => buildReviews(),
+  t9  : () => buildDomains(),
+  t10 : () => buildTimePatterns(),
+  t11 : () => buildTLActivity(),
+  t12 : () => buildProductivity(),
+};
+
+function showTab(id) {
+  APP.activeTab = id;
+  document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.t-btn').forEach(b => b.classList.remove('active'));
+  const sec = document.getElementById(id);
+  if (sec) sec.classList.add('active');
+  const btn = document.querySelector('.t-btn[data-tab="'+id+'"]');
+  if (btn) btn.classList.add('active');
+  if (TAB_BUILDERS[id]) TAB_BUILDERS[id]();
+}
+
+// ── PDF EXPORT ────────────────────────────────────────────────────
+async function exportPDF() {
+  const btn = document.getElementById('pdf-btn');
+  if (btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true; }
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+    const content = document.querySelector('.content');
+    if (!content) throw new Error('No content');
+    const canvas = await html2canvas(content, { scale: 1.5, useCORS: true, backgroundColor: '#f5f4f0' });
+    const imgData = canvas.toDataURL('image/jpeg', 0.85);
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pw / canvas.width * 96, ph / canvas.height * 96);
+    const fw = canvas.width * ratio / 96, fh = canvas.height * ratio / 96;
+    pdf.addImage(imgData, 'JPEG', (pw - fw) / 2, (ph - fh) / 2, fw, fh);
+    pdf.save('WAY-Ops-Dashboard-'+new Date().toISOString().slice(0,10)+'.pdf');
+  } catch (e) { alert('PDF export failed: ' + e.message); }
+  finally { if (btn) { btn.textContent = '⬇ Export PDF'; btn.disabled = false; } }
+}
+
+
+function buildOverview()     { const wp=getFiltered(APP.wpData),cc=getFiltered(APP.ccData),ag=getFiltered(APP.agData); renderOverview(wp,cc,ag); }
+function buildAI()           { const wp=getFiltered(APP.wpData); renderAI(wp); }
+function buildQueue()        { const cc=getFiltered(APP.ccData),ag=getFiltered(APP.agData); renderQueue(cc,ag); }
+function buildDrivers()      { const wp=getFiltered(APP.wpData); renderDrivers(wp); }
+function buildDisputes()     { const wp=getFiltered(APP.wpData); renderDisputes(wp); }
+function buildRefunds()      { const wp=getFiltered(APP.wpData); renderRefunds(wp); }
+function buildEscalations()  { const wp=getFiltered(APP.wpData); renderEscalations(wp); }
+function buildReviews()      { const wp=getFiltered(APP.wpData); renderReviews(wp); }
+function buildDomains()      { const wp=getFiltered(APP.wpData); renderDomains(wp); }
+function buildTimePatterns() { const wp=getFiltered(APP.wpData),cc=getFiltered(APP.ccData),ag=getFiltered(APP.agData); renderTimePatterns(wp,cc,ag); }
+function buildTLActivity()   { const wp=getFiltered(APP.wpData),cc=getFiltered(APP.ccData); renderTLActivity(wp,cc); }
+function buildProductivity() { const ag=getFiltered(APP.agData),wp=getFiltered(APP.wpData); renderProductivity(ag,wp); }
+
+// ── HELPER: empty placeholder ────────────────────────────────────
+function empty(id, msg) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = '<div class="empty">' + (msg||'No data') + '</div>';
+}
+
+// ── HELPER: mini bar ─────────────────────────────────────────────
+function miniBar(val, max, color) {
+  const pct = max ? Math.round(val/max*100) : 0;
+  return '<div style="display:flex;align-items:center;gap:6px;"><div style="width:100px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:3px;"></div></div></div>';
+}
+
+// ── HELPER: driver accordion ─────────────────────────────────────
+function buildDriverAccordion(containerId, drivers, colorArr) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!drivers.length) { el.innerHTML='<div class="empty">No data</div>'; return; }
+  const max = drivers[0].count;
+  const items = drivers.map(function(d,i) {
+    const color = colorArr ? colorArr[i % colorArr.length] : COLORS[i % COLORS.length];
+    const itemId = 'di-' + containerId + '-' + i;
+    const lotRows = (d.lots||[]).slice(0,5).map(function(l,li) {
+      return '<div class="lot-row">' +
+        (li===0 ? '<span class="top-badge">top</span>' : '<span style="min-width:28px"></span>') +
+        '<span class="lot-name">' + l.name + '</span>' +
+        miniBar(l.count, d.lots[0].count, color) +
+        '<span class="lot-count">' + l.count + '</span>' +
+      '</div>';
+    }).join('');
+    const barW = Math.round(d.count/max*100);
+    return '<div class="driver-item" id="' + itemId + '">' +
+      '<div class="driver-row">' +
+        '<div class="driver-bar-bg"><div class="driver-bar-fg" style="width:' + barW + '%;background:' + color + '"></div></div>' +
+        '<span style="flex:1;font-size:12px;padding-left:8px;">' + d.name + '</span>' +
+        '<span class="driver-count">' + d.count + '</span>' +
+        '<span class="driver-expand">▼</span>' +
+      '</div>' +
+      '<div class="driver-lots">' + lotRows + '</div>' +
+    '</div>';
+  });
+  el.innerHTML = items.join('');
+  // Attach click handlers after render
+  el.querySelectorAll('.driver-row').forEach(function(row) {
+    row.addEventListener('click', function() {
+      const item = row.closest('.driver-item');
+      if (item) item.classList.toggle('open');
+    });
+  });
+}
+
+
+// ── TAB 2: DECAGON AI ─────────────────────────────────────────────
+function renderAI(wp) {
+  const aiRows = wp.filter(r => r['Interaction'] === 'AI-Agent Call' || String(r['Agent Name']||'').includes('ai-decagon'));
+
+  // Find tickets where AI was first then agent followed = escalated
+  const aiTickets = {};
+  wp.filter(r => r['Ticket ID']).forEach(r => {
+    const tid = String(r['Ticket ID']);
+    if (!aiTickets[tid]) aiTickets[tid] = [];
+    aiTickets[tid].push(r);
+  });
+
+  let aiTotal=0, aiAnswered=0, aiResolved=0, aiEscalated=0;
+  const escalatedTickets = new Set();
+  const agentsReceived = {};
+
+  Object.entries(aiTickets).forEach(([tid, rows]) => {
+    const hasAI = rows.some(r => r['Interaction']==='AI-Agent Call');
+    if (!hasAI) return;
+    aiTotal++;
+    const hasAgent = rows.some(r => ['Call','Email','Chat'].includes(r['Interaction']) && !String(r['Agent Name']||'').includes('ai-decagon'));
+    if (hasAgent) {
+      aiEscalated++;
+      escalatedTickets.add(tid);
+      rows.filter(r => ['Call','Email','Chat'].includes(r['Interaction']) && !String(r['Agent Name']||'').includes('ai-decagon'))
+          .forEach(r => {
+            const a = String(r['Agent Name']||'');
+            if (!agentsReceived[a]) agentsReceived[a] = {count:0, channels:new Set()};
+            agentsReceived[a].count++;
+            agentsReceived[a].channels.add(r['Interaction']);
+          });
+    } else {
+      aiResolved++;
+    }
+    aiAnswered = aiTotal; // all AI calls are answered
+  });
+
+  const resPct = aiTotal ? Math.round(aiResolved/aiTotal*100) : 0;
+  const escPct = aiTotal ? Math.round(aiEscalated/aiTotal*100) : 0;
+
+  // KPIs
+  const kpi = document.getElementById('ai-kpi');
+  if (kpi) kpi.innerHTML = [
+    mkKPI('Total AI Calls', aiTotal, 'Decagon AI'),
+    mkKPI('AI Answered', aiAnswered, ''),
+    mkKPI('AI Resolved', aiResolved, 'no agent needed', 'green'),
+    mkKPI('Escalated to Human', aiEscalated, '', 'red'),
+    mkKPI('Resolution Rate', resPct+'%', '', resPct>=70?'green':'amber'),
+    mkKPI('Escalation Rate', escPct+'%', '', escPct>30?'red':'amber'),
+  ].join('');
+
+  // Call drivers
+  const driverMap = {};
+  aiRows.forEach(r => {
+    const d = String(r['Reason']||'').trim(); if (!d) return;
+    if (!driverMap[d]) driverMap[d] = {count:0, lots:{}};
+    driverMap[d].count++;
+    const lot = String(r['Lot Name']||'').trim();
+    if (lot) driverMap[d].lots[lot] = (driverMap[d].lots[lot]||0)+1;
+  });
+  const drivers = Object.entries(driverMap).sort((a,b)=>b[1].count-a[1].count).slice(0,10)
+    .map(([name,d]) => ({name, count:d.count, lots:Object.entries(d.lots).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([n,c])=>({name:n,count:c}))}));
+  buildDriverAccordion('ai-drivers', drivers, COLORS);
+
+  // Top lots resolved vs escalated
+  const lotRes={}, lotEsc={};
+  Object.entries(aiTickets).forEach(([tid,rows]) => {
+    const hasAI = rows.some(r=>r['Interaction']==='AI-Agent Call');
+    if (!hasAI) return;
+    const lot = String((rows.find(r=>r['Lot Name'])||{})['Lot Name']||'').trim();
+    if (!lot) return;
+    const esc = rows.some(r=>['Call','Email','Chat'].includes(r['Interaction'])&&!String(r['Agent Name']||'').includes('ai-decagon'));
+    if (esc) lotEsc[lot]=(lotEsc[lot]||0)+1; else lotRes[lot]=(lotRes[lot]||0)+1;
+  });
+
+  function topLotList(obj, color) {
+    const sorted = Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    if (!sorted.length) return '<div class="empty">No data</div>';
+    const max = sorted[0][1];
+    return sorted.map(([n,c],i) =>
+      '<div class="lot-row" style="padding:6px 0;border-bottom:1px solid var(--border);">'+
+        (i===0?'<span class="top-badge">top</span>':'<span style="min-width:28px;font-size:11px;color:var(--muted)">'+(i+1)+'</span>')+
+        '<span class="lot-name" style="flex:1;font-size:12px;">'+n+'</span>'+
+        miniBar(c,max,color)+
+        '<span style="font-size:12px;font-weight:600;min-width:24px;text-align:right;">'+c+'</span>'+
+      '</div>'
+    ).join('');
+  }
+  const lr=document.getElementById('ai-lots-resolved'); if(lr) lr.innerHTML=topLotList(lotRes,'#4ade80');
+  const le=document.getElementById('ai-lots-escalated'); if(le) le.innerHTML=topLotList(lotEsc,'#f87171');
+
+  // Agents table
+  const agEl = document.getElementById('ai-agents-table');
+  if (agEl) {
+    const agData = Object.entries(agentsReceived).sort((a,b)=>b[1].count-a[1].count);
+    if (!agData.length) { agEl.innerHTML='<div class="empty">No escalated calls</div>'; }
+    else agEl.innerHTML='<table><thead><tr><th data-sort="name">Agent</th><th data-sort="count" class="num">AI Escalations</th><th>Channels</th></tr></thead><tbody>'+
+      agData.map(([a,d])=>'<tr><td>'+a+'</td><td class="num">'+d.count+'</td><td>'+[...d.channels].join(', ')+'</td></tr>').join('')+
+      '</tbody></table>';
+  }
+
+  // Reasons table
+  const reasEl = document.getElementById('ai-reasons-table');
+  if (reasEl) {
+    const reasMap = {};
+    aiRows.forEach(r => {
+      const key = (String(r['Reason']||'')+' › '+String(r['Sub Reason']||'')).trim().replace(/^›\s*/,'').replace(/\s*›\s*$/,'');
+      if (!key) return;
+      const tid = String(r['Ticket ID']||r['Interaction ID']||'');
+      const isEsc = tid && escalatedTickets.has(tid);
+      const isOpen = ['Open','In Progress'].includes(String(r['Status']||''));
+      if (!reasMap[key]) reasMap[key] = {total:0,resolved:0,escalated:0,open:0};
+      reasMap[key].total++;
+      if (isEsc) reasMap[key].escalated++; else if (isOpen) reasMap[key].open++; else reasMap[key].resolved++;
+    });
+    const rData = Object.entries(reasMap).sort((a,b)=>b[1].total-a[1].total).slice(0,20);
+    reasEl.innerHTML='<table><thead><tr><th>Driver</th><th class="num">Total</th><th class="num" style="color:var(--green)">✓ Resolved</th><th class="num" style="color:var(--red)">✗ Escalated</th><th class="num">Open</th></tr></thead><tbody>'+
+      rData.map(([k,d])=>'<tr><td>'+k+'</td><td class="num">'+d.total+'</td><td class="num" style="color:var(--green)">'+d.resolved+'</td><td class="num" style="color:var(--red)">'+d.escalated+'</td><td class="num">'+d.open+'</td></tr>').join('')+
+      '</tbody></table>';
+  }
+
+  // Open/In Progress
+  const openEl = document.getElementById('ai-open-table');
+  if (openEl) {
+    const openRows = aiRows.filter(r=>['Open','In Progress'].includes(String(r['Status']||'')));
+    if (!openRows.length) openEl.innerHTML='<div class="empty">No open AI tickets</div>';
+    else openEl.innerHTML='<table><thead><tr><th>Ticket ID</th><th>Agent</th><th>Reason</th><th>Status</th><th>Date</th></tr></thead><tbody>'+
+      openRows.slice(0,50).map(r=>'<tr><td>'+String(r['Ticket ID']||'—')+'</td><td>'+String(r['Agent Name']||'')+'</td><td>'+String(r['Reason']||'')+'</td><td><span class="bx ba">'+String(r['Status']||'')+'</span></td><td>'+String(r['Interaction created date']||'')+'</td></tr>').join('')+
+      '</tbody></table>';
+  }
+
+  // No sub reason
+  const noSubEl = document.getElementById('ai-nosub-table');
+  if (noSubEl) {
+    const noSub = aiRows.filter(r=>!String(r['Sub Reason']||'').trim());
+    if (!noSub.length) noSubEl.innerHTML='<div class="empty">All AI tickets have sub reasons ✓</div>';
+    else noSubEl.innerHTML='<table><thead><tr><th>Ticket ID</th><th>Agent</th><th>Reason</th><th>Status</th><th>Date</th></tr></thead><tbody>'+
+      noSub.slice(0,50).map(r=>'<tr><td>'+String(r['Ticket ID']||'—')+'</td><td>'+String(r['Agent Name']||'')+'</td><td>'+String(r['Reason']||'—')+'</td><td>'+String(r['Status']||'')+'</td><td>'+String(r['Interaction created date']||'')+'</td></tr>').join('')+
+      '</tbody></table>';
+  }
+}
+
+// ── TAB 3: QUEUE & ABANDONED ──────────────────────────────────────
+function renderQueue(cc, ag) {
+  const answered  = cc.filter(r=>String(r['Call Result']||'')==='Answered');
+  const abandoned = cc.filter(r=>String(r['Call Result']||'')==='Abandoned');
+  const abn30     = abandoned.filter(r=>(r._wait||0)<30);
+  const abnARR    = abandoned.filter(r=>(r._wait||0)>=30);
+  const arrPct    = cc.length ? (abnARR.length/cc.length*100).toFixed(2) : '0.00';
+
+  const avgAHT  = answered.length ? Math.round(answered.reduce((s,r)=>s+(r._talk||0)+(r._hold||0)+(r._wrap||0),0)/answered.length) : 0;
+  const avgTalk = answered.length ? Math.round(answered.reduce((s,r)=>s+(r._talk||0),0)/answered.length) : 0;
+  const avgHold = answered.length ? Math.round(answered.reduce((s,r)=>s+(r._hold||0),0)/answered.length) : 0;
+
+  const kpi = document.getElementById('q-kpi');
+  if (kpi) kpi.innerHTML = [
+    mkKPI('Total Calls', cc.length.toLocaleString(), ''),
+    mkKPI('Answered', answered.length.toLocaleString(), pct(answered.length,cc.length)+'% answer rate', 'green'),
+    mkKPI('Abandoned', abandoned.length.toLocaleString(), 'click to see details'),
+    mkKPI('Abn <30s', abn30.length.toLocaleString(), 'short abandon'),
+    mkKPI('Abn ≥30s (ARR)', abnARR.length.toLocaleString(), 'true abandon'),
+    mkKPI('ARR %', arrPct+'%', 'Abn≥30s / total', abnARR.length/Math.max(cc.length,1)*100>5?'red':'green'),
+    mkKPI('Avg AHT', secToMmss(avgAHT), 'Talk+Hold+Wrap'),
+    mkKPI('Avg Talk', secToMmss(avgTalk), ''),
+    mkKPI('Avg Hold', secToMmss(avgHold), ''),
+  ].join('');
+
+  // Queue performance table
+  const queueStats = {};
+  cc.forEach(r => {
+    const q = String(r['Call Center Name']||'').trim();
+    const lang = r._lang||''; const vert = r._vertical||'';
+    if (!q) return;
+    if (!queueStats[q]) queueStats[q] = {q,lang,vert,offered:0,answered:0,abandoned:0,talkSum:0,waitSum:0,ansCount:0};
+    queueStats[q].offered++;
+    if (String(r['Call Result']||'')==='Answered') {
+      queueStats[q].answered++;
+      queueStats[q].talkSum+=(r._talk||0)+(r._hold||0)+(r._wrap||0);
+      queueStats[q].waitSum+=(r._wait||0);
+      queueStats[q].ansCount++;
+    }
+    if (String(r['Call Result']||'')==='Abandoned') queueStats[q].abandoned++;
+  });
+
+  const qData = Object.values(queueStats)
+    .filter(q=>q.vert&&q.vert!=='_manager'&&q.vert!=='_crosssell')
+    .sort((a,b)=>b.offered-a.offered);
+
+  const total_offered = qData.reduce((s,r)=>s+r.offered,0);
+
+  const qEl = document.getElementById('q-perf-table');
+  if (qEl) {
+    qEl.innerHTML = '<table id="q-perf-tbl"><thead><tr>'+
+      '<th data-sort="q">Queue Group</th>'+
+      '<th data-sort="lang">Lang</th>'+
+      '<th data-sort="vert">Vertical</th>'+
+      '<th data-sort="offered" class="num">Offered</th>'+
+      '<th data-sort="answered" class="num">Answered</th>'+
+      '<th data-sort="abandoned" class="num">Abandoned</th>'+
+      '<th class="num">Abn%</th>'+
+      '<th class="num">ARR%</th>'+
+      '<th class="num">AHT</th>'+
+      '<th class="num">Avg Wait</th>'+
+      '<th class="num">% Share</th>'+
+      '</tr></thead><tbody id="q-perf-body"></tbody>'+
+      '<tfoot><tr class="total-row"><td colspan="3">Total</td>'+
+      '<td class="num">'+total_offered.toLocaleString()+'</td>'+
+      '<td class="num">'+qData.reduce((s,r)=>s+r.answered,0).toLocaleString()+'</td>'+
+      '<td class="num">'+qData.reduce((s,r)=>s+r.abandoned,0).toLocaleString()+'</td>'+
+      '<td class="num">'+pct(qData.reduce((s,r)=>s+r.abandoned,0),total_offered)+'%</td>'+
+      '<td colspan="4"></td></tr></tfoot></table>';
+
+    function renderQRows(data) {
+      const tbody = document.getElementById('q-perf-body');
+      if (!tbody) return;
+      tbody.innerHTML = data.map(r=>{
+        const ahtS = r.ansCount ? Math.round(r.talkSum/r.ansCount) : 0;
+        const waitS= r.ansCount ? Math.round(r.waitSum/r.ansCount) : 0;
+        const abnPct= r.offered ? pct(r.abandoned,r.offered) : 0;
+        const arrRows = cc.filter(x=>String(x['Call Center Name']||'').trim()===r.q && String(x['Call Result']||'')==='Abandoned' && (x._wait||0)>=30);
+        const arrP = r.offered ? pct(arrRows.length,r.offered) : 0;
+        return '<tr>'+
+          '<td>'+r.q+'</td><td>'+r.lang+'</td><td>'+r.vert+'</td>'+
+          '<td class="num">'+r.offered.toLocaleString()+'</td>'+
+          '<td class="num">'+r.answered.toLocaleString()+'</td>'+
+          '<td class="num">'+r.abandoned.toLocaleString()+'</td>'+
+          '<td class="num"><span class="bx '+(abnPct>10?'br':abnPct>5?'ba':'bg')+'">'+abnPct+'%</span></td>'+
+          '<td class="num"><span class="bx '+(arrP>5?'br':arrP>2?'ba':'bg')+'">'+arrP+'%</span></td>'+
+          '<td class="num">'+ahtBadge(ahtS)+'</td>'+
+          '<td class="num">'+secToMmss(waitS)+'</td>'+
+          '<td class="num">'+(total_offered?pct(r.offered,total_offered):0)+'%</td>'+
+        '</tr>';
+      }).join('');
+    }
+    renderQRows(qData);
+    sortableTable('q-perf-tbl', qData, renderQRows);
+  }
+
+  // Abandon buckets
+  const buckets = [{label:'0–30s',min:0,max:30},{label:'31–60s',min:30,max:60},{label:'61–120s',min:60,max:120},{label:'121–300s',min:120,max:300},{label:'>300s',min:300,max:Infinity}];
+  const bData = buckets.map(b=>({...b,count:abandoned.filter(r=>(r._wait||0)>=b.min&&(r._wait||0)<b.max).length}));
+  const bEl = document.getElementById('q-buckets');
+  if (bEl) {
+    bEl.innerHTML = '<table><thead><tr><th>Wait Time</th><th class="num">Count</th><th class="num">% of Abandoned</th></tr></thead><tbody>'+
+      bData.map(b=>'<tr><td>'+b.label+'</td><td class="num">'+b.count+'</td><td class="num">'+pct(b.count,abandoned.length)+'%</td></tr>').join('')+
+      '</tbody></table>';
+  }
+
+  // Abandon distribution chart
+  mkBar('q-abn-chart', bData.map(b=>b.label), [{data:bData.map(b=>b.count),backgroundColor:['#4ade80','#fbbf24','#f97316','#f87171','#dc2626'],borderRadius:4}], {});
+
+  // Peak abandonment hours
+  const hourAbn = {};
+  abandoned.forEach(r=>{ if(r._hour!==null){hourAbn[r._hour]=(hourAbn[r._hour]||0)+1;} });
+  const peakEl = document.getElementById('q-peak-hours');
+  if (peakEl) {
+    if (!Object.keys(hourAbn).length) { peakEl.innerHTML='<div class="empty">No abandoned calls in this period</div>'; }
+    else {
+      const sorted = Object.entries(hourAbn).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      peakEl.innerHTML='<div class="kpi-row">'+sorted.map(([h,c])=>mkKPI(h.toString().padStart(2,'0')+':00',c,'abandoned calls','red')).join('')+'</div>';
+    }
+  }
+
+  // Bounced calls
+  const bounced = cc.filter(r=>(parseInt(r['Number of Bounces']||0))>0);
+  const bncEl = document.getElementById('q-bounced-table');
+  if (bncEl) {
+    if (!bounced.length) { bncEl.innerHTML='<div class="empty">No bounced calls</div>'; }
+    else {
+      const agBnc = {};
+      bounced.forEach(r=>{
+        const a=String(r['Agent Name']||'Unknown');
+        if(!agBnc[a])agBnc[a]={agent:a,count:0,maxBounce:0};
+        agBnc[a].count++;
+        agBnc[a].maxBounce=Math.max(agBnc[a].maxBounce,parseInt(r['Number of Bounces']||0));
+      });
+      const bData2=Object.values(agBnc).sort((a,b)=>b.count-a.count);
+      bncEl.innerHTML='<table><thead><tr><th>Agent</th><th class="num">Bounced Calls</th><th class="num">Max Bounces</th><th>Action</th></tr></thead><tbody>'+
+        bData2.map(r=>'<tr><td>'+r.agent+'</td><td class="num"><span class="bx br">'+r.count+'</span></td><td class="num">'+r.maxBounce+'</td><td><span style="font-size:11px;color:var(--amber)">⚠ Needs explanation</span></td></tr>').join('')+
+        '</tbody></table>';
+    }
+  }
+}
+
+// ── TAB 4: CALL DRIVERS ───────────────────────────────────────────
+function renderDrivers(wp) {
+  const vFilter = (document.getElementById('dr-vertical')||{}).value||'';
+  const cFilter = (document.getElementById('dr-channel')||{}).value||'';
+
+  let rows = wp.filter(r=>['Call','Email','Chat'].includes(String(r['Interaction']||'')));
+  if (vFilter) rows = rows.filter(r=>r._vertical===vFilter);
+  if (cFilter) rows = rows.filter(r=>String(r['Interaction']||'')===cFilter);
+
+  const title = (vFilter||'All Verticals')+' · '+(cFilter||'All Channels')+' — Top Drivers';
+  const tEl=document.getElementById('dr-title'); if(tEl)tEl.textContent=title;
+  const cEl=document.getElementById('dr-chart-title'); if(cEl)cEl.textContent=title;
+
+  const dMap={};
+  rows.forEach(r=>{
+    const d=String(r['Reason']||'').trim(); if(!d)return;
+    if(!dMap[d])dMap[d]={count:0,lots:{}};
+    dMap[d].count++;
+    const lot=String(r['Lot Name']||'').trim();
+    if(lot)dMap[d].lots[lot]=(dMap[d].lots[lot]||0)+1;
+  });
+  const drivers=Object.entries(dMap).sort((a,b)=>b[1].count-a[1].count).slice(0,10)
+    .map(([name,d])=>({name,count:d.count,lots:Object.entries(d.lots).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([n,c])=>({name:n,count:c}))}));
+
+  buildDriverAccordion('dr-list', drivers, COLORS);
+
+  // Bar chart
+  const top5=drivers.slice(0,5);
+  mkBar('dr-bar-chart',top5.map(d=>d.name),[{data:top5.map(d=>d.count),backgroundColor:COLORS.slice(0,5),borderRadius:4}],{h:true,yt:{font:{size:10}}});
+
+  // Lot issue summary by vertical
+  const verticals=['Airport Parking','City Parking','WAY+','Car Wash','Insurance','R&M','General'];
+  const lotSumEl=document.getElementById('dr-lot-summary');
+  if(lotSumEl){
+    let html2='';
+    verticals.forEach(v=>{
+      const vRows=wp.filter(r=>r._vertical===v&&r['Lot Name']);
+      if(!vRows.length)return;
+      const lotMap={};
+      vRows.forEach(r=>{
+        const lot=String(r['Lot Name']||'').trim(); if(!lot)return;
+        if(!lotMap[lot])lotMap[lot]={count:0,reasons:{}};
+        lotMap[lot].count++;
+        const rea=String(r['Reason']||''); if(rea)lotMap[lot].reasons[rea]=(lotMap[lot].reasons[rea]||0)+1;
+      });
+      const sorted=Object.entries(lotMap).sort((a,b)=>b[1].count-a[1].count).slice(0,5);
+      if(!sorted.length)return;
+      const max=sorted[0][1].count;
+      html2+='<div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">'+v+' — Lot Issue Summary</span></div>'+
+        '<table><thead><tr><th>#</th><th>Lot Name</th><th class="num">Contacts</th><th>Top Issue</th></tr></thead><tbody>'+
+        sorted.map(([lot,d],i)=>{
+          const topIssue=Object.entries(d.reasons).sort((a,b)=>b[1]-a[1])[0];
+          return '<tr><td>'+(i+1)+'</td><td>'+lot+'</td><td class="num">'+d.count+'</td><td style="font-size:11px;color:var(--muted)">'+(topIssue?topIssue[0]:'—')+'</td></tr>';
+        }).join('')+
+        '</tbody></table></div>';
+    });
+    lotSumEl.innerHTML=html2||'<div class="empty">No lot data</div>';
+  }
+}
+
+// ── TAB 5: DISPUTES ───────────────────────────────────────────────
+function renderDisputes(wp) {
+  const dis=wp.filter(r=>r['Interaction']==='Dispute');
+  const amt=dis.reduce((s,r)=>s+parseFloat(r['Amount']||0),0);
+  const avg=dis.length?amt/dis.length:0;
+  const closed=dis.filter(r=>String(r['Status']||'')==='Closed').length;
+
+  const kpi=document.getElementById('dis-kpi');
+  if(kpi)kpi.innerHTML=[
+    mkKPI('Total Disputes',dis.length.toLocaleString(),''),
+    mkKPI('Disputed Amount',fmt$(amt),'booking value','red'),
+    mkKPI('Avg Per Dispute',fmt$(avg),''),
+    mkKPI('All Closed',closed.toLocaleString(),'',closed===dis.length?'green':'amber'),
+  ].join('');
+
+  // By vertical donut
+  const vMap={};
+  dis.forEach(r=>{const v=r._vertical||'Other';vMap[v]=(vMap[v]||0)+1;});
+  const vL=Object.keys(vMap).sort((a,b)=>vMap[b]-vMap[a]);
+  mkDonut('dis-vert-chart',vL,vL.map(l=>vMap[l]),COLORS.slice(0,vL.length));
+  const vLeg=document.getElementById('dis-vert-legend');
+  if(vLeg)vLeg.innerHTML=vL.map((l,i)=>'<div class="leg-item"><div class="leg-dot" style="background:'+COLORS[i]+'"></div>'+l+' '+vMap[l]+'</div>').join('');
+
+  // Outcomes bar
+  const outMap={};
+  dis.forEach(r=>{const s=String(r['Sub Reason']||r['Reason']||'').trim();if(s)outMap[s]=(outMap[s]||0)+1;});
+  const outL=Object.keys(outMap).sort((a,b)=>outMap[b]-outMap[a]).slice(0,6);
+  mkBar('dis-out-chart',outL,[{data:outL.map(l=>outMap[l]),backgroundColor:'#f87171',borderRadius:4}],{xt:{maxRotation:30,font:{size:10}}});
+
+  // Team utilisation
+  const teamMap={};
+  const disTeam=TEAM.DISPUTES;
+  disTeam.forEach(a=>{teamMap[a]={agent:a,disputes:0,other:0,total:0,amount:0};});
+  dis.forEach(r=>{
+    const a=String(r['Agent Name']||'');
+    if(teamMap[a]){teamMap[a].disputes++;teamMap[a].total++;teamMap[a].amount+=parseFloat(r['Amount']||0);}
+  });
+  wp.filter(r=>r['Interaction']!=='Dispute').forEach(r=>{
+    const a=String(r['Agent Name']||'');
+    if(teamMap[a]){teamMap[a].other++;teamMap[a].total++;}
+  });
+
+  const tData=Object.values(teamMap).sort((a,b)=>b.disputes-a.disputes);
+  const teamEl=document.getElementById('dis-team-table');
+  if(teamEl){
+    teamEl.innerHTML='<table><thead><tr><th>Agent</th><th class="num">Disputes</th><th class="num">Other</th><th class="num">Total</th><th class="num">Amount</th><th>Status</th></tr></thead><tbody>'+
+      tData.map(r=>'<tr><td>'+r.agent+'</td><td class="num">'+r.disputes+'</td><td class="num">'+r.other+'</td><td class="num fw600">'+r.total+'</td><td class="num">'+fmt$(r.amount)+'</td><td>'+activeInactiveBadge(r.disputes>0||r.other>0)+'</td></tr>').join('')+
+      '<tr class="total-row"><td>Total</td><td class="num">'+tData.reduce((s,r)=>s+r.disputes,0)+'</td><td class="num">'+tData.reduce((s,r)=>s+r.other,0)+'</td><td class="num">'+tData.reduce((s,r)=>s+r.total,0)+'</td><td class="num">'+fmt$(tData.reduce((s,r)=>s+r.amount,0))+'</td><td></td></tr>'+
+      '</tbody></table>';
+  }
+
+  // By lot per vertical
+  const verticals=['Airport Parking','City Parking','Car Wash','WAY+','Insurance','R&M'];
+  let lotHtml='';
+  verticals.forEach(v=>{
+    const vDis=dis.filter(r=>r._vertical===v&&r['Lot Name']);
+    if(!vDis.length)return;
+    const lotMap={};
+    vDis.forEach(r=>{
+      const lot=String(r['Lot Name']||'').trim(); if(!lot)return;
+      if(!lotMap[lot])lotMap[lot]={count:0,amount:0};
+      lotMap[lot].count++;lotMap[lot].amount+=parseFloat(r['Amount']||0);
+    });
+    const sorted=Object.entries(lotMap).sort((a,b)=>b[1].count-a[1].count);
+    const max=sorted[0]?sorted[0][1].count:1;
+    lotHtml+='<div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">'+v+' — Disputes by Lot</span></div>'+
+      '<table><thead><tr><th>Lot Name</th><th class="num">Count</th><th class="num">Amount</th></tr></thead><tbody>'+
+      sorted.map(([lot,d])=>'<tr><td>'+lot+'</td><td class="num">'+d.count+'</td><td class="num">'+fmt$(d.amount)+'</td></tr>').join('')+
+      '</tbody></table></div>';
+  });
+  const lotEl=document.getElementById('dis-by-lot');
+  if(lotEl)lotEl.innerHTML=lotHtml||'<div class="empty">No lot data</div>';
+}
+
+// ── TAB 6: REFUNDS ────────────────────────────────────────────────
+function renderRefunds(wp) {
+  const refTypes={BCI_CARD:'BCI Card',BCI_WB:'BCI Waybucks',ACI_FULL:'ACI Full',ACI_PARTIAL:'ACI Partial',ACI_WB:'ACI Waybucks',ACI_DENIED:'ACI Denied',SUB_REFUND:'Sub Refund',SUB_NO_REFUND:'Sub No Refund'};
+  const refColors={'BCI_CARD':'#f87171','BCI_WB':'#60a5fa','ACI_FULL':'#f97316','ACI_PARTIAL':'#fbbf24','ACI_WB':'#4ade80','ACI_DENIED':'#a78bfa','SUB_REFUND':'#2dd4bf','SUB_NO_REFUND':'#94a3b8'};
+
+  const refRows={};
+  Object.keys(refTypes).forEach(t=>refRows[t]=[]);
+  wp.filter(r=>r._refund).forEach(r=>{ if(refRows[r._refund])refRows[r._refund].push(r); });
+
+  const total=Object.values(refRows).reduce((s,a)=>s+a.length,0);
+
+  const kpi=document.getElementById('ref-kpi');
+  if(kpi){
+    let kpiHtml = '<div class="kpi" style="cursor:pointer" data-reftype="ALL">' +
+      '<div class="kpi-l">Total Refund Actions</div><div class="kpi-v">' + total + '</div>' +
+      '<div class="kpi-s">click a type below</div></div>';
+    Object.entries(refTypes).forEach(function(entry){
+      const k=entry[0], label=entry[1];
+      const rrows=refRows[k];
+      const amt=rrows.reduce(function(s,r){return s+parseFloat(r['Amount']||0);},0);
+      kpiHtml += '<div class="kpi" style="cursor:pointer;border-top:3px solid '+refColors[k]+'" data-reftype="'+k+'">' +
+        '<div class="kpi-l">'+label+'</div>' +
+        '<div class="kpi-v" style="color:'+refColors[k]+'">'+fmt$(amt)+'</div>' +
+        '<div class="kpi-s">'+rrows.length+' bookings ▸</div></div>';
+    });
+    kpi.innerHTML = kpiHtml;
+    kpi.querySelectorAll('[data-reftype]').forEach(function(el){
+      el.addEventListener('click', function(){ openRefDrill(el.getAttribute('data-reftype')); });
+    });
+  }
+
+  // Charts
+  const cLabels=Object.keys(refTypes).filter(k=>refRows[k].length>0);
+  const cData=cLabels.map(k=>refRows[k].length);
+  const cColors=cLabels.map(k=>refColors[k]);
+  mkDonut('ref-type-chart',cLabels.map(k=>refTypes[k]),cData,cColors);
+  const tLeg=document.getElementById('ref-type-legend');
+  if(tLeg)tLeg.innerHTML=cLabels.map((k,i)=>'<div class="leg-item"><div class="leg-dot" style="background:'+cColors[i]+'"></div>'+refTypes[k]+' '+cData[i]+'</div>').join('');
+
+  const dollarTypes=['BCI_CARD','ACI_FULL','ACI_PARTIAL','ACI_WB','ACI_DENIED'];
+  const dAmts=dollarTypes.map(k=>refRows[k].reduce((s,r)=>s+parseFloat(r['Amount']||0),0));
+  mkBar('ref-val-chart',dollarTypes.map(k=>refTypes[k]),[{data:dAmts,backgroundColor:dollarTypes.map(k=>refColors[k]),borderRadius:4}],{});
+
+  // By vertical table
+  const verticals=['Airport Parking','City Parking','WAY+','Car Wash','Insurance','R&M','General'];
+  const vertEl=document.getElementById('ref-vert-table');
+  if(vertEl){
+    const vData=verticals.map(v=>{
+      const obj={v};
+      Object.keys(refTypes).forEach(k=>{obj[k]=refRows[k].filter(r=>r._vertical===v).length;});
+      obj.total=Object.keys(refTypes).reduce((s,k)=>s+obj[k],0);
+      return obj;
+    }).filter(r=>r.total>0);
+    const tots={v:'Total'};
+    Object.keys(refTypes).forEach(k=>{tots[k]=refRows[k].length;});
+    tots.total=total;
+    vertEl.innerHTML='<table><thead><tr><th>Vertical</th>'+Object.values(refTypes).map(function(l){return '<th class="num">'+l+'</th>';}).join('')+'<th class="num">Total</th></tr></thead><tbody>'+
+      vData.map(r=>'<tr><td>'+r.v+'</td>'+Object.keys(refTypes).map(k=>'<td class="num">'+(r[k]||0)+'</td>').join('')+'<td class="num fw600">'+r.total+'</td></tr>').join('')+
+      '<tr class="total-row"><td>Total</td>'+Object.keys(refTypes).map(k=>'<td class="num">'+tots[k]+'</td>').join('')+'<td class="num fw600">'+total+'</td></tr>'+
+      '</tbody></table>';
+  }
+
+  // Store for drill
+  window._refRows = refRows;
+  window._refTypes = refTypes;
+  window._refColors = refColors;
+}
+
+function openRefDrill(type) {
+  const panel=document.getElementById('ref-drill');
+  const titleEl=document.getElementById('ref-drill-title');
+  const subEl=document.getElementById('ref-drill-sub');
+  const contentEl=document.getElementById('ref-drill-content');
+  if(!panel||!window._refRows)return;
+
+  const rows=type==='ALL'?Object.values(window._refRows).flat():window._refRows[type]||[];
+  const label=type==='ALL'?'All Refunds':(window._refTypes[type]||type);
+  const amt=rows.reduce((s,r)=>s+parseFloat(r['Amount']||0),0);
+
+  if(titleEl)titleEl.textContent=label+' — '+rows.length+' cases · '+fmt$(amt);
+  if(subEl)subEl.textContent='Click close to dismiss';
+
+  // By agent
+  const agMap={};
+  rows.forEach(r=>{const a=String(r['Agent Name']||'Unknown');if(!agMap[a])agMap[a]=0;agMap[a]++;});
+  const agSorted=Object.entries(agMap).sort((a,b)=>b[1]-a[1]);
+  const max=agSorted[0]?agSorted[0][1]:1;
+
+  // By vertical
+  const vMap={};
+  rows.forEach(r=>{const v=r._vertical||'Other';if(!vMap[v])vMap[v]=0;vMap[v]++;});
+
+  // Top lots
+  const lotMap={};
+  rows.forEach(r=>{const l=String(r['Lot Name']||'').trim();if(l){if(!lotMap[l])lotMap[l]={count:0,amount:0};lotMap[l].count++;lotMap[l].amount+=parseFloat(r['Amount']||0);}});
+  const lotSorted=Object.entries(lotMap).sort((a,b)=>b[1].amount-a[1].amount).slice(0,8);
+
+  if(contentEl)contentEl.innerHTML=
+    '<div style="margin-bottom:12px"><div class="card-title">By Agent</div>'+
+    agSorted.slice(0,15).map(([a,c])=>'<div class="lot-row">'+miniBar(c,max,'#f97316')+'<span style="flex:1;font-size:12px;">'+a+'</span><span class="lot-count">'+c+'</span></div>').join('')+'</div>'+
+    '<div style="margin-bottom:12px"><div class="card-title">By Vertical</div>'+
+    Object.entries(vMap).sort((a,b)=>b[1]-a[1]).map(([v,c])=>'<div class="lot-row"><span class="lot-name">'+v+'</span><span class="lot-count">'+c+'</span></div>').join('')+'</div>'+
+    '<div><div class="card-title">Top Lots by Amount</div>'+
+    lotSorted.map(([l,d])=>'<div class="lot-row"><span class="lot-name">'+l+'</span><span style="font-size:12px;font-weight:600;color:var(--red)">'+fmt$(d.amount)+'</span></div>').join('')+'</div>';
+
+  panel.classList.add('open');
+}
+
+// ── TAB 7: L2 ESCALATIONS ─────────────────────────────────────────
+function renderEscalations(wp) {
+  const escTypes=['Escalation Handled by TL','Escalation handled by Escalation Team','Escalation handled by Ops Team','Escalation handled by Manager'];
+  const l2Agents=new Set([...TEAM.L2,...TEAM.TEAM_LEADS]);
+  const escs=wp.filter(r=>escTypes.includes(String(r['Interaction']||''))||l2Agents.has(String(r['Agent Name']||'')));
+  const frontlineTotal=wp.filter(r=>['Call','Email','Chat'].includes(String(r['Interaction']||''))&&TEAM.FRONTLINE.includes(String(r['Agent Name']||''))).length;
+  const escRate=frontlineTotal?Math.round(escs.length/frontlineTotal*100*10)/10:0;
+  const closed=escs.filter(r=>String(r['Status']||'')==='Closed').length;
+  const open=escs.length-closed;
+
+  const kpi=document.getElementById('esc-kpi');
+  if(kpi)kpi.innerHTML=[
+    mkKPI('Total Escalated',escs.length,''),
+    mkKPI('Escalation Rate',escRate+'%','of frontline tickets',escRate>5?'red':'amber'),
+    mkKPI('Closed',closed,'','green'),
+    mkKPI('Still Open',open,'',open>0?'amber':'green'),
+  ].join('');
+
+  // By vertical donut
+  const vMap={};escs.forEach(r=>{const v=r._vertical||'Other';vMap[v]=(vMap[v]||0)+1;});
+  const vL=Object.keys(vMap).sort((a,b)=>vMap[b]-vMap[a]);
+  mkDonut('esc-vert-chart',vL,vL.map(l=>vMap[l]),COLORS.slice(0,vL.length));
+  const vLeg=document.getElementById('esc-vert-legend');
+  if(vLeg)vLeg.innerHTML=vL.map((l,i)=>'<div class="leg-item"><div class="leg-dot" style="background:'+COLORS[i]+'"></div>'+l+' '+vMap[l]+'</div>').join('');
+
+  // By channel donut
+  const cMap={};escs.forEach(r=>{const c=String(r['Interaction']||'');cMap[c]=(cMap[c]||0)+1;});
+  const cL=Object.keys(cMap).sort((a,b)=>cMap[b]-cMap[a]);
+  mkDonut('esc-chan-chart',cL,cL.map(l=>cMap[l]),COLORS.slice(0,cL.length));
+  const cLeg=document.getElementById('esc-chan-legend');
+  if(cLeg)cLeg.innerHTML=cL.map((l,i)=>'<div class="leg-item"><div class="leg-dot" style="background:'+COLORS[i]+'"></div>'+l+' '+cMap[l]+'</div>').join('');
+
+  // Reasons accordion
+  const dMap={};
+  escs.forEach(r=>{
+    const d=String(r['Reason']||'').trim();if(!d)return;
+    if(!dMap[d])dMap[d]={count:0,lots:{}};
+    dMap[d].count++;
+    const lot=String(r['Lot Name']||'').trim();
+    if(lot)dMap[d].lots[lot]=(dMap[d].lots[lot]||0)+1;
+  });
+  const drivers=Object.entries(dMap).sort((a,b)=>b[1].count-a[1].count).slice(0,15)
+    .map(([name,d])=>({name,count:d.count,lots:Object.entries(d.lots).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([n,c])=>({name:n,count:c}))}));
+  buildDriverAccordion('esc-reasons',drivers,['#f87171']);
+
+  // Status breakdown
+  const statMap={};escs.forEach(r=>{const s=String(r['Status']||'Unknown');statMap[s]=(statMap[s]||0)+1;});
+  const statEl=document.getElementById('esc-status-table');
+  if(statEl){
+    const sorted=Object.entries(statMap).sort((a,b)=>b[1]-a[1]);
+    statEl.innerHTML='<table><thead><tr><th>Status</th><th class="num">Count</th><th class="num">%</th></tr></thead><tbody>'+
+      sorted.map(([s,c])=>'<tr><td>'+s+'</td><td class="num">'+c+'</td><td class="num"><span class="bx '+(s==='Closed'?'bg':s.includes('Waiting')?'ba':'br')+'">'+pct(c,escs.length)+'%</span></td></tr>').join('')+
+      '</tbody></table>';
+  }
+}
+
+// ── TAB 8: REVIEWS ────────────────────────────────────────────────
+function renderReviews(wp) {
+  const revs=wp.filter(r=>r['Interaction']==='User Reviews');
+  function stars(r){const s=String(r['Reason']||'');const m=s.match(/(\d)/);return m?parseInt(m[1]):0;}
+  const s5=revs.filter(r=>stars(r)>=5).length;
+  const s4=revs.filter(r=>stars(r)===4).length;
+  const s3=revs.filter(r=>stars(r)===3).length;
+  const s2=revs.filter(r=>stars(r)===2).length;
+  const s1=revs.filter(r=>stars(r)===1).length;
+  const pub=revs.filter(r=>String(r['Status']||'')==='Closed').length;
+
+  const kpi=document.getElementById('rev-kpi');
+  if(kpi)kpi.innerHTML=[
+    mkKPI('Total Reviews',revs.length,''),
+    mkKPI('5 Star',s5,'positive','green'),
+    mkKPI('4 Star',s4,'','green'),
+    mkKPI('3 Star',s3,'neutral','amber'),
+    mkKPI('2 Star',s2,'','red'),
+    mkKPI('1 Star',s1,'negative','red'),
+    mkKPI('Published',pub,''),
+  ].join('');
+
+  mkDonut('rev-rating-chart',['5★','4★','3★','2★','1★'],[s5,s4,s3,s2,s1],['#16a34a','#4ade80','#fbbf24','#f97316','#f87171']);
+  const rLeg=document.getElementById('rev-rating-legend');
+  if(rLeg)rLeg.innerHTML=['5★','4★','3★','2★','1★'].map((l,i)=>'<div class="leg-item"><div class="leg-dot" style="background:'+['#16a34a','#4ade80','#fbbf24','#f97316','#f87171'][i]+'"></div>'+l+'</div>').join('');
+
+  // By vertical
+  const vMap={};revs.forEach(r=>{const v=r._vertical||'Other';vMap[v]=(vMap[v]||0)+1;});
+  const vL=Object.keys(vMap).sort((a,b)=>vMap[b]-vMap[a]);
+  mkBar('rev-vert-chart',vL,[{data:vL.map(l=>vMap[l]),backgroundColor:'#a78bfa',borderRadius:4}],{xt:{maxRotation:30,font:{size:10}}});
+
+  // Handler table
+  const handlers=TEAM.REVIEWS;
+  const hData=handlers.map(a=>{
+    const aRevs=revs.filter(r=>r['Agent Name']===a);
+    const a5=aRevs.filter(r=>stars(r)>=5).length;
+    const a4=aRevs.filter(r=>stars(r)===4).length;
+    const a3=aRevs.filter(r=>stars(r)===3).length;
+    const a2=aRevs.filter(r=>stars(r)===2).length;
+    const a1=aRevs.filter(r=>stars(r)===1).length;
+    const pct5=aRevs.length?Math.round(a5/aRevs.length*100):0;
+    return {name:a,s5:a5,s4:a4,s3:a3,s2:a2,s1:a1,total:aRevs.length,pct5,active:aRevs.length>0};
+  });
+  const handEl=document.getElementById('rev-handler-table');
+  if(handEl){
+    handEl.innerHTML='<table><thead><tr><th>Agent</th><th class="num">5★</th><th class="num">4★</th><th class="num">3★</th><th class="num">2★</th><th class="num">1★</th><th class="num">Total</th><th class="num">5★%</th></tr></thead><tbody>'+
+      hData.map(r=>'<tr><td>'+r.name+' '+activeInactiveBadge(r.active)+'</td><td class="num" style="color:var(--green)">'+r.s5+'</td><td class="num" style="color:var(--green)">'+r.s4+'</td><td class="num" style="color:var(--amber)">'+r.s3+'</td><td class="num" style="color:var(--red)">'+r.s2+'</td><td class="num" style="color:var(--red)">'+r.s1+'</td><td class="num fw600">'+r.total+'</td><td class="num">'+fcrBadge(r.pct5)+'</td></tr>').join('')+
+      '<tr class="total-row"><td>Total</td><td class="num">'+s5+'</td><td class="num">'+s4+'</td><td class="num">'+s3+'</td><td class="num">'+s2+'</td><td class="num">'+s1+'</td><td class="num fw600">'+revs.length+'</td><td class="num">'+fcrBadge(revs.length?Math.round(s5/revs.length*100):0)+'</td></tr>'+
+      '</tbody></table>';
+  }
+
+  // Top lots pos/neg
+  function topLots(filter, containerId, color) {
+    const lMap={};
+    revs.filter(r=>filter(stars(r))).forEach(r=>{
+      const l=String(r['Lot Name']||'').trim();if(!l)return;lMap[l]=(lMap[l]||0)+1;
+    });
+    const sorted=Object.entries(lMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const el=document.getElementById(containerId);
+    if(!el)return;
+    if(!sorted.length){el.innerHTML='<div class="empty">No data</div>';return;}
+    el.innerHTML=sorted.map(([l,c],i)=>'<div class="lot-row" style="padding:6px 0;border-bottom:1px solid var(--border);">'+
+      '<span style="font-size:11px;font-weight:700;min-width:20px;color:var(--muted)">'+(i+1)+'</span>'+
+      '<span class="lot-name" style="flex:1">'+l+'</span>'+
+      '<span style="font-size:12px;font-weight:600;color:'+color+'">'+c+'</span></div>').join('');
+  }
+  topLots(s=>s>=4,'rev-top-pos','#16a34a');
+  topLots(s=>s<=3&&s>0,'rev-top-neg','#dc2626');
+
+  // Reasons pos/neg
+  function topReasons(filter, containerId, color) {
+    const rMap={};
+    revs.filter(r=>filter(stars(r))).forEach(r=>{
+      const d=String(r['Sub Reason']||r['Reason']||'').trim();if(d)rMap[d]=(rMap[d]||0)+1;
+    });
+    const sorted=Object.entries(rMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const el=document.getElementById(containerId);
+    if(!el)return;
+    const max=sorted[0]?sorted[0][1]:1;
+    el.innerHTML=sorted.map(([r,c])=>'<div class="lot-row" style="padding:5px 0;">'+
+      miniBar(c,max,color)+'<span class="lot-name" style="flex:1">'+r+'</span><span class="lot-count">'+c+'</span></div>').join('');
+  }
+  topReasons(s=>s>=4,'rev-reasons-pos','#4ade80');
+  topReasons(s=>s<=3&&s>0,'rev-reasons-neg','#f87171');
+}
+
+// ── TAB 9: DOMAINS ────────────────────────────────────────────────
+function renderDomains(wp) {
+  const domMap={};
+  let untagged=0;
+  wp.filter(r=>r['Ticket ID']).forEach(r=>{
+    const d=String(r['Domain']||'').trim();
+    if(!d)untagged++;
+    else domMap[d]=(domMap[d]||0)+1;
+  });
+  const sorted=Object.entries(domMap).sort((a,b)=>b[1]-a[1]);
+  const total=sorted.reduce((s,[,c])=>s+c,0);
+  const top=sorted[0]||['—',0];
+  const topPct=total?Math.round(top[1]/total*100*10)/10:0;
+
+  const kpi=document.getElementById('dom-kpi');
+  if(kpi)kpi.innerHTML=[
+    mkKPI('Platforms Tracked',sorted.length,''),
+    mkKPI('Top Platform',top[0],top[1]+' tickets','blue'),
+    mkKPI('Top Share',topPct+'%',''),
+    mkKPI('Untagged',untagged,'no domain','amber'),
+  ].join('');
+
+  // Bar chart
+  const top10=sorted.slice(0,10);
+  mkBar('dom-bar-chart',top10.map(([d])=>d),[{data:top10.map(([,c])=>c),backgroundColor:'#60a5fa',borderRadius:4}],{xt:{maxRotation:30,font:{size:10}}});
+
+  // Platform by vertical table
+  const verticals=['Airport Parking','City Parking','WAY+','Car Wash','Insurance','R&M','General','Other'];
+  const platforms=sorted.slice(0,10).map(([d])=>d);
+  const pData=platforms.map(p=>{
+    const pRows=wp.filter(r=>String(r['Domain']||'').trim()===p&&r['Ticket ID']);
+    const obj={platform:p};
+    verticals.forEach(v=>{obj[v]=pRows.filter(r=>r._vertical===v).length;});
+    obj.total=pRows.length;return obj;
+  });
+
+  const domEl=document.getElementById('dom-table');
+  if(domEl){
+    domEl.innerHTML='<table><thead><tr><th>Platform</th>'+verticals.map(v=>'<th class="num">'+v+'</th>').join('')+'<th class="num">Total</th></tr></thead><tbody>'+
+      pData.map(r=>'<tr><td>'+r.platform+'</td>'+verticals.map(v=>'<td class="num">'+(r[v]||0)+'</td>').join('')+'<td class="num fw600">'+r.total+'</td></tr>').join('')+
+      '<tr class="total-row"><td>Total (tagged)</td>'+verticals.map(v=>'<td class="num">'+pData.reduce((s,r)=>s+(r[v]||0),0)+'</td>').join('')+'<td class="num fw600">'+total+'</td></tr>'+
+      '</tbody></table>';
+  }
+}
+
+// ── TAB 10: TIME PATTERNS ─────────────────────────────────────────
+function renderTimePatterns(wp, cc, ag) {
+  const hours=Array.from({length:24},(_,i)=>i);
+  const hLabels=hours.map(h=>(h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p'));
+
+  // Peak/quietest from CC
+  const hourCC={};
+  cc.forEach(r=>{if(r._hour!==null){hourCC[r._hour]=(hourCC[r._hour]||0)+1;}});
+  const sorted=Object.entries(hourCC).sort((a,b)=>b[1]-a[1]);
+  const peakH=sorted[0]?sorted[0][0]:'—';
+  const quietH=sorted[sorted.length-1]?sorted[sorted.length-1][0]:'—';
+
+  // Shift volumes from WP (by hour)
+  const shiftVols=[0,0,0];
+  wp.forEach(r=>{
+    if(r._hour===null)return;
+    const h=r._hour;
+    if((h>=18||h<4))shiftVols[0]++;       // Shift 1: 6:30PM-3:30AM
+    if(h>=2&&h<11)shiftVols[1]++;          // Shift 2: 2AM-11AM
+    if(h>=10&&h<19)shiftVols[2]++;         // Shift 3: 10AM-7PM
+  });
+
+  const kpi=document.getElementById('tp-kpi');
+  if(kpi)kpi.innerHTML=[
+    mkKPI('Peak Hour',peakH+':00','busiest'),
+    mkKPI('Quietest Hour',quietH+':00','least calls'),
+    mkKPI('Shift 1 Volume',shiftVols[0].toLocaleString(),'6:30PM–3:30AM'),
+    mkKPI('Shift 2 Volume',shiftVols[1].toLocaleString(),'2:00AM–11:00AM'),
+    mkKPI('Shift 3 Volume',shiftVols[2].toLocaleString(),'10:00AM–7:00PM'),
+  ].join('');
+
+  // Hourly WP volume by shift
+  const s1=[],s2=[],s3=[];
+  hours.forEach(h=>{
+    const c=wp.filter(r=>r._hour===h).length;
+    s1.push((h>=18||h<4)?c:null);
+    s2.push((h>=2&&h<11)?c:null);
+    s3.push((h>=10&&h<19)?c:null);
+  });
+
+  // Active agents per hour from AG
+  const agHour={};
+  ag.forEach(r=>{
+    if(r._hour===null||!r['Agent Name'])return;
+    if(!agHour[r._hour])agHour[r._hour]=new Set();
+    agHour[r._hour].add(r['Agent Name']);
+  });
+  const agActive=hours.map(h=>agHour[h]?agHour[h].size:0);
+
+  destroyChart('tp-coverage-chart');
+  mkChart('tp-coverage-chart',{
+    type:'bar',
+    data:{labels:hLabels,datasets:[
+      {label:'Shift 1',data:s1,backgroundColor:'rgba(74,111,165,0.6)',borderRadius:3},
+      {label:'Shift 2',data:s2,backgroundColor:'rgba(74,140,92,0.6)',borderRadius:3},
+      {label:'Shift 3',data:s3,backgroundColor:'rgba(140,106,42,0.6)',borderRadius:3},
+      {label:'Active Agents',data:agActive,type:'line',yAxisID:'y2',borderColor:'#f97316',backgroundColor:'#f97316',pointRadius:3,borderWidth:2,fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{font:{size:10}}}},
+      scales:{
+        x:{stacked:true,grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:9}}},
+        y:{stacked:true,grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:9}}},
+        y2:{position:'right',grid:{display:false},ticks:{font:{size:9}}},
+      }
+    }
+  });
+
+  // CC hourly answered/abandoned
+  const ccAns={},ccAbn={};
+  cc.forEach(r=>{
+    if(r._hour===null)return;
+    if(String(r['Call Result']||'')==='Answered')ccAns[r._hour]=(ccAns[r._hour]||0)+1;
+    if(String(r['Call Result']||'')==='Abandoned')ccAbn[r._hour]=(ccAbn[r._hour]||0)+1;
+  });
+  const peakCC=Object.entries(ccAns).sort((a,b)=>b[1]-a[1])[0];
+  const tpTitle=document.getElementById('tp-cc-title');
+  if(tpTitle&&peakCC)tpTitle.textContent='Hourly Call Volume (CC Report) — Peak at '+peakCC[0]+':00';
+
+  mkBar('tp-cc-chart',hLabels,[
+    {label:'Answered',data:hours.map(h=>ccAns[h]||0),backgroundColor:'rgba(74,140,92,0.7)',borderRadius:2},
+    {label:'Abandoned',data:hours.map(h=>ccAbn[h]||0),backgroundColor:'rgba(220,38,38,0.7)',borderRadius:2},
+  ],{legend:true,stk:true,xt:{font:{size:9}}});
+
+  // Heatmap
+  const hmEl=document.getElementById('tp-heatmap');
+  if(hmEl){
+    const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const hmData={};
+    wp.forEach(r=>{
+      if(!r._dt)return;
+      const day=r._dt.getDay(); // 0=Sun
+      const dow=day===0?6:day-1; // Mon=0
+      const h=r._hour;
+      if(h===null)return;
+      const key=dow+'-'+h;
+      hmData[key]=(hmData[key]||0)+1;
+    });
+    const allVals=Object.values(hmData);
+    const maxVal=allVals.length?Math.max(...allVals):1;
+
+    let html2='<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:10px;">';
+    html2+='<tr><th style="padding:2px 6px;"></th>'+hours.map(h=>'<th style="padding:2px 4px;color:var(--muted);font-weight:400">'+hLabels[h]+'</th>').join('')+'</tr>';
+    days.forEach((d,di)=>{
+      html2+='<tr><td style="padding:2px 6px;font-weight:600;color:var(--muted);white-space:nowrap">'+d+'</td>';
+      hours.forEach(h=>{
+        const v=hmData[di+'-'+h]||0;
+        const intensity=v?Math.round(v/maxVal*100):0;
+        const bg=v?'rgba(200,86,43,'+Math.max(0.05,intensity/100)+')':'#f9f9f7';
+        html2+='<td style="width:26px;height:22px;background:'+bg+';border:1px solid #f0eeea;border-radius:2px;text-align:center;color:'+(intensity>50?'#fff':'var(--text)')+'">'+
+          (v>0?v:'')+'</td>';
+      });
+      html2+='</tr>';
+    });
+    html2+='</table></div>';
+    hmEl.innerHTML=html2;
+  }
+
+  // Agent gap analysis
+  const gapEl=document.getElementById('tp-gap-table');
+  if(gapEl){
+    const gapData=[];
+    hours.forEach(h=>{
+      const callsThisHour=cc.filter(r=>r._hour===h&&String(r['Call Result']||'')==='Answered').length;
+      const emailsThisHour=wp.filter(r=>r._hour===h&&r['Interaction']==='Email').length;
+      const chatsThisHour=wp.filter(r=>r._hour===h&&r['Interaction']==='Chat').length;
+      const totalHandle=callsThisHour*SLA.CALL_HANDLE_SEC+emailsThisHour*SLA.EMAIL_HANDLE_SEC+chatsThisHour*SLA.CHAT_HANDLE_SEC;
+      const agentsNeeded=Math.ceil(totalHandle/(3600*SLA.OCCUPANCY_TARGET));
+      const agentsActive=agActive[h]||0;
+      const gap=agentsNeeded-agentsActive;
+      if(gap>0)gapData.push({hour:hLabels[h],calls:callsThisHour,emails:emailsThisHour,chats:chatsThisHour,needed:agentsNeeded,active:agentsActive,gap});
+    });
+    if(!gapData.length){gapEl.innerHTML='<div class="empty" style="color:var(--green)">✓ No staffing gaps detected</div>';}
+    else{
+      gapEl.innerHTML='<table><thead><tr><th>Hour</th><th class="num">Calls</th><th class="num">Emails</th><th class="num">Chats</th><th class="num">Agents Needed</th><th class="num">Agents Active</th><th class="num">Gap</th></tr></thead><tbody>'+
+        gapData.map(r=>'<tr><td>'+r.hour+'</td><td class="num">'+r.calls+'</td><td class="num">'+r.emails+'</td><td class="num">'+r.chats+'</td><td class="num">'+r.needed+'</td><td class="num">'+r.active+'</td><td class="num"><span class="bx br">+'+r.gap+' needed</span></td></tr>').join('')+
+        '</tbody></table>';
+    }
+  }
+}
+
+// ── TAB 11: TL ACTIVITY ───────────────────────────────────────────
+function renderTLActivity(wp, cc) {
+  // Manager Queue
+  const mgr=cc.filter(r=>String(r['Call Center Name']||'').trim()==='CS Manager Queue');
+  const mgrAns=mgr.filter(r=>String(r['Call Result']||'')==='Answered');
+  const mgrAbn=mgr.filter(r=>String(r['Call Result']||'')==='Abandoned');
+
+  const mgEl=document.getElementById('tl-mgr-queue');
+  if(mgEl){
+    mgEl.innerHTML='<div class="kpi-row">'+
+      mkKPI('Offered',mgr.length,'')+
+      mkKPI('Answered',mgrAns.length,'','green')+
+      mkKPI('Abandoned',mgrAbn.length,'',mgrAbn.length>0?'red':'green')+
+    '</div>'+
+    (mgrAbn.length?'<div style="padding:8px 0;color:var(--red);font-size:12px;font-weight:600">⚠ '+mgrAbn.length+' calls abandoned in Manager Queue — needs investigation</div>':'')+
+    '<div class="card-title" style="margin-top:12px">Who answered Manager Queue calls</div>'+
+    (()=>{
+      const agMap={};
+      mgrAns.forEach(r=>{const a=String(r['Agent Name']||'Unknown');agMap[a]=(agMap[a]||0)+1;});
+      const sorted=Object.entries(agMap).sort((a,b)=>b[1]-a[1]);
+      if(!sorted.length) return '<div class="empty">No answered calls</div>';
+      return '<table><thead><tr><th>Agent</th><th>Role</th><th class="num">Calls Answered</th></tr></thead><tbody>'+
+        sorted.map(([a,c])=>'<tr><td>'+a+'</td><td style="font-size:11px;color:var(--muted)">'+(AGENT_ROLE[a]||'—')+'</td><td class="num fw600">'+c+'</td></tr>').join('')+
+        '</tbody></table>';
+    })();
+  }
+
+  // TL content — team sections
+  const tlEl=document.getElementById('tl-content');
+  if(!tlEl)return;
+
+  function buildSection(title, agents, columns, color) {
+    const rows=agents.map(a=>{
+      const aWP=wp.filter(r=>r['Agent Name']===a);
+      const calls=aWP.filter(r=>r['Interaction']==='Call').length;
+      const emails=aWP.filter(r=>r['Interaction']==='Email').length;
+      const chats=aWP.filter(r=>r['Interaction']==='Chat').length;
+      const tlRevs=aWP.filter(r=>r['Interaction']==='TL Review').length;
+      const escH=aWP.filter(r=>['Escalation Handled by TL','Escalation handled by Escalation Team'].includes(r['Interaction'])).length;
+      const total=calls+emails+chats;
+      const fcrEl2=aWP.filter(r=>r._fcrEligible);
+      const fcrOk=aWP.filter(r=>r._isFCR);
+      const fcr=fcrEl2.length?Math.round(fcrOk.length/fcrEl2.length*100):null;
+      const escPct=total?Math.round(escH/total*100*10)/10:0;
+      return {name:a,calls,emails,chats,tlRevs,escH,total,fcr,escPct,active:total+tlRevs+escH>0};
+    });
+
+    return '<div class="tbl-wrap mb16">'+
+      '<div class="sec-hdr" style="background:'+color+'">'+title+' ('+agents.length+')</div>'+
+      '<table><thead><tr><th>Name</th>'+columns.map(c=>'<th class="num">'+c+'</th>').join('')+'</tr></thead><tbody>'+
+      rows.map(r=>'<tr><td>'+r.name+' '+activeInactiveBadge(r.active)+'</td>'+
+        columns.map(c=>{
+          if(c==='Calls')return'<td class="num">'+r.calls+'</td>';
+          if(c==='Emails')return'<td class="num">'+r.emails+'</td>';
+          if(c==='Chats')return'<td class="num">'+r.chats+'</td>';
+          if(c==='TL Reviews')return'<td class="num bb">'+r.tlRevs+'</td>';
+          if(c==='Esc Handled')return'<td class="num">'+r.escH+'</td>';
+          if(c==='Total')return'<td class="num fw600">'+r.total+'</td>';
+          if(c==='FCR%')return'<td class="num">'+fcrBadge(r.fcr)+'</td>';
+          if(c==='Esc%')return'<td class="num">'+escBadge(r.escPct)+'</td>';
+          return'<td>—</td>';
+        }).join('')+
+      '</tr>').join('')+
+      '<tr class="total-row"><td>Total</td>'+columns.map(c=>{
+        if(c==='Calls')return'<td class="num">'+rows.reduce((s,r)=>s+r.calls,0)+'</td>';
+        if(c==='Emails')return'<td class="num">'+rows.reduce((s,r)=>s+r.emails,0)+'</td>';
+        if(c==='Chats')return'<td class="num">'+rows.reduce((s,r)=>s+r.chats,0)+'</td>';
+        if(c==='TL Reviews')return'<td class="num">'+rows.reduce((s,r)=>s+r.tlRevs,0)+'</td>';
+        if(c==='Esc Handled')return'<td class="num">'+rows.reduce((s,r)=>s+r.escH,0)+'</td>';
+        if(c==='Total')return'<td class="num fw600">'+rows.reduce((s,r)=>s+r.total,0)+'</td>';
+        return'<td></td>';
+      }).join('')+'</tr>'+
+      '</tbody></table></div>';
+  }
+
+  tlEl.innerHTML=
+    buildSection('MANAGEMENT',  [...TEAM.MANAGER,...TEAM.ASST_MANAGER], ['Calls','Emails','Chats','Total'], '#6b7280')+
+    buildSection('TEAM LEADS',  TEAM.TEAM_LEADS, ['Calls','Emails','Chats','TL Reviews','Esc Handled','Total','Esc%'], '#2563eb')+
+    buildSection('SME',         TEAM.SME,        ['Calls','Emails','Chats','Total','FCR%','Esc%'], '#7c3aed')+
+    buildSection('L2 ESCALATIONS', TEAM.L2,      ['Calls','Emails','Chats','Esc Handled','Total','FCR%'], '#dc2626')+
+    buildSection('QC TEAM',     TEAM.QC,         ['Calls','Emails','Chats','Total','FCR%','Esc%'], '#0d9488')+
+    buildSection('DISPUTES',    TEAM.DISPUTES,   ['Calls','Emails','Chats','Total','FCR%'], '#d97706')+
+    buildSection('DATA/REPORTING', TEAM.DATA_REPORTING, ['Calls','Emails','Chats','Total'], '#6b7280')+
+    buildSection('REVIEWS',     TEAM.REVIEWS,    ['Calls','Emails','Chats','Total','FCR%','Esc%'], '#db2777');
+}
+
+// ── TAB 12: PRODUCTIVITY ──────────────────────────────────────────
+function renderProductivity(ag, wp) {
+  // KPI Row 1 — from AG
+  const inbound = ag.filter(r=>r._isInbound);
+  const outbound= ag.filter(r=>r._isOutbound);
+  const avgTalk = inbound.length?Math.round(inbound.reduce((s,r)=>s+r._talk,0)/inbound.length):0;
+  const avgHold = inbound.length?Math.round(inbound.reduce((s,r)=>s+r._hold,0)/inbound.length):0;
+  const avgWrap = inbound.length?Math.round(inbound.reduce((s,r)=>s+r._wrap,0)/inbound.length):0;
+  const aht     = avgTalk+avgHold+avgWrap;
+  const totalHandle= Math.round(inbound.reduce((s,r)=>s+r._talk+r._hold+r._wrap,0)/3600*10)/10;
+
+  // Active agents per day
+  const dayAgents={};
+  ag.forEach(r=>{if(!r._dateKey||!r['Agent Name'])return;if(!dayAgents[r._dateKey])dayAgents[r._dateKey]=new Set();dayAgents[r._dateKey].add(r['Agent Name']);});
+  const avgPerDay=Object.keys(dayAgents).length?Math.round(Object.values(dayAgents).reduce((s,v)=>s+v.size,0)/Object.keys(dayAgents).length):0;
+
+  // Interactions per agent from WP
+  const agInts={};
+  wp.filter(r=>['Call','Email','Chat'].includes(r['Interaction'])).forEach(r=>{const a=r['Agent Name'];if(a)agInts[a]=(agInts[a]||0)+1;});
+  const avgInts=Object.keys(agInts).length?Math.round(Object.values(agInts).reduce((s,v)=>s+v,0)/Object.keys(agInts).length*10)/10:0;
+  const long10=ag.filter(r=>r._isLongCall).length;
+  const hold5=ag.filter(r=>r._isHighHold).length;
+
+  const k1=document.getElementById('prod-kpi1');
+  if(k1)k1.innerHTML=[
+    mkKPI('Inbound Calls',inbound.length.toLocaleString(),''),
+    mkKPI('Outbound Calls',outbound.length.toLocaleString(),'agent outbound'),
+    mkKPI('Avg Talk',secToMmss(avgTalk),''),
+    mkKPI('Avg Hold',secToMmss(avgHold),''),
+    mkKPI('AHT',secToMmss(aht),'Talk+Hold+Wrap',aht<=300?'green':aht<=SLA.AHT_TARGET_SEC?'amber':'red'),
+    mkKPI('Total Handle',totalHandle+'h','team total'),
+    mkKPI('Avg Agents/Day',avgPerDay,'daily active'),
+    mkKPI('Avg Interactions',avgInts,'Call+Email+Chat'),
+  ].join('');
+
+  // KPI Row 2
+  const frontlineAgents=ag.filter(r=>TEAM.FRONTLINE.includes(r['Agent Name']));
+  const frontlineSet=new Set(frontlineAgents.map(r=>r['Agent Name']));
+
+  // FCR per agent
+  const agFCR={};
+  wp.filter(r=>r._fcrEligible).forEach(r=>{const a=r['Agent Name'];if(!agFCR[a])agFCR[a]={el:0,ok:0};agFCR[a].el++;});
+  wp.filter(r=>r._isFCR).forEach(r=>{const a=r['Agent Name'];if(agFCR[a])agFCR[a].ok++;});
+  const fcrBelowAgents=[...frontlineSet].filter(a=>{const d=agFCR[a];return d&&d.el>=5&&Math.round(d.ok/d.el*100)<80;}).length;
+
+  // Esc rate per agent
+  const agEsc={};
+  wp.filter(r=>['Call','Email','Chat'].includes(r['Interaction'])&&TEAM.FRONTLINE.includes(r['Agent Name'])).forEach(r=>{const a=r['Agent Name'];if(!agEsc[a])agEsc[a]={total:0,esc:0};agEsc[a].total++;});
+  wp.filter(r=>['Escalation Handled by TL','Escalation handled by Escalation Team'].includes(r['Interaction'])).forEach(r=>{const a=r['Agent Name'];if(agEsc[a])agEsc[a].esc++;});
+  const highEscAgents=[...frontlineSet].filter(a=>{const d=agEsc[a];return d&&d.total>0&&d.esc/d.total*100>5;}).length;
+
+  // Complexity (ints/ticket)
+  const agTickets={},agIntsAll={};
+  wp.filter(r=>r['Ticket ID']&&TEAM.FRONTLINE.includes(r['Agent Name'])).forEach(r=>{
+    const a=r['Agent Name'];
+    if(!agTickets[a])agTickets[a]=new Set();
+    agTickets[a].add(String(r['Ticket ID']));
+    agIntsAll[a]=(agIntsAll[a]||0)+1;
+  });
+  const highComplexAgents=[...frontlineSet].filter(a=>{
+    const t=agTickets[a]?agTickets[a].size:0;
+    const i=agIntsAll[a]||0;
+    return t>=5&&i/t>1.4;
+  }).length;
+
+  const k2=document.getElementById('prod-kpi2');
+  if(k2)k2.innerHTML=[
+    mkKPI('Frontline Agents',[...frontlineSet].length,'active'),
+    mkKPI('Calls >10 min',long10.toLocaleString(),'long calls',long10>100?'red':'amber'),
+    mkKPI('Hold >5 min',hold5.toLocaleString(),'high hold',hold5>100?'red':'amber'),
+    mkKPI('FCR Below 80%',fcrBelowAgents+' agents','min 5 tickets',fcrBelowAgents>0?'red':'green'),
+    mkKPI('High Esc Rate >5%',highEscAgents+' agents','',highEscAgents>0?'red':'green'),
+    mkKPI('High Complexity >1.4x',highComplexAgents+' agents','',highComplexAgents>0?'amber':'green'),
+  ].join('');
+
+  // Build sub-tab content
+  buildProdOverview(ag, wp, agFCR, agEsc, agTickets, agIntsAll);
+  buildProdTeam('p-frontline','FRONTLINE',TEAM.FRONTLINE,ag,wp,agFCR,agEsc,agTickets,agIntsAll,true);
+  buildProdTeam('p-ind-spa','INDIAN SPANISH',TEAM.INDIAN_SPANISH,ag,wp,agFCR,agEsc,agTickets,agIntsAll,false);
+  buildProdTeam('p-col-spa','COLUMBIA SPANISH',TEAM.COLUMBIA_SPANISH,ag,wp,agFCR,agEsc,agTickets,agIntsAll,false);
+  buildProdTeam('p-wayplus','WAY+ US',TEAM.WAYPLUS_US,ag,wp,agFCR,agEsc,agTickets,agIntsAll,false);
+  buildProdSupport(ag,wp,agFCR,agEsc);
+}
+
+function buildProdOverview(ag,wp,agFCR,agEsc,agTickets,agIntsAll) {
+  const el=document.getElementById('p-overview');
+  if(!el)return;
+  const allTeams={
+    'Frontline':TEAM.FRONTLINE,'Indian Spanish':TEAM.INDIAN_SPANISH,
+    'Columbia Spanish':TEAM.COLUMBIA_SPANISH,'Way+ US':TEAM.WAYPLUS_US,
+    'Team Leads':TEAM.TEAM_LEADS,'SME':TEAM.SME,'L2':TEAM.L2,
+    'QC':TEAM.QC,'Disputes':TEAM.DISPUTES,'Data/Reporting':TEAM.DATA_REPORTING,'Reviews':TEAM.REVIEWS,
+    'Manager':[...TEAM.MANAGER,...TEAM.ASST_MANAGER],
+  };
+  const tData=Object.entries(allTeams).map(([team,agents])=>{
+    const aAg=ag.filter(r=>agents.includes(r['Agent Name'])&&r._isInbound);
+    const aOut=ag.filter(r=>agents.includes(r['Agent Name'])&&r._isOutbound).length;
+    const n=aAg.length;
+    const avgT=n?Math.round(aAg.reduce((s,r)=>s+r._talk,0)/n):0;
+    const avgH=n?Math.round(aAg.reduce((s,r)=>s+r._hold,0)/n):0;
+    const avgAHT=n?Math.round(aAg.reduce((s,r)=>s+r._talk+r._hold+r._wrap,0)/n):0;
+    const handle=Math.round(aAg.reduce((s,r)=>s+r._talk+r._hold+r._wrap,0)/3600*10)/10;
+    const l10=aAg.filter(r=>r._isLongCall).length;
+    const h5=aAg.filter(r=>r._isHighHold).length;
+    return {team,inbound:n,outbound:aOut,avgTalk:avgT,avgHold:avgH,aht:avgAHT,handle,long10:l10,hold5:h5};
+  });
+
+  el.innerHTML='<div class="tbl-wrap" style="margin-top:12px"><div class="tbl-hdr"><span class="tbl-title">Team-wise Summary</span><span class="tbl-hint">↕ Sort</span></div>'+
+    '<table id="prod-ov-tbl"><thead><tr>'+
+    '<th data-sort="team">Team</th><th data-sort="inbound" class="num">Inbound</th><th data-sort="outbound" class="num">Outbound</th>'+
+    '<th class="num">Avg Talk</th><th class="num">Avg Hold</th><th class="num">AHT</th>'+
+    '<th data-sort="handle" class="num">Handle (hrs)</th><th data-sort="long10" class="num">>10m</th><th data-sort="hold5" class="num">>5m Hold</th>'+
+    '</tr></thead><tbody id="prod-ov-body"></tbody>'+
+    '<tfoot><tr class="total-row"><td>Total</td>'+
+    '<td class="num">'+tData.reduce((s,r)=>s+r.inbound,0).toLocaleString()+'</td>'+
+    '<td class="num">'+tData.reduce((s,r)=>s+r.outbound,0).toLocaleString()+'</td>'+
+    '<td colspan="3"></td>'+
+    '<td class="num">'+tData.reduce((s,r)=>s+r.handle,0).toFixed(1)+'h</td>'+
+    '<td class="num">'+tData.reduce((s,r)=>s+r.long10,0)+'</td>'+
+    '<td class="num">'+tData.reduce((s,r)=>s+r.hold5,0)+'</td>'+
+    '</tr></tfoot></table></div>';
+
+  function renderProdOvRows(data) {
+    const tbody=document.getElementById('prod-ov-body');
+    if(!tbody)return;
+    tbody.innerHTML=data.map(r=>'<tr>'+
+      '<td>'+r.team+'</td><td class="num">'+r.inbound.toLocaleString()+'</td><td class="num">'+r.outbound.toLocaleString()+'</td>'+
+      '<td class="num">'+secToMmss(r.avgTalk)+'</td><td class="num">'+secToMmss(r.avgHold)+'</td><td class="num">'+ahtBadge(r.aht)+'</td>'+
+      '<td class="num">'+r.handle+'h</td><td class="num">'+(r.long10>0?'<span class="bx ba">'+r.long10+'</span>':0)+'</td>'+
+      '<td class="num">'+(r.hold5>0?'<span class="bx ba">'+r.hold5+'</span>':0)+'</td>'+
+    '</tr>').join('');
+  }
+  renderProdOvRows(tData);
+  sortableTable('prod-ov-tbl',tData,renderProdOvRows);
+}
+
+function buildProdTeam(elId,title,agents,ag,wp,agFCR,agEsc,agTickets,agIntsAll,showComplexity) {
+  const el=document.getElementById(elId);
+  if(!el)return;
+
+  const rows=agents.map(a=>{
+    const aAg=ag.filter(r=>r['Agent Name']===a&&r._isInbound);
+    const aOut=ag.filter(r=>r['Agent Name']===a&&r._isOutbound).length;
+    const n=aAg.length;
+    const avgT=n?Math.round(aAg.reduce((s,r)=>s+r._talk,0)/n):0;
+    const avgH=n?Math.round(aAg.reduce((s,r)=>s+r._hold,0)/n):0;
+    const aht=n?Math.round(aAg.reduce((s,r)=>s+r._talk+r._hold+r._wrap,0)/n):0;
+    const handle=Math.round(aAg.reduce((s,r)=>s+r._talk+r._hold+r._wrap,0)/3600*10)/10;
+    const l10=aAg.filter(r=>r._isLongCall).length;
+    const h5=aAg.filter(r=>r._isHighHold).length;
+    const calls=wp.filter(r=>r['Agent Name']===a&&r['Interaction']==='Call').length;
+    const emails=wp.filter(r=>r['Agent Name']===a&&r['Interaction']==='Email').length;
+    const chats=wp.filter(r=>r['Agent Name']===a&&r['Interaction']==='Chat').length;
+    const tlRev=wp.filter(r=>r['Agent Name']===a&&r['Interaction']==='TL Review').length;
+    const totalWP=calls+emails+chats;
+    const fcrD=agFCR[a];
+    const fcr=fcrD&&fcrD.el>=5?Math.round(fcrD.ok/fcrD.el*100):null;
+    const escD=agEsc[a];
+    const escPct=escD&&escD.total?Math.round(escD.esc/escD.total*100*10)/10:0;
+    const tix=agTickets[a]?agTickets[a].size:0;
+    const ints=agIntsAll[a]||0;
+    const complexity=tix>=5?Math.round(ints/tix*100)/100:null;
+    return {name:a,inbound:n,outbound:aOut,avgTalk:avgT,avgHold:avgH,aht,handle,long10:l10,hold5:h5,calls,emails,chats,tlRev,total:totalWP,fcr,escPct,complexity,active:n+aOut+totalWP>0};
+  });
+
+  // Complexity chart for frontline
+  let chartHtml='';
+  if(showComplexity){
+    const compRows=rows.filter(r=>r.complexity!==null).sort((a,b)=>b.complexity-a.complexity).slice(0,10);
+    chartHtml='<div class="chart-wrap mb16"><div class="card-title">Top Agents by Complexity (min 5 tickets)</div><canvas id="prod-complexity-chart" height="160"></canvas></div>';
+    setTimeout(()=>{
+      if(compRows.length){
+        mkBar('prod-complexity-chart',compRows.map(r=>r.name),[{
+          data:compRows.map(r=>r.complexity),
+          backgroundColor:compRows.map(r=>r.complexity>1.9?'#f87171':r.complexity>1.4?'#fbbf24':'#4ade80'),
+          borderRadius:4
+        }],{h:false,yt:{font:{size:9}}});
+      }
+    },100);
+  }
+
+  el.innerHTML=chartHtml+
+    '<div class="tbl-wrap"><div class="tbl-hdr"><span class="tbl-title">'+title+' ('+agents.length+')</span><span class="tbl-hint">↕ Sort</span></div>'+
+    '<table id="prod-'+elId+'-tbl"><thead><tr>'+
+    '<th>#</th><th data-sort="name">Agent</th>'+
+    '<th data-sort="total" class="num">Total</th>'+
+    '<th data-sort="calls" class="num">Calls</th>'+
+    '<th data-sort="emails" class="num">Emails</th>'+
+    '<th data-sort="chats" class="num">Chats</th>'+
+    (showComplexity?'<th data-sort="tlRev" class="num">TL Rev</th>':'')+ 
+    '<th data-sort="escPct" class="num">Esc%</th>'+
+    '<th data-sort="fcr" class="num">FCR%</th>'+
+    (showComplexity?'<th data-sort="complexity" class="num">Ints/Ticket</th>':'')+
+    '<th class="num">AHT</th>'+
+    '</tr></thead><tbody id="prod-'+elId+'-body"></tbody>'+
+    '<tfoot><tr class="total-row"><td colspan="2">Total — '+agents.length+' agents</td>'+
+    '<td class="num">'+rows.reduce((s,r)=>s+r.total,0).toLocaleString()+'</td>'+
+    '<td class="num">'+rows.reduce((s,r)=>s+r.calls,0).toLocaleString()+'</td>'+
+    '<td class="num">'+rows.reduce((s,r)=>s+r.emails,0).toLocaleString()+'</td>'+
+    '<td class="num">'+rows.reduce((s,r)=>s+r.chats,0).toLocaleString()+'</td>'+
+    (showComplexity?'<td class="num">'+rows.reduce((s,r)=>s+r.tlRev,0)+'</td>':'')+
+    '<td colspan="'+(showComplexity?3:2)+'"></td></tr></tfoot></table></div>';
+
+  function renderRows(data) {
+    const tbody=document.getElementById('prod-'+elId+'-body');
+    if(!tbody)return;
+    tbody.innerHTML=data.map((r,i)=>'<tr>'+
+      '<td style="color:var(--muted);font-size:11px">'+(i+1)+'</td>'+
+      '<td>'+r.name+' '+activeInactiveBadge(r.active)+'</td>'+
+      '<td class="num fw600">'+r.total+'</td>'+
+      '<td class="num">'+r.calls+'</td>'+
+      '<td class="num">'+r.emails+'</td>'+
+      '<td class="num">'+r.chats+'</td>'+
+      (showComplexity?'<td class="num bb">'+r.tlRev+'</td>':'')+
+      '<td class="num">'+escBadge(r.escPct)+'</td>'+
+      '<td class="num">'+fcrBadge(r.fcr)+'</td>'+
+      (showComplexity?'<td class="num">'+(r.complexity!==null?'<span class="bx '+(r.complexity>1.9?'br':r.complexity>1.4?'ba':'bg')+'">'+r.complexity+'x</span>':'—')+'</td>':'')+
+      '<td class="num">'+ahtBadge(r.aht)+'</td>'+
+    '</tr>').join('');
+  }
+  renderRows(rows.sort((a,b)=>b.total-a.total));
+  sortableTable('prod-'+elId+'-tbl',rows,renderRows);
+}
+
+function buildProdSupport(ag,wp,agFCR,agEsc) {
+  const el=document.getElementById('p-support');
+  if(!el)return;
+
+  function section(title,agents,color) {
+    const rows=agents.map(a=>{
+      const aAg=ag.filter(r=>r['Agent Name']===a&&r._isInbound);
+      const aOut=ag.filter(r=>r['Agent Name']===a&&r._isOutbound).length;
+      const calls=wp.filter(r=>r['Agent Name']===a&&r['Interaction']==='Call').length;
+      const emails=wp.filter(r=>r['Agent Name']===a&&r['Interaction']==='Email').length;
+      const chats=wp.filter(r=>r['Agent Name']===a&&r['Interaction']==='Chat').length;
+      const total=calls+emails+chats;
+      const fcrD=agFCR[a];
+      const fcr=fcrD&&fcrD.el>=3?Math.round(fcrD.ok/fcrD.el*100):null;
+      const escD=agEsc[a];
+      const escPct=escD&&escD.total?Math.round(escD.esc/escD.total*100*10)/10:0;
+      return {name:a,calls,emails,chats,total,fcr,escPct,active:total>0};
+    });
+    return '<div class="tbl-wrap mb16">'+
+      '<div class="sec-hdr" style="background:'+color+'">'+title+'</div>'+
+      '<table><thead><tr><th>Name</th><th class="num">Calls</th><th class="num">Emails</th><th class="num">Chats</th><th class="num">Total</th><th class="num">FCR%</th><th class="num">Esc%</th></tr></thead><tbody>'+
+      rows.map(r=>'<tr><td>'+r.name+' '+activeInactiveBadge(r.active)+'</td>'+
+        '<td class="num">'+r.calls+'</td><td class="num">'+r.emails+'</td><td class="num">'+r.chats+'</td>'+
+        '<td class="num fw600">'+r.total+'</td><td class="num">'+fcrBadge(r.fcr)+'</td><td class="num">'+escBadge(r.escPct)+'</td></tr>').join('')+
+      '<tr class="total-row"><td>Total</td>'+
+      '<td class="num">'+rows.reduce((s,r)=>s+r.calls,0)+'</td>'+
+      '<td class="num">'+rows.reduce((s,r)=>s+r.emails,0)+'</td>'+
+      '<td class="num">'+rows.reduce((s,r)=>s+r.chats,0)+'</td>'+
+      '<td class="num fw600">'+rows.reduce((s,r)=>s+r.total,0)+'</td>'+
+      '<td colspan="2"></td></tr>'+
+      '</tbody></table></div>';
+  }
+
+  el.innerHTML=
+    section('MANAGEMENT',[...TEAM.MANAGER,...TEAM.ASST_MANAGER],'#6b7280')+
+    section('TEAM LEADS',TEAM.TEAM_LEADS,'#2563eb')+
+    section('SME',TEAM.SME,'#7c3aed')+
+    section('L2 ESCALATIONS',TEAM.L2,'#dc2626')+
+    section('QC TEAM',TEAM.QC,'#0d9488')+
+    section('DISPUTES',TEAM.DISPUTES,'#d97706')+
+    section('DATA/REPORTING',TEAM.DATA_REPORTING,'#6b7280')+
+    section('REVIEWS TEAM',TEAM.REVIEWS,'#db2777');
+}
+
+// ── OVERVIEW RENDERER ─────────────────────────────────────────────
+function renderOverview(wp, cc, ag) {
+  // ── KPI calculations ──
+  const calls     = wp.filter(r => r['Interaction'] === 'Call');
+  const emails    = wp.filter(r => r['Interaction'] === 'Email');
+  const chats     = wp.filter(r => r['Interaction'] === 'Chat');
+  const aiCalls   = wp.filter(r => r['Interaction'] === 'AI-Agent Call');
+  const tlRevs    = wp.filter(r => r['Interaction'] === 'TL Review');
+  const userRevs  = wp.filter(r => r['Interaction'] === 'User Reviews');
+  const disputes  = wp.filter(r => r['Interaction'] === 'Dispute');
+  const escs      = wp.filter(r => ['Escalation Handled by TL','Escalation handled by Escalation Team','Escalation handled by Ops Team','Escalation handled by Manager'].includes(r['Interaction']));
+
+  // Tickets = unique ticket IDs
+  const tickets   = new Set(wp.filter(r => r['Ticket ID']).map(r => r['Ticket ID']));
+
+  // Inbound / Outbound from AG
+  const agInb     = ag.filter(r => r._isInbound).length;
+  const agOut     = ag.filter(r => r._isOutbound).length;
+
+  // FCR
+  const fcrEl = wp.filter(r => r._fcrEligible);
+  const fcrOk = wp.filter(r => r._isFCR);
+  const fcrPct = fcrEl.length ? Math.round(fcrOk.length / fcrEl.length * 100) : 0;
+  const fcrColor = fcrPct >= SLA.FCR_TARGET ? 'green' : fcrPct >= 70 ? 'amber' : 'red';
+
+  // Esc rate
+  const escRate = calls.length ? Math.round(escs.length / calls.length * 100 * 10) / 10 : 0;
+
+  // KPI Row 1
+  const k1 = document.getElementById('ov-kpi1');
+  if (k1) k1.innerHTML = [
+    mkKPI('Tickets', tickets.size.toLocaleString(), 'all teams'),
+    mkKPI('Inbound Calls', agInb.toLocaleString(), 'from AG report'),
+    mkKPI('Outbound Calls', agOut.toLocaleString(), 'agent outbound'),
+    mkKPI('Emails', emails.length.toLocaleString(), ''),
+    mkKPI('Chats', chats.length.toLocaleString(), ''),
+    mkKPI('Overall FCR', fcrPct + '%', fcrPct >= SLA.FCR_TARGET ? 'above target' : 'below target', fcrColor),
+    mkKPI('Escalations', escs.length.toLocaleString(), escRate + '% rate'),
+    mkKPI('Disputes', disputes.length.toLocaleString(), 'separate team'),
+  ].join('');
+
+  // KPI Row 2
+  const k2 = document.getElementById('ov-kpi2');
+  if (k2) k2.innerHTML = [
+    mkKPI('TL Reviews', tlRevs.length.toLocaleString(), 'quality checks'),
+    mkKPI('User Reviews', userRevs.length.toLocaleString(), ''),
+    mkKPI('AI Handled', aiCalls.length.toLocaleString(), 'Decagon AI calls'),
+  ].join('');
+
+  // ── Channel Mix donut ──
+  const chLabels = ['Inbound','Outbound','Email','Chat'];
+  const chData   = [agInb, agOut, emails.length, chats.length];
+  const chTotal  = chData.reduce((a,b) => a+b, 0);
+  mkDonut('ov-channel-chart', chLabels, chData, ['#60a5fa','#f97316','#4ade80','#a78bfa']);
+  const chLeg = document.getElementById('ov-channel-legend');
+  if (chLeg) chLeg.innerHTML = chLabels.map(function(l,i) {
+    var colors=['#60a5fa','#f97316','#4ade80','#a78bfa'];
+    return '<div class="leg-item"><div class="leg-dot" style="background:'+colors[i]+'"></div>'+l+' '+(chTotal ? Math.round(chData[i]/chTotal*100) : 0)+'%</div>';
+  }).join('');
+
+  // ── Vertical Distribution donut ──
+  const verts = {};
+  wp.filter(r => r._vertical).forEach(r => { verts[r._vertical] = (verts[r._vertical]||0)+1; });
+  const vLabels = Object.keys(verts).sort((a,b) => verts[b]-verts[a]);
+  const vData   = vLabels.map(l => verts[l]);
+  const vTotal  = vData.reduce((a,b) => a+b, 0);
+  mkDonut('ov-vertical-chart', vLabels, vData, COLORS.slice(0, vLabels.length));
+  const vLeg = document.getElementById('ov-vertical-legend');
+  if (vLeg) vLeg.innerHTML = vLabels.map(function(l,i) {
+    return '<div class="leg-item"><div class="leg-dot" style="background:'+COLORS[i]+'"></div>'+l+' '+(vTotal ? Math.round(vData[i]/vTotal*100) : 0)+'%</div>';
+  }).join('');
+
+  // ── All Interaction Types bar ──
+  const intTypes = {};
+  wp.forEach(r => { const t = r['Interaction']||''; intTypes[t]=(intTypes[t]||0)+1; });
+  const itLabels = Object.keys(intTypes).sort((a,b) => intTypes[b]-intTypes[a]).slice(0,10);
+  const itData   = itLabels.map(l => intTypes[l]);
+  mkBar('ov-int-chart', itLabels, [{ data: itData, backgroundColor: COLORS.slice(0,itLabels.length), borderRadius: 4 }],
+    { xt: { maxRotation: 30, font: { size: 10 } } });
+
+  // ── FCR by Channel ──
+  const channels = ['Call','Email','Chat'];
+  const fcrByChannel = channels.map(ch => {
+    const rows = wp.filter(r => r['Interaction'] === ch && r._fcrEligible);
+    const ok   = wp.filter(r => r['Interaction'] === ch && r._isFCR);
+    return rows.length ? Math.round(ok.length/rows.length*100) : 0;
+  });
+  mkBar('ov-fcr-channel-chart', channels, [
+    { label: 'FCR%', data: fcrByChannel, backgroundColor: fcrByChannel.map(v => v >= 80 ? '#4ade80' : v >= 70 ? '#fbbf24' : '#f87171'), borderRadius: 4 },
+    { label: 'Target', data: [80,80,80], type:'line', borderColor:'#dc2626', borderDash:[4,4], pointRadius:0, fill:false, borderWidth:1.5 }
+  ], { legend: true, ymin: 50 });
+
+  // ── FCR by Vertical ──
+  const vertList = [...new Set(wp.filter(r=>r._vertical).map(r=>r._vertical))].sort();
+  const fcrByVert = vertList.map(v => {
+    const rows = wp.filter(r => r._vertical===v && r._fcrEligible);
+    const ok   = wp.filter(r => r._vertical===v && r._isFCR);
+    return rows.length ? Math.round(ok.length/rows.length*100) : 0;
+  });
+  mkBar('ov-fcr-vertical-chart', vertList, [
+    { label: 'FCR%', data: fcrByVert, backgroundColor: fcrByVert.map(v => v>=80?'#4ade80':v>=70?'#fbbf24':'#f87171'), borderRadius:4 },
+    { label: 'Target', data: vertList.map(()=>80), type:'line', borderColor:'#dc2626', borderDash:[4,4], pointRadius:0, fill:false, borderWidth:1.5 }
+  ], { legend: false, ymin: 0, xt: { maxRotation: 30, font: { size: 10 } } });
+
+  // ── Vertical Summary Table ──
+  const vtEl = document.getElementById('ov-vertical-table');
+  if (vtEl) {
+    const vtData = vertList.map(v => {
+      const vrows  = wp.filter(r => r._vertical===v);
+      const vtix   = new Set(vrows.filter(r=>r['Ticket ID']).map(r=>r['Ticket ID']));
+      const vcalls = vrows.filter(r=>r['Interaction']==='Call').length;
+      const vemails= vrows.filter(r=>r['Interaction']==='Email').length;
+      const vchats = vrows.filter(r=>r['Interaction']==='Chat').length;
+      const vfcrel = vrows.filter(r=>r._fcrEligible);
+      const vfcrok = vrows.filter(r=>r._isFCR);
+      const vfcr   = vfcrel.length ? Math.round(vfcrok.length/vfcrel.length*100) : null;
+      const vesc   = vrows.filter(r=>['Escalation Handled by TL','Escalation handled by Escalation Team','Escalation handled by Ops Team'].includes(r['Interaction'])).length;
+      const vescr  = vcalls ? Math.round(vesc/vcalls*100*10)/10 : 0;
+      return { v, tickets: vtix.size, interactions: vrows.length, calls: vcalls, emails: vemails, chats: vchats, fcr: vfcr, escr: vescr };
+    });
+
+    // Totals
+    const tot = { tickets: new Set(wp.filter(r=>r['Ticket ID']).map(r=>r['Ticket ID'])).size, interactions: wp.length,
+      calls: calls.length, emails: emails.length, chats: chats.length, fcr: fcrPct, escr: escRate };
+
+    vtEl.innerHTML =
+      '<table id="ov-vt"><thead><tr>' +
+      '<th data-sort="v">Vertical</th>' +
+      '<th data-sort="tickets" class="num">Tickets</th>' +
+      '<th data-sort="interactions" class="num">Interactions</th>' +
+      '<th data-sort="calls" class="num">Calls</th>' +
+      '<th data-sort="emails" class="num">Emails</th>' +
+      '<th data-sort="chats" class="num">Chats</th>' +
+      '<th data-sort="fcr" class="num">FCR</th>' +
+      '<th data-sort="escr" class="num">Esc%</th>' +
+      '</tr></thead><tbody id="ov-vt-body"></tbody>' +
+      '<tfoot><tr class="total-row">' +
+      '<td>Total</td><td class="num">' + tot.tickets.toLocaleString() + '</td>' +
+      '<td class="num">' + tot.interactions.toLocaleString() + '</td>' +
+      '<td class="num">' + tot.calls.toLocaleString() + '</td>' +
+      '<td class="num">' + tot.emails.toLocaleString() + '</td>' +
+      '<td class="num">' + tot.chats.toLocaleString() + '</td>' +
+      '<td class="num">' + fcrBadge(tot.fcr) + '</td>' +
+      '<td class="num">' + escBadge(tot.escr) + '</td>' +
+      '</tr></tfoot></table>';
+
+    function renderVTRows(data) {
+      const tbody = document.getElementById('ov-vt-body');
+      if (tbody) tbody.innerHTML = data.map(function(r) {
+        return '<tr>' +
+          '<td>' + r.v + '</td>' +
+          '<td class="num">' + r.tickets.toLocaleString() + '</td>' +
+          '<td class="num">' + r.interactions.toLocaleString() + '</td>' +
+          '<td class="num">' + r.calls.toLocaleString() + '</td>' +
+          '<td class="num">' + r.emails.toLocaleString() + '</td>' +
+          '<td class="num">' + r.chats.toLocaleString() + '</td>' +
+          '<td class="num">' + fcrBadge(r.fcr) + '</td>' +
+          '<td class="num">' + escBadge(r.escr) + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+    renderVTRows(vtData);
+    sortableTable('ov-vt', vtData, renderVTRows);
+  }
+
+  // ── Repeat OGI Contacts ──
+  const ogiCounts = {};
+  wp.filter(r=>r['OGI']).forEach(r => { const o=String(r['OGI']); ogiCounts[o]=(ogiCounts[o]||0)+1; });
+  const repeatOGIs  = Object.values(ogiCounts).filter(c=>c>=2).length;
+  const threeplus   = Object.values(ogiCounts).filter(c=>c>=3).length;
+  const maxContacts = Object.values(ogiCounts).length ? Math.max(...Object.values(ogiCounts)) : 0;
+  const repEl = document.getElementById('ov-repeat');
+  if (repEl) repEl.innerHTML =
+    '<div class="card-title">Repeat OGI Contacts — Same booking contacted multiple times</div>' +
+    '<div class="kpi-row">' +
+      mkKPI('Repeat Contacts', repeatOGIs.toLocaleString(), 'OGIs contacted 2+ times', 'amber') +
+      mkKPI('3+ Contacts', threeplus.toLocaleString(), 'OGIs contacted 3+ times', 'red') +
+      mkKPI('Max Contacts', maxContacts, 'on a single booking') +
+    '</div>';
+}
+
+
 function showSubTab(id) {
   document.querySelectorAll('.sub-tab-content').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
-  const btn = document.querySelector(`.sub-tab-btn[data-sub="${id}"]`);
+  const btn = document.querySelector('.sub-tab-btn[data-sub="' + id + '"]');
   if (btn) btn.classList.add('active');
 }
 </script>
-
 </body>
 </html>
