@@ -165,6 +165,9 @@ tbody tr.total-row { background: var(--bg); font-weight: 600; }
 tbody td     { padding: 8px 12px; vertical-align: middle; }
 tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
 tbody td.center { text-align: center; }
+thead th.num { text-align: right; }
+thead th.center { text-align: center; }
+tbody td.center { text-align: center; }
 
 /* ── BADGES ───────────────────────────────────────────────────── */
 .badge          { font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
@@ -380,6 +383,10 @@ select.filter-dd {
     </div>
 
     <div class="sec" id="t2">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div></div>
+        <button id="ai-download-btn" onclick="downloadAITickets()" style="padding:7px 16px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">⬇ Download Ticket Lists</button>
+      </div>
       <div class="kpi-row" id="ai-kpi"></div>
       <div class="kpi-row" id="ai-kpi2" style="flex-wrap:wrap;"></div>
       <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">AI Call Drivers</span></div><div id="ai-drivers"></div></div>
@@ -389,7 +396,6 @@ select.filter-dd {
       </div>
       <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">Agents who received AI-escalated calls</span></div><div id="ai-agents-table"></div></div>
       <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title">AI Interactions by Reason &amp; Sub Reason</span></div><div id="ai-reasons-table"></div></div>
-      <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title" style="color:var(--amber)">⚠ Open / In Progress AI Tickets</span></div><div id="ai-open-table"></div></div>
       <div class="tbl-wrap mb16"><div class="tbl-hdr"><span class="tbl-title" style="color:var(--red)">⚠ AI Tickets — No Sub Reason</span></div><div id="ai-nosub-table"></div></div>
       <div class="card mb16" id="ai-action-required" style="border-left:4px solid var(--red)"></div>
     </div>
@@ -1579,50 +1585,73 @@ function renderAI(wp) {
     }
   });
 
-  // Calculate truly handled = Closed + has Sub Reason
-  let aiOpen=0, aiInProg=0, aiNoSub=0, aiHandled=0;
+  // ── Calculate all AI KPIs ──────────────────────────────────────
+  let aiHandled=0, csHandled=0;
+  let faultOpen=0, faultOpenNoSub=0, faultInProg=0, faultEscOpen=0;
+
   Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
     const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
     if (!aiRow) return;
     const status = String(aiRow['Status']||'').trim();
     const sub    = String(aiRow['Sub Reason']||'').trim();
-    if (status === 'Open') aiOpen++;
-    if (status.includes('Progress')) aiInProg++;
-    if (!sub) aiNoSub++;
+    const hasHuman = intrs.some(function(r){
+      return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+             String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+    });
+    // Main KPIs
     if (status === 'Closed' && sub) aiHandled++;
+    if (hasHuman) csHandled++;
+    // Fault KPIs
+    if (status === 'Open') faultOpen++;
+    if (status === 'Open' && !sub) faultOpenNoSub++;
+    if (status.includes('Progress')) faultInProg++;
+    if (hasHuman && status === 'Open') faultEscOpen++;
   });
-  const handledRate = aiTotal ? Math.round(aiHandled/aiTotal*100) : 0;
 
-  // KPI Row 1
+  // KPI Row 1 — Main
   const kpi = document.getElementById('ai-kpi');
   if (kpi) kpi.innerHTML = [
-    mkKPI('Total AI Calls', aiTotal, 'Decagon AI'),
-    mkKPI('AI Truly Handled', aiHandled, 'Closed + sub reason', handledRate>=70?'green':'amber'),
-    mkKPI('Open Tickets', aiOpen, 'not resolved yet', aiOpen>0?'red':'green'),
-    mkKPI('In Progress', aiInProg, '', aiInProg>0?'amber':'green'),
-    mkKPI('No Sub Reason', aiNoSub, 'data quality issue', aiNoSub>0?'amber':'green'),
-    mkKPI('Escalated to Human', aiEscalated, '', 'red'),
-    mkKPI('Handled Rate', handledRate+'%', 'Closed + sub reason', handledRate>=70?'green':'amber'),
+    mkKPI('Calls Routed to AI', aiTotal, 'total AI interactions'),
+    mkKPI('Truly AI Handled', aiHandled, 'Closed + sub reason', aiHandled>0?'green':'amber'),
+    mkKPI('CS Had to Handle', csHandled, 'tickets with agent interaction', csHandled>0?'red':'green'),
   ].join('');
 
-  // KPI Row 2
+  // KPI Row 2 — Fault KPIs
   const kpi2 = document.getElementById('ai-kpi2');
   if (kpi2) kpi2.innerHTML =
-    mkKPI('Escalation Rate', escPct+'%', 'of total AI calls', escPct>30?'red':'amber') +
-    mkKPI('AI Resolved (no agent)', aiResolved, '', 'green') +
-    mkKPI('Resolution Rate', resPct+'%', '', resPct>=70?'green':'amber');
+    '<div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;width:100%;padding:2px 0 6px;">Action Required</div>' +
+    mkKPI('Open Tickets', faultOpen, 'all AI open tickets', faultOpen>0?'red':'green') +
+    mkKPI('Open + No Sub Reason', faultOpenNoSub, 'open & missing sub reason', faultOpenNoSub>0?'red':'green') +
+    mkKPI('In Progress', faultInProg, '', faultInProg>0?'amber':'green') +
+    mkKPI('Escalated Still Open', faultEscOpen, 'agent handled but not closed', faultEscOpen>0?'amber':'green');
 
-  // Call drivers
+  // AI Call Drivers — one count per ticket across all 447
   const driverMap = {};
-  aiRows.forEach(r => {
-    const d = String(r['Reason']||'').trim(); if (!d) return;
-    if (!driverMap[d]) driverMap[d] = {count:0, lots:{}};
+  Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
+    const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
+    if (!aiRow) return;
+    const d = String(aiRow['Reason']||'').trim(); if (!d) return;
+    const hasHuman = intrs.some(function(r){
+      return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+             String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+    });
+    const lot = String(aiRow['Lot Name']||'').trim();
+    if (!driverMap[d]) driverMap[d] = {count:0, handled:0, escalated:0, lots:{}};
     driverMap[d].count++;
-    const lot = String(r['Lot Name']||'').trim();
+    if (hasHuman) driverMap[d].escalated++; else driverMap[d].handled++;
     if (lot) driverMap[d].lots[lot] = (driverMap[d].lots[lot]||0)+1;
   });
-  const drivers = Object.entries(driverMap).sort((a,b)=>b[1].count-a[1].count).slice(0,10)
-    .map(([name,d]) => ({name, count:d.count, lots:Object.entries(d.lots).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([n,c])=>({name:n,count:c}))}));
+
+  const drivers = Object.entries(driverMap).sort(function(a,b){return b[1].count-a[1].count;})
+    .map(function(entry){
+      const name=entry[0], d=entry[1];
+      const pct = aiTotal ? Math.round(d.count/aiTotal*100) : 0;
+      return {
+        name     : name + ' — ' + d.count + ' (' + pct + '%)',
+        count    : d.count,
+        lots     : Object.entries(d.lots).sort(function(a,b){return b[1]-a[1];}).slice(0,5).map(function(e){return {name:e[0],count:e[1]};})
+      };
+    });
   buildDriverAccordion('ai-drivers', drivers, COLORS);
 
   // Top lots resolved vs escalated — use ticketGroups logic
@@ -1669,67 +1698,46 @@ function renderAI(wp) {
   const reasEl = document.getElementById('ai-reasons-table');
   if (reasEl) {
     const reasMap = {};
-    aiRows.forEach(r => {
-      const key = (String(r['Reason']||'')+' > '+String(r['Sub Reason']||'')).trim().replace(/^> /,'').replace(/ >$/,'');
-      if (!key) return;
-      const iss = String(r['TKT_IssueReason']||'').trim();
-      const isEsc = iss === 'Escalated';
-      const isRes = ['Not Escalated','Non Escalated'].includes(iss);
-      const isOpen = !iss || ['Open','In Progress'].includes(String(r['Status']||''));
-      if (!reasMap[key]) reasMap[key] = {total:0,resolved:0,escalated:0,open:0};
-      reasMap[key].total++;
-      if (isEsc) reasMap[key].escalated++; else if (isRes) reasMap[key].resolved++; else reasMap[key].open++;
-    });
-    const rData = Object.entries(reasMap).sort((a,b)=>b[1].total-a[1].total).slice(0,20);
-    reasEl.innerHTML='<table><thead><tr><th>Driver</th><th class="num">Total</th><th class="num" style="color:var(--green)">✓ Resolved</th><th class="num" style="color:var(--red)">✗ Escalated</th><th class="num">Open</th></tr></thead><tbody>'+
-      rData.map(([k,d])=>'<tr><td>'+k+'</td><td class="num">'+d.total+'</td><td class="num" style="color:var(--green)">'+d.resolved+'</td><td class="num" style="color:var(--red)">'+d.escalated+'</td><td class="num">'+d.open+'</td></tr>').join('')+
-      '</tbody></table>';
-  }
-
-  // Open/In Progress — show resolved-open and escalated-open separately
-  const openEl = document.getElementById('ai-open-table');
-  if (openEl) {
-    const openTickets = [];
     Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
       const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
       if (!aiRow) return;
+      const reason = String(aiRow['Reason']||'').trim();
+      const sub    = String(aiRow['Sub Reason']||'').trim();
+      const key    = sub ? reason+' > '+sub : reason;
+      if (!key) return;
       const status = String(aiRow['Status']||'').trim();
-      if (!['Open','In Progress','Waiting for OPs'].includes(status)) return;
       const hasHuman = intrs.some(function(r){
         return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
                String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
       });
-      openTickets.push({
-        tkt    : tkt,
-        agent  : String(aiRow['Agent Name']||''),
-        reason : String(aiRow['Reason']||''),
-        sub    : String(aiRow['Sub Reason']||''),
-        status : status,
-        date   : String(aiRow['Interaction created date']||''),
-        lot    : String(aiRow['Lot Name']||''),
-        type   : hasHuman ? 'Escalated' : 'Resolved',
-      });
+      if (!reasMap[key]) reasMap[key] = {total:0, resolved:0, escalated:0, open:0};
+      reasMap[key].total++;
+      if (hasHuman) reasMap[key].escalated++;
+      else if (status === 'Closed' && sub) reasMap[key].resolved++;
+      else reasMap[key].open++;
     });
-    if (!openTickets.length) {
-      openEl.innerHTML='<div class="empty" style="color:var(--green)">No open AI tickets ✓</div>';
-    } else {
-      openEl.innerHTML='<table><thead><tr>'+
-        '<th>Ticket ID</th><th>Type</th><th>Reason</th><th>Sub Reason</th><th>Lot</th><th>Status</th><th>Date</th>'+
-        '</tr></thead><tbody>'+
-        openTickets.map(function(r){
-          return '<tr>'+
-            '<td>'+r.tkt+'</td>'+
-            '<td><span class="bx '+(r.type==='Escalated'?'br':'ba')+'">'+r.type+'</span></td>'+
-            '<td>'+r.reason+'</td>'+
-            '<td style="font-size:11px;color:var(--muted)">'+r.sub+'</td>'+
-            '<td style="font-size:11px">'+r.lot+'</td>'+
-            '<td><span class="bx ba">'+r.status+'</span></td>'+
-            '<td>'+r.date+'</td>'+
-          '</tr>';
-        }).join('')+
-        '</tbody></table>';
-    }
+    const rData = Object.entries(reasMap).sort(function(a,b){return b[1].total-a[1].total;}).slice(0,30);
+    reasEl.innerHTML = '<table><thead><tr>'+
+      '<th style="text-align:left">Driver</th>'+
+      '<th style="text-align:right;min-width:60px">Total</th>'+
+      '<th style="text-align:right;min-width:80px;color:var(--green)">✓ Resolved</th>'+
+      '<th style="text-align:right;min-width:80px;color:var(--red)">✗ Escalated</th>'+
+      '<th style="text-align:right;min-width:60px">Open</th>'+
+      '</tr></thead><tbody>'+
+      rData.map(function(entry){
+        var k=entry[0], d=entry[1];
+        return '<tr>'+
+          '<td>'+k+'</td>'+
+          '<td style="text-align:right;font-weight:600">'+d.total+'</td>'+
+          '<td style="text-align:right;color:var(--green);font-weight:600">'+d.resolved+'</td>'+
+          '<td style="text-align:right;color:var(--red);font-weight:600">'+d.escalated+'</td>'+
+          '<td style="text-align:right">'+d.open+'</td>'+
+        '</tr>';
+      }).join('')+
+      '</tbody></table>';
   }
+
+  // Open/In Progress tickets shown in Action Required dropdowns below
 
   // No sub reason — use ticketGroups
   const noSubEl = document.getElementById('ai-nosub-table');
@@ -1802,52 +1810,66 @@ function renderAI(wp) {
         noSubTickets2.push({tkt, reason, status, lot, date, hasHuman});
     });
 
-    function actionTable(rows, cols, title, color, note) {
+    // Build dropdown accordion for each action item
+    let dropdownCount = 0;
+    function actionDropdown(rows, title, color, note, keyField) {
       if (!rows.length) return '';
-      const colKeys = Object.keys(cols);
-      return '<div style="margin-bottom:16px">'+
-        '<div style="font-size:11px;font-weight:700;color:'+color+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">'+
-          '⚠ '+title+' ('+rows.length+')'+
-          (note ? ' <span style="font-size:10px;font-weight:400;color:var(--muted)">— '+note+'</span>' : '')+
+      const id = 'ai-act-dd-' + (dropdownCount++);
+      const tickets = rows.map(function(r){ return r[keyField||'tkt']; });
+      const badge = rows.length;
+      const ticketSpans = tickets.map(function(t){
+        return '<span style="font-size:11px;font-weight:600;padding:3px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;">'+t+'</span>';
+      }).join('');
+      const noteHtml = note ? '<span style="font-size:10px;color:var(--muted);margin-left:8px;">'+note+'</span>' : '';
+      return '<div style="margin-bottom:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden;">'+
+        '<div data-ddtarget="'+id+'" class="ai-act-hdr" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--bg);">'+
+          '<div>'+
+            '<span style="font-size:12px;font-weight:600;color:'+color+'">'+title+'</span>'+
+            '<span style="margin-left:8px;background:'+color+';color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;">'+badge+'</span>'+
+            noteHtml+
+          '</div>'+
+          '<span style="font-size:11px;color:var(--muted)">▼ click to expand</span>'+
         '</div>'+
-        '<table><thead><tr>'+colKeys.map(function(k){return '<th>'+cols[k]+'</th>';}).join('')+'</tr></thead>'+
-        '<tbody>'+rows.slice(0,20).map(function(r){
-          return '<tr>'+colKeys.map(function(k){
-            if(k==='tkt') return '<td style="font-weight:600">'+r[k]+'</td>';
-            if(k==='status') return '<td><span class="bx ba">'+r[k]+'</span></td>';
-            return '<td style="font-size:11px">'+r[k]+'</td>';
-          }).join('')+'</tr>';
-        }).join('')+
-        (rows.length>20?'<tr><td colspan="'+colKeys.length+'" style="text-align:center;color:var(--muted);font-size:11px">...and '+(rows.length-20)+' more</td></tr>':'')+
-        '</tbody></table></div>';
+        '<div id="'+id+'" style="display:none;padding:10px 14px;background:var(--card);border-top:1px solid var(--border);">'+
+          '<div style="display:flex;flex-wrap:wrap;gap:6px;">'+ticketSpans+'</div>'+
+        '</div>'+
+      '</div>';
     }
 
     actEl.innerHTML =
-      '<div style="font-size:13px;font-weight:700;margin-bottom:16px;color:var(--red)">🚨 Action Required</div>' +
+      '<div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--red)">🚨 Action Required</div>' +
 
-      actionTable(openAIOnlyTickets,
-        {tkt:'Ticket ID', reason:'Reason', lot:'Lot', date:'Date'},
-        'AI handled but ticket still Open ('+openAIOnlyTickets.length+')',
+      actionDropdown(openAIOnlyTickets,
+        'AI Handled — Ticket still Open',
         'var(--red)',
-        'Tech/AI team — AI not closing tickets after interaction') +
+        'Tech/AI team: AI not closing tickets after interaction',
+        'tkt') +
 
-      actionTable(openEscTickets,
-        {tkt:'Ticket ID', agent:'Agent', reason:'Reason', lot:'Lot', date:'Date'},
-        'Escalated & handled by agent but still Open',
+      actionDropdown(openEscTickets,
+        'Escalated & Handled by CS — Still Open',
         'var(--amber)',
-        'Agent compliance — close ticket after handling') +
+        'Agent compliance: close ticket after handling',
+        'tkt') +
 
-      actionTable(inProgTickets,
-        {tkt:'Ticket ID', agent:'Agent', reason:'Reason', status:'Status', date:'Date'},
+      actionDropdown(inProgTickets,
         'Tickets stuck In Progress',
         'var(--amber)',
-        'Needs follow-up to close') +
+        'Needs follow-up to close',
+        'tkt') +
 
-      actionTable(noSubTickets2,
-        {tkt:'Ticket ID', reason:'Reason', status:'Status', lot:'Lot', date:'Date'},
+      actionDropdown(noSubTickets2,
         'Missing Sub Reason',
         'var(--accent2)',
-        'Data quality — sub reason must be tagged');
+        'Data quality: sub reason must be tagged',
+        'tkt');
+
+    // Attach click handlers via delegation
+    actEl.querySelectorAll('.ai-act-hdr').forEach(function(hdr) {
+      hdr.addEventListener('click', function() {
+        const target = document.getElementById(hdr.getAttribute('data-ddtarget'));
+        if (target) target.style.display = target.style.display === 'block' ? 'none' : 'block';
+      });
+    });
   }
 }
 
@@ -3097,6 +3119,92 @@ function renderOverview(wp, cc, ag) {
     '</div>';
 }
 
+
+// ── AI TICKET DOWNLOAD ────────────────────────────────────────────
+function downloadAITickets() {
+  if (!APP.wpData || !APP.wpData.length) { alert('No data loaded'); return; }
+  const wp = getFiltered(APP.wpData);
+
+  // Fill down ticket ID
+  const ticketGroups = {};
+  let curTkt = null;
+  wp.forEach(function(r) {
+    const tkt = String(r['Ticket ID']||'').trim();
+    if (tkt) curTkt = tkt;
+    if (curTkt) {
+      if (!ticketGroups[curTkt]) ticketGroups[curTkt] = [];
+      ticketGroups[curTkt].push(r);
+    }
+  });
+
+  const cats = {
+    'Open Tickets'           : [],
+    'In Progress'            : [],
+    'No Sub Reason'          : [],
+    'Escalated Still Open'   : [],
+    'Truly Handled'          : [],
+    'Escalated to Human'     : [],
+  };
+
+  Object.entries(ticketGroups).forEach(function([tkt, intrs]) {
+    const aiRow = intrs.find(function(r){ return r['Interaction']==='AI-Agent Call'; });
+    if (!aiRow) return;
+    const status = String(aiRow['Status']||'').trim();
+    const sub    = String(aiRow['Sub Reason']||'').trim();
+    const reason = String(aiRow['Reason']||'').trim();
+    const lot    = String(aiRow['Lot Name']||'').trim();
+    const date   = String(aiRow['Interaction created date']||'').trim();
+    const hasHuman = intrs.some(function(r){
+      return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+             String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+    });
+    const agentName = hasHuman ? String((intrs.find(function(r){
+      return ['Call','Email','Chat'].includes(String(r['Interaction']||'')) &&
+             String(r['Agent Name']||'') !== 'ai-decagon ai-decagon';
+    })||{})['Agent Name']||'') : '';
+
+    const row = {
+      'Ticket ID' : tkt,
+      'Reason'    : reason,
+      'Sub Reason': sub,
+      'Lot'       : lot,
+      'Status'    : status,
+      'Agent'     : agentName,
+      'Date'      : date,
+    };
+
+    if (status === 'Open')                       cats['Open Tickets'].push(row);
+    if (status.includes('Progress'))             cats['In Progress'].push(row);
+    if (!sub)                                    cats['No Sub Reason'].push(row);
+    if (hasHuman && status === 'Open')           cats['Escalated Still Open'].push(row);
+    if (status === 'Closed' && sub && !hasHuman) cats['Truly Handled'].push(row);
+    if (hasHuman)                                cats['Escalated to Human'].push(row);
+  });
+
+  // Build Excel workbook
+  const wb = XLSX.utils.book_new();
+  const cols = ['Ticket ID','Reason','Sub Reason','Lot','Status','Agent','Date'];
+
+  Object.entries(cats).forEach(function([sheetName, rows]) {
+    if (!rows.length) return;
+    const wsData = [cols].concat(rows.map(function(r){ return cols.map(function(c){ return r[c]||''; }); }));
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    // Column widths
+    ws['!cols'] = [12,25,30,35,12,20,12].map(function(w){ return {wch:w}; });
+    XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0,31));
+  });
+
+  // Summary sheet
+  const summaryData = [['Category','Count']].concat(
+    Object.entries(cats).map(function([k,v]){ return [k, v.length]; })
+  );
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  wsSummary['!cols'] = [{wch:25},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+  const date = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, 'AI-Ticket-Lists-' + date + '.xlsx');
+}
 
 function showSubTab(id) {
   document.querySelectorAll('.sub-tab-content').forEach(s => s.classList.remove('active'));
